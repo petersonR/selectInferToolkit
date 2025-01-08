@@ -1,0 +1,56 @@
+---
+title: "Using the practicalPSI Package"
+author: "Jinal Shah & Ryan A Peterson"
+date: "`r Sys.Date()`"
+output:   
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{practicalPSI}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.height = 5, fig.width = 7)
+library(practicalPSI)
+library(tidyverse)
+```
+
+
+```{r}
+#data("raw_data")
+y= raw_data$hdl1
+#x <-model.matrix(hdl1 ~., model.frame(~ ., raw_data, na.action=na.pass))[,-1]
+x <- raw_data %>% select(-hdl1)
+
+```
+
+
+```{r}
+aic_mod=step_ic (x=x,y=y,std = TRUE)
+class(aic_mod)
+x =infer(aic_mod)
+
+```
+
+
+```{r}
+bic_mod=step_ic(x=x,y=y,std = TRUE,penalty="BIC")
+
+```
+
+```{r}
+lassomin =pen_cv (x=x,y=y,penalty= "lasso",lambda="min")
+```
+
+
+```{r}
+lasso1se=pen_cv (x=x,y=y,penalty= "lasso",lambda="1se")
+```
+
+```{r}
+mcpmin =pen_cv (x=x,y=y,penalty= "MCP",lambda="min")
+```
+
+

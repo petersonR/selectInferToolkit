@@ -11,7 +11,7 @@
 #'
 #' @export
 hello <- function() {
-  print("Hello, world!")
+  print("Hello, world! from us")
 }
 
 #' Add two numbers, create new class
@@ -47,3 +47,18 @@ tidy.my_new_class <- function(x, ...) {
 print.my_new_class <- function(x, ...) {
  print(x$val)
 }
+
+#' Title
+#'
+#' @param x  A character vector with one element.
+#' @param split What to split on.
+#'
+#' @return A character vector.
+#' @export
+strsplit1 <- function(x, split) {
+  strsplit(x, split = split)[[1]]
+}
+
+
+
+
