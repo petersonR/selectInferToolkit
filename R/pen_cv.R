@@ -57,7 +57,7 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="min",...){
 
 
   val <- list( beta=beta, std=std,penalty=penalty, lambda=lambda, lambda.select= lambda_mod,
-              fold=foldid, x=fit[["fit"]][["X"]], y=fit[["fit"]][["y"]] )
+              fold=foldid, x=fit[["fit"]][["X"]], y=fit[["fit"]][["y"]], model=fit )
   class(val) <- "selector"
   val
 

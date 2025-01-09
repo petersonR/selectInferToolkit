@@ -30,7 +30,8 @@ x <- raw_data %>% select(-hdl1)
 ```{r}
 aic_mod=step_ic (x=x,y=y,std = TRUE)
 class(aic_mod)
-x =infer(aic_mod)
+aic_hybrid =infer(aic_mod)
+aic_hybrid_confident =infer(aic_mod,nonselection="confident_nulls")
 
 ```
 
