@@ -77,14 +77,31 @@ x <- raw_data %>% dplyr::select(-hdl1)
 ## 3.2.1 Perfoming Stepwsie AIC model selection 
 
 ```{r}
-aic_mod=step_ic (x=x,y=y,std = TRUE, penalty = "AIC", direction = "both")
+aic_model=step_ic (x=x,y=y,std = TRUE, penalty = "AIC", direction = "both")
 ```
 
 ## 3.2.1 Perfoming penalized model selection 
 
+```{r}
+lassomin_model =pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=TRUE)
+```
 
 
-# Full model bootstrap
+# 3.3  Perfoming post-seelction inference 
+
+
+```{r}
+aic_hybrid =infer(aic_model,  method = "hybrid", nonselection = "ignored")
+```
+
+
+```{r}
+lasso_sel_confident  = infer(lassomin_model , method="selectiveinf",nonselection="confident_nulls")
+```
+
+
+
+# 3.4 Full model bootstrap without any model selection 
 
 ```{r}
 model<- lm(y~., data=cbind(y,x), x= TRUE, y=TRUE)
