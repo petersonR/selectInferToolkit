@@ -7,35 +7,37 @@
 \format{
 A data frame with \code{n} rows and \code{p} variables:
 \describe{
-\item{age}{Description of the first column (e.g., numeric, categorical).}
-\item{bmi}{Description of the second column.}
-\item{dbp}{Description of the second column.}
-\item{diabetes}{Description of the second column.}
-\item{dmpills}{Description of the second column.}
-\item{drinkany}{Description of the second column.}
-\item{exercise}{Description of the second column.}
-\item{globrat}{Description of the second column.}
-\item{glucose}{Description of the second column.}
-\item{hdl}{Descriptions for other columns.}
-\item{hdl1}{Descriptions for other columns.}
-\item{ht}{Descriptions for other columns.}
-\item{htnmeds}{Descriptions for other columns.}
-\item{insulin}{Descriptions for other columns.}
-\item{ldl}{Descriptions for other columns.}
-\item{medcond}{Descriptions for other columns.}
-\item{physact}{Descriptions for other columns.}
-\item{raceth}{Descriptions for other columns.}
-\item{sbp}{Descriptions for other columns.}
-\item{smoking}{Descriptions for other columns.}
-\item{statins}{Descriptions for other columns.}
-\item{tg}{Descriptions for other columns.}
-\item{waist}{Descriptions for other columns.}
-\item{weight}{Descriptions for other columns.}
-\item{whr}{Descriptions for other columns.}
+\item{age}{age in years}
+\item{bmi}{BMI (kg/m^2)}
+\item{dbp}{ diastolic blood pressure.}
+\item{diabetes}{diabetes}
+\item{dmpills}{ oral DM medication by self-report}
+\item{drinkany}{any current alcohol consumption}
+\item{exercise}{exercise at least 3 times per week.}
+\item{globrat}{self-reported health}
+\item{glucose}{fasting glucose (mg/dl) }
+\item{hdl}{  HDL cholesterol (mg/dl)}
+\item{hdl1}{year 1 HDL cholesterol (mg/dl).}
+\item{ht}{random assignment to hormone therapy}
+\item{htnmeds}{ anti-hypertensive use}
+\item{insulin}{insulin use by self-report}
+\item{ldl}{LDL cholesterol (mg/dl)}
+\item{medcond}{other serious conditions by self-report.}
+\item{physact}{comparative physical activity.}
+\item{raceth}{race/ethnicity.}
+\item{sbp}{systolic blood pressure}
+\item{smoking}{current smoker}
+\item{statins}{statin use}
+\item{tg}{triglycerides (mg/dl)}
+\item{waist}{waist (cm).}
+\item{weight}{weight (kg)}
+\item{whr}{ waist/hip ratio.}
 }
 }
 \source{
-Source of the data (if applicable), e.g., "Generated internally" or a citation.
+\describe{
+\item{raw_data}{\url{}}
+}
 }
 \usage{
 raw_data
@@ -46,5 +48,9 @@ This dataset contains raw data used for demonstration purposes.
 \examples{
 data(raw_data)
 head(raw_data)
+}
+\references{
+\describe{
+}
 }
 \keyword{datasets}

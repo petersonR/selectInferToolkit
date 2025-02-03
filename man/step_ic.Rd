@@ -4,30 +4,32 @@
 \alias{step_ic}
 \title{Stepwise forwad/backward/bidirectional selection with AIC/BIC}
 \usage{
-step_ic(x, y, std = TRUE, penalty = "AIC", direction = "both", ...)
+step_ic(x, y, std = FALSE, penalty = "AIC", direction = "both", ...)
 }
 \arguments{
 \item{x}{Dataframe with predictors}
 
 \item{y}{outcome vector}
 
-\item{std}{if TRUE (defult), standardize design matrix}
+\item{std}{if TRUE (default), standardize design matrix}
 
 \item{penalty}{AIC or BIC}
 
-\item{direction}{the mode of stepwise search, can be one of "both", "backward", or "forward", with a default of "both"}
+\item{direction}{the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "both"}
 
-\item{...}{Additional arguments that can be passed}
+\item{...}{Additional arguments that can be passed with stepAIC function in MASS package}
 }
 \value{
-A data frame with betahat
+A list of class \code{selector_ic} containing:#'
+\item{beta}{a tibble containing term names and coefficients}
+\item{std}{Was desing matrix standadrized}
+\item{penalty}{penalty used (AIC or BIC)}
+\item{direction}{the mode of step wise search}
+\item{x}{the model dataframe used}
+\item{y}{repsonse used in vector}
+\item{model_sum}{the stepwise-selected model  details is returned}
 }
 \description{
-#' @description
-}
-\details{
 This function implements forwad/backward/bidirectional stepwise regression,
 for use in the practicalPSI package
-
-You can learn more about package authoring with RStudio at:
 }

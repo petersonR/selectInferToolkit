@@ -6,7 +6,7 @@ output:
   rmarkdown::html_vignette:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{practicalPSI}
+  %\VignetteIndexEntry{Using the practicalPSI Package}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -15,43 +15,83 @@ vignette: >
 knitr::opts_chunk$set(echo = TRUE,fig.height = 5, fig.width = 7)
 library(practicalPSI)
 library(tidyverse)
+
 ```
+
+# 1 Introduction
+
+The `practicalPSI` package stands for "practical post-selection inference". It makes it easier to implement post-selection inference after model selection using stepwsie and penalized regression in linear regression setting. 
+
+The following model selection methods are supported, with help from ncvreg, glmnet and MASS on the backed:
+
+1) Stepwise regression methods using AIC/BIC (performs step wise search in "backward", "forward" or "both" direction)
+2) Penalized regression methods (Lasso, MCP and  elastic net)
+
+In this package, we support following three post-selection inference approaches, with help from selectiveInference package: 
+
+(1) Hybrid-OLS,
+(2) Bootstrap, and 
+(3) Selective inference (Currently only implemented for lasso and forward selection)
+
+Additionally, within each of theses inference method, there are three ways to handle the non-selections:
+
+(1) Ignoring non-selections
+(2) Treating non-selections as confident null, and
+(3) Treating non-selections as uncertain null
+
+This document goes through several use cases of the package on different data sets. 
+
+# 2 General workflow for using pacakge 
+
+In order to first use the model selection procedure, user can use either `step_ic()` function or `pen_cv()` function to fit either the stepwise or penalized models respectively. Specifically, there are three option to choose for direction ("backward", "forward" or "both" (default)) and they have two option for penalty (either "AIC" or "BIC"), Similarly, for penalized models, one needs to use the pen_cv function with either "lasso" or "MCP" option for penalty. Users can also choose to extract the coefficients associated with either "lambda.min" or "lambda.1se". 
+
+Both `step_ic()` and  `pen_cv()` will produce `selector` class object which can then be passed to `infer()` function to make post-selection inference. User can choose one of three `method` options:  "hybrid", "selectiveinf" or "boot" for performing post-selection inference using either "Hybrid", "selective inference" or "boostrap" methods respectively. 
+
+# 3 Use case: HERS data
+
+
+## 3.1 Dataset description
+
+
+To illustrate a realistic example, we use the data from the Heart and Estrogen/Progestin Replacement Study (HERS). HERS was a randomized, double-blind, placebo-controlled secondary prevention trial conducted between January 1993 and September 1994 in outpatient and community settings at 20 U.S. clinical centers. In this trial, 2,763 postmenopausal women with established coronary heart disease (CHD) were randomized to receive either a placebo or estrogen plus progestin therapy to assess whether treatment influenced the risk of future CHD events. In our guiding application, we aim to model the continuous outcome of High-Density Lipoprotein (HDL) one year after treatment, based on baseline covariates. A total of 25 baseline characteristics are available to predict HDL levels one-year post-treatment for 2,571 observations with complete covariate data. Covariates of interest include treatment group, demographic variables, lifestyle factors, health status/activity levels, comorbidities, medications, baseline physical measurements, and baseline lab values.
+
+First let's look at the data a litte:
+
+```{r}
+data("raw_data")
+summary(raw_data)
+```
+
+Next we create our doutcome varaible and dataframe with all predictors. 
 
 
 ```{r}
-#data("raw_data")
 y= raw_data$hdl1
-#x <-model.matrix(hdl1 ~., model.frame(~ ., raw_data, na.action=na.pass))[,-1]
-x <- raw_data %>% select(-hdl1)
-
+x <- raw_data %>% dplyr::select(-hdl1)
 ```
 
+
+# 3.2 Performing model selection
+
+
+## 3.2.1 Perfoming Stepwsie AIC model selection 
 
 ```{r}
-aic_mod=step_ic (x=x,y=y,std = TRUE)
-class(aic_mod)
-aic_hybrid =infer(aic_mod)
-aic_hybrid_confident =infer(aic_mod,nonselection="confident_nulls")
-
+aic_mod=step_ic (x=x,y=y,std = TRUE, penalty = "AIC", direction = "both")
 ```
 
+## 3.2.1 Perfoming penalized model selection 
+
+
+
+# Full model bootstrap
 
 ```{r}
-bic_mod=step_ic(x=x,y=y,std = TRUE,penalty="BIC")
+model<- lm(y~., data=cbind(y,x), x= TRUE, y=TRUE)
+full_model_linear <- full_boot(model, B=5, family="gaussian",parallel = TRUE)
 
+full_model_linear
 ```
 
-```{r}
-lassomin =pen_cv (x=x,y=y,penalty= "lasso",lambda="min")
-```
-
-
-```{r}
-lasso1se=pen_cv (x=x,y=y,penalty= "lasso",lambda="1se")
-```
-
-```{r}
-mcpmin =pen_cv (x=x,y=y,penalty= "MCP",lambda="min")
-```
 
 

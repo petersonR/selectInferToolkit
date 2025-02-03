@@ -2,26 +2,48 @@
 % Please edit documentation in R/pen_cv.R
 \name{pen_cv}
 \alias{pen_cv}
-\title{Title}
+\title{Fit an MCP- or SCAD-penalized regression}
 \usage{
-pen_cv(x, y, std = TRUE, penalty = "lasso", lambda = "min", ...)
+pen_cv(
+  x,
+  y,
+  std = TRUE,
+  penalty = "MCP",
+  lambda = "lambda.min",
+  alpha = 1,
+  ...
+)
 }
 \arguments{
 \item{x}{Dataframe with predictors}
 
 \item{y}{outcome vector}
 
-\item{std}{if TRUE (defult), standardize design matrix}
+\item{std}{if TRUE (default), standardize design matrix}
 
 \item{penalty}{lasso or MCP}
 
-\item{lambda}{extrac coefficeints assoicated wtih lambda min or lamba SE}
+\item{lambda}{extra coefficients associated with "lambda.min" or "lambda.1se"}
 
-\item{...}{Additional arguments that can be passed}
+\item{alpha}{Tuning parameter for the Mnet estimator which controls the relative contributions from the MCP/SCAD penalty
+and the ridge, or L2 penalty. alpha=1 is equivalent to MCP/SCAD penalty, while alpha=0 would be equivalent to ridge regression. However, alpha=0 is not supported; alpha may be arbitrarily small, but not exactly 0.}
+
+\item{...}{Additional arguments that can be passed with cv.ncvreg function in cv.ncvreg package}
 }
 \value{
-A data frame with betahat
+A list of class \code{selector_pen} containing:
+\item{beta}{a tibble containing term names and coefficients}
+\item{std}{Was desing matrix standadrized}
+\item{penalty}{penalty used (lasso or MCP)}
+\item{lambda}{are the coefficeint associated with "lambda.min" or "lambda.1se"}
+\item{lambda.select}{numeric value of selected lambda}
+\item{fold}{Which fold each observation belongs to. By default the observations are randomly assigned.}
+\item{x}{ the model dataframe used}
+\item{y}{repsonse used}
+\item{alpha}{selected alpha for model fitting}
 }
 \description{
-Title
+Performs k-fold cross validation for MCP- or SCAD-penalized regression
+models over a grid of values for the regularization parameter lambda and returns the
+coefficeints associated with either value of lambda that gives minimum cvm or largest value of lambda such that error is within 1 standard error of the minimum.
 }
