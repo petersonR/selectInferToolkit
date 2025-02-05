@@ -16,14 +16,14 @@ infer.selector.ic(model, method = "hybrid", nonselection = "ignored")
 }
 \value{
 infer_ic class list with
-\item{model} {A dataframe with model results including columns for term, estimate, std.error, statistics, p.value, conf.low, conf.high, ci_ln}
-\item{ci_avg_ratio} {Average CI length across all variables in model}
-\item{ci_median_ratio} {medain CI length across all variables in model}
-\item{selection_method} {Stepwsie}
-\item{direction} {the mode of step wise search}
-\item{penalty} {penalty used (AIC or BIC)}
-\item{infmethod} {Inference method chosen}
-\item{nonselection} {method chosen  to deal with non selection}
+\item{model}{A dataframe with model results including columns for term, estimate, std.error, statistics, p.value, conf.low, conf.high, ci_ln}
+\item{ci_avg_ratio}{Average CI length across all variables in model}
+\item{ci_median_ratio}{medain CI length across all variables in model}
+\item{selection_method}{Stepwsie}
+\item{direction}{the mode of step wise search}
+\item{penalty}{penalty used (AIC or BIC)}
+\item{infmethod}{Inference method chosen}
+\item{nonselection}{method chosen  to deal with non selection}
 }
 \description{
 Inference for selector.ic class except bootstrap which is it's own function

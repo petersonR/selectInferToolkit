@@ -8,17 +8,16 @@
 #' @param nonselection  A character string specifying how to handle variables not selected by model selection procedure. One of
 #' "ignored", "confident_nulls" or "uncertain_nulls" supported
 #' @return infer_ic class list with
-#' \item{model} {A dataframe with model results including columns for term, estimate, std.error, statistics, p.value, conf.low, conf.high, ci_ln}
-#' \item{ci_avg_ratio} {Average CI length across all variables in model}
-#' \item{ci_median_ratio} {medain CI length across all variables in model}
-#' \item{selection_method} {Stepwsie}
-#' \item{direction} {the mode of step wise search}
-#' \item{penalty} {penalty used (AIC or BIC)}
-#' \item{infmethod} {Inference method chosen}
-#' \item{nonselection} {method chosen  to deal with non selection}
+#' \item{model}{A dataframe with model results including columns for term, estimate, std.error, statistics, p.value, conf.low, conf.high, ci_ln}
+#' \item{ci_avg_ratio}{Average CI length across all variables in model}
+#' \item{ci_median_ratio}{medain CI length across all variables in model}
+#' \item{selection_method}{Stepwsie}
+#' \item{direction}{the mode of step wise search}
+#' \item{penalty}{penalty used (AIC or BIC)}
+#' \item{infmethod}{Inference method chosen}
+#' \item{nonselection}{method chosen  to deal with non selection}
 #'
 #'
-
 
 infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored") {
   if (method == "hybrid" && nonselection == "ignored") {
@@ -209,7 +208,7 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
 #'
 #' @param model model of selector_pen class returned from  pen_cv function
 #' @param method A character string specifying method of post-selection inference.Currently "hybrid", "selectiveinf" or
-#' boot supported
+#' "boot" supported
 #' @param nonselection A character string specifying how to handle variables not selected by model selection procedure. One of
 #' "ignored", "confident_nulls" or "uncertain_nulls" supported
 #' @return "infer_pen" class list with
@@ -413,16 +412,18 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
 #' @param parallel  Whether to run bootstrap in parallel or not
 #' @param ... Additional arguments
 #' @return "boot_ic" class list with
-#' \item{model}{A dataframe with model results including columns for term, mean_estimate,  conf.low, conf.high, median_p.value,ci_ln, prop.select, prop.reject}
-#' \item{ci_avg_ratio}{Average CI length across all variables in model}
-#' \item{ci_median_ratio}{median CI length across all variables in model}
-#' \item{selection_method}{Stepwsie}
-#' \item{direction}{selected the mode of step wise search}
-#' \item{penalty}{penalty used (AIC or BIC)}
-#' \item{infmethod}{Inference method chosen}
-#' \item{nonselection}{method chosen  to deal with non selection}
-#' \item{B}{The number of bootstrap replicates used}
+#'   \item{model}{A dataframe with model results including columns for term, mean_estimate,  conf.low, conf.high, median_p.value,ci_ln, prop.select, prop.reject}
+#'   \item{ci_avg_ratio}{Average CI length across all variables in model}
+#'   \item{ci_median_ratio}{median CI length across all variables in model}
+#'   \item{selection_method}{Stepwsie}
+#'   \item{direction}{selected the mode of step wise search}
+#'   \item{penalty}{penalty used (AIC or BIC)}
+#'   \item{infmethod}{Inference method chosen}
+#'   \item{nonselection}{method chosen  to deal with non selection}
+#'   \item{B}{The number of bootstrap replicates used}
 #'
+
+
 boot.selector.ic  <- function(model, B=10,nonselection = "ignored",parallel=  FALSE,... ){
   direction=model[["direction"]]
   x <-model[["x"]]
@@ -533,15 +534,15 @@ boot.selector.ic  <- function(model, B=10,nonselection = "ignored",parallel=  FA
 #' @param ...
 #'
 #' @return "boot_pen" class list with
-#' \item{model} {A dataframe with model results including columns for term, mean_estimate,  conf.low, conf.high,ci_ln, prop.select}
-#' \item{ci_avg_ratio} {Average CI length across all variables in model}
-#' \item{ci_median_ratio} {median CI length across all variables in model}
-#' \item{selection_method} {lasso' or 'MCP' Note: Same as in ncvreg, even with elasticnet-it says lasso but can be differntiated with value of alpha}
-#' \item{lambda} {selected lambda for inference , either "lambda.min" or "lambda.1se"}
-#' \item{alpha} {selected alpha for inference}
-#' \item{infmethod} {Inference method chosen}
-#' \item{nonselection} {method chosen  to deal with non selection}
-#' \item{B} {The number of bootstrap replicates used}
+#' \item{model}{A dataframe with model results including columns for term, mean_estimate,  conf.low, conf.high,ci_ln, prop.select}
+#' \item{ci_avg_ratio}{Average CI length across all variables in model}
+#' \item{ci_median_ratio}{median CI length across all variables in model}
+#' \item{selection_method}{lasso' or 'MCP' Note: Same as in ncvreg, even with elasticnet-it says lasso but can be differntiated with value of alpha}
+#' \item{lambda}{selected lambda for inference , either "lambda.min" or "lambda.1se"}
+#' \item{alpha}{selected alpha for inference}
+#' \item{infmethod}{Inference method chosen}
+#' \item{nonselection}{method chosen  to deal with non selection}
+#' \item{B}{The number of bootstrap replicates used}
 #' @export
 #'
 #'
@@ -595,7 +596,7 @@ boot.selector.pen  <-function(model, B=10,nonselection = "ignored",parallel=  FA
 #'
 #' @param model model of selector_ic or selector_pen class returned from step_ic or pen_cv function
 #' @param method A character string specifying method of post-selection inference.Currently "hybrid", "selectiveinf" or
-#' boot supported
+#' "boot" supported
 #' @param nonselection A character string specifying how to handle variables not selected by model selection procedure. One of
 #' "ignored", "confident_nulls" or "uncertain_nulls" supported
 #'
@@ -608,8 +609,8 @@ boot.selector.pen  <-function(model, B=10,nonselection = "ignored",parallel=  FA
 #' \item{selection_method}{Stepwsie,returned for selector_ic class only}
 #' \item{direction}{the mode of step wise search, returned for selector_ic class only}
 #' \item{penalty}{penalty used (AIC or BIC), returned for selector_ic class only}
-#' \item{lambda}{selected lambda for inference , either "lambda.min" or "lambda.1se"; returned for selector_pen class only}}
-#' \item{alpha}{selected alpha for inference, returned for selector_pen class only}}
+#' \item{lambda}{selected lambda for inference , either "lambda.min" or "lambda.1se"; returned for selector_pen class only}
+#' \item{alpha}{selected alpha for inference, returned for selector_pen class only}
 #' \item{B}{The number of bootstrap replicates used (only for bootstrap selection method)}
 #'
 #' @importFrom broom tidy
@@ -722,10 +723,10 @@ print.infer_ic <- function(x, ...) {
     cat ("Method for handling null: ", x[["nonselection"]], "\n")
 
     # Averege CI length
-    cat ("Averege confidence intervals length ", x[["ci_avg_ratio"]], "\n")
+    cat ("Averege confidence interval length ", x[["ci_avg_ratio"]], "\n")
 
     # Median CI length
-    cat ("Median confidence intervals length ", x[["ci_median_ratio"]], "\n")
+    cat ("Median confidence interval length ", x[["ci_median_ratio"]], "\n")
 
     # coeff <-c(x[["model"]][["estimate"]])
     # names(coeff)<- x[["model"]][["term"]]
@@ -781,7 +782,7 @@ print.infer_pen <- function(x, ...) {
 #' @importFrom tibble as_tibble
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
-#' @importFrom broom tidy
+#' @importFrom broom  tidy
 #'
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export

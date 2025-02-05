@@ -95,16 +95,16 @@ print.selector_pen <- function(x, ...) {
 
   # Standard errors used in the model
   if(x$std) {
-    cat("Desing Matrix standadrized: TRUE\n")
+    cat("Design Matrix standardized: TRUE\n")
   } else {
-    cat("Desing Matrix standadrized: FALSE\n")
+    cat("Design Matrix standardized: FALSE\n")
   }
 
   # Penalty used for selection
   cat("Penalty used: ", x$penalty, " and alpha:",x$alpha, "\n")
 
   # lambda
-  cat("Coefficeint associated with : ", x$lambda, "\n")
+  cat("Coefficient associated with : ", x$lambda, "\n")
 
   # Model coefficients (first few)
   cat("\nFinal Model Non-Zero Coefficients:\n")

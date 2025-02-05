@@ -39,7 +39,7 @@ sel_inf_fs <- function(x,y, mult=2, intercept= FALSE, ...) {
     conf.high = out_aic$ci[,2],
     #ci_ln= round(out_aic$ci[,2]-out_aic$ci[,1],4),
     p.value =  out_aic$pv
-  )%>%arrange(term )
+  )%>% dplyr::arrange(term )
 
   results
 }

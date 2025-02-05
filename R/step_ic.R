@@ -153,9 +153,9 @@ print.selector_ic <- function(x, ...) {
 
   # Standard errors used in the model
   if(x$std) {
-    cat("Desing Matrix standadrized: TRUE\n")
+    cat("Design Matrix standardized: TRUE\n")
   } else {
-    cat("Desing Matrix standadrized: FALSE\n")
+    cat("Design Matrix standardized: FALSE\n")
   }
 
   # Model coefficients (first few)

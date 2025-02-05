@@ -26,15 +26,15 @@ boot.selector.pen(
 }
 \value{
 "boot_pen" class list with
-\item{model} {A dataframe with model results including columns for term, mean_estimate,  conf.low, conf.high,ci_ln, prop.select}
-\item{ci_avg_ratio} {Average CI length across all variables in model}
-\item{ci_median_ratio} {median CI length across all variables in model}
-\item{selection_method} {lasso' or 'MCP' Note: Same as in ncvreg, even with elasticnet-it says lasso but can be differntiated with value of alpha}
-\item{lambda} {selected lambda for inference , either "lambda.min" or "lambda.1se"}
-\item{alpha} {selected alpha for inference}
-\item{infmethod} {Inference method chosen}
-\item{nonselection} {method chosen  to deal with non selection}
-\item{B} {The number of bootstrap replicates used}
+\item{model}{A dataframe with model results including columns for term, mean_estimate,  conf.low, conf.high,ci_ln, prop.select}
+\item{ci_avg_ratio}{Average CI length across all variables in model}
+\item{ci_median_ratio}{median CI length across all variables in model}
+\item{selection_method}{lasso' or 'MCP' Note: Same as in ncvreg, even with elasticnet-it says lasso but can be differntiated with value of alpha}
+\item{lambda}{selected lambda for inference , either "lambda.min" or "lambda.1se"}
+\item{alpha}{selected alpha for inference}
+\item{infmethod}{Inference method chosen}
+\item{nonselection}{method chosen  to deal with non selection}
+\item{B}{The number of bootstrap replicates used}
 }
 \description{
 Title Inference for selector_pen class based on bootstrap, other methods are supposed in infer.selector.pen

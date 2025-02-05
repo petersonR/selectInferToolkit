@@ -10,7 +10,7 @@ infer.selector.pen(model, method = "hybrid", nonselection = "ignored")
 \item{model}{model of selector_pen class returned from  pen_cv function}
 
 \item{method}{A character string specifying method of post-selection inference.Currently "hybrid", "selectiveinf" or
-boot supported}
+"boot" supported}
 
 \item{nonselection}{A character string specifying how to handle variables not selected by model selection procedure. One of
 "ignored", "confident_nulls" or "uncertain_nulls" supported}
