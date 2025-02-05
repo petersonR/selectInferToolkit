@@ -12,7 +12,7 @@
 
 get_uncertain_nulls <- function(mod, res, x) { # val will be residuals
   selections <- mod$term[!is.na(mod$estimate)]
-  selections <- setdiff(selections , "(Intercept)")
+  #selections <- setdiff(selections , "(Intercept)")
   nulls <- mod$term[is.na(mod$estimate)]
 
   nulls <- setdiff(nulls , "(Intercept)")
@@ -28,13 +28,14 @@ get_uncertain_nulls <- function(mod, res, x) { # val will be residuals
 
     f <- as.formula(paste0("res ~ 1 + `", j, "`"))
 
-    # print(f)
+    #print(f)
 
     # model the residuals 1+ variable j
     #print(mod$term == j)
     #print(tidy(lm(f,data = data), conf.int=T) )
     mod[mod$term == j,] <- tidy(lm(f,data = data), conf.int=T) %>%tail(1)
     mod$term <-gsub("`", "", mod$term )
+    #print(mod)
   }
   mod$selected <-selected
   mod %>% mutate(   ci_ln = conf.high- conf.low)

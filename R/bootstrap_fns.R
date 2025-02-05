@@ -447,12 +447,16 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         dplyr::select(term) %>%
         dplyr::left_join(tidy_fit, by = "term")
 
+      data_boot <- droplevels(data_boot)
       x_dup<- as.data.frame(model.matrix(y ~., data_boot,check.names=FALSE))[,-1]
+
+      print(colnames(x_dup))
+      get_uncertain_nulls (mod=aic_ignore_full, res=res, x=x_dup) %>%
+        select(term, estimate, selected, p.value)
 
       boot_fits[[b]] <-  get_uncertain_nulls (mod=aic_ignore_full, res=res, x=x_dup) %>%
         select(term, estimate, selected, p.value) %>%
         dplyr::mutate(   boot = b)
-
     }
 
 
@@ -511,13 +515,14 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       }
       res =residuals(model)
 
-      bic_ignore_full <-  all_vars  %>%
+      aic_ignore_full <-  all_vars  %>%
         dplyr::select(term) %>%
         dplyr::left_join(tidy_fit, by = "term")
 
+      data_boot <- droplevels(data_boot)
       x_dup<- as.data.frame(model.matrix(y ~., data_boot,check.names=FALSE))[,-1]
 
-      return(get_uncertain_nulls (mod=bic_ignore_full, res=res, x=x_dup) %>%
+      return(get_uncertain_nulls (mod=aic_ignore_full, res=res, x=x_dup) %>%
                select(term, estimate, selected, p.value) %>%
                dplyr::mutate(   boot = b)
       )},cl=cl)
@@ -629,7 +634,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
 
     boot_fits  %>%
       dplyr:: bind_rows() %>%
-      group_by(term = forcats::fct_inorder(term)) %>%
+      dplyr::group_by(term = forcats::fct_inorder(term)) %>%
       summarize(
         mean_estimate = round(mean(estimate, na.rm=T),4),
         conf.low = round(quantile(estimate, .025, na.rm=T),4),
@@ -696,7 +701,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
 
     boot_fits  %>%
       dplyr:: bind_rows() %>%
-      group_by(term = forcats::fct_inorder(term)) %>%
+      dplyr::group_by(term = forcats::fct_inorder(term)) %>%
       summarize(
         mean_estimate = round(mean(estimate,na.rm=T),4),
         conf.low = round(quantile(estimate, .025,na.rm=T),4),
