@@ -199,7 +199,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
        fit = broom::tidy(MASS::stepAIC(
           lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
           scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", trace = 1,...
+          direction = "forward", trace = 0,...
         ), conf.int = T)
 
 
@@ -261,7 +261,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         fit = broom::tidy(MASS::stepAIC(
           lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
           scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", trace = 1,...
+          direction = "forward", trace = 0,...
         ), conf.int = T)
 
 
@@ -313,7 +313,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         fit = broom::tidy(MASS::stepAIC(
           lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
           scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", trace = 1,...
+          direction = "forward", trace = 0,...
         ), conf.int = T)
 
 
@@ -376,7 +376,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         fit = broom::tidy(MASS::stepAIC(
           lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
           scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", trace = 1,...
+          direction = "forward", trace = 0,...
         ), conf.int = T)
 
 
@@ -450,7 +450,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       data_boot <- droplevels(data_boot)
       x_dup<- as.data.frame(model.matrix(y ~., data_boot,check.names=FALSE))[,-1]
 
-      print(colnames(x_dup))
+      # print(colnames(x_dup))
       get_uncertain_nulls (mod=aic_ignore_full, res=res, x=x_dup) %>%
         select(term, estimate, selected, p.value)
 
@@ -675,7 +675,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
           scope = list(lower = ~1, upper = scope_formula),
           k=log(nrow(na.omit(data_boot))),
-          direction = "forward", trace = 1,...
+          direction = "forward", trace = 0,...
         ), conf.int = T)
 
 
@@ -794,7 +794,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
           scope = list(lower = ~1, upper = scope_formula),
           k=log(nrow(na.omit(data_boot))),
-          direction = "forward", trace = 1,...
+          direction = "forward", trace = 0,...
         ), conf.int = T)
 
 

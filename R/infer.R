@@ -20,6 +20,11 @@
 #'
 
 infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored") {
+
+  if(method == "selectiveinf" & model$direction != "forward") {
+    warning("Direction must be set to 'forward' for selectiveInference")
+  }
+
   if (method == "hybrid" && nonselection == "ignored") {
     mod<- tidy(model[["model_sum"]], conf.int=T)
     mod$ci_ln <- mod$conf.high - mod$conf.low
@@ -83,6 +88,7 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
 
   }
   else if (method == "selectiveinf" && nonselection == "ignored") {
+
     x <-model[["x"]]
     x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     y <- model[["y"]]
@@ -734,7 +740,7 @@ print.infer_ic <- function(x, ...) {
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
 #' @importFrom broom tidy
-#' @param ...
+#' @param ... currently not used
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
 print.boot_ic <- function(x, ...) {
@@ -840,7 +846,7 @@ tidy.infer_ic <- function(x, ...) {
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
 #' @importFrom broom tidy
-#' @param ...
+#' @param ... currently not used
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
 
@@ -856,7 +862,7 @@ tidy.infer_pen <- function(x, ...) {
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
 #' @importFrom broom tidy
-#' @param ...
+#' @param ... currently not used
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
 tidy.boot_ic <- function(x, ...) {
@@ -872,7 +878,7 @@ tidy.boot_ic <- function(x, ...) {
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
 #' @importFrom broom tidy
-#' @param ...
+#' @param ... currently not used
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
 tidy.boot_pen <- function(x, ...) {

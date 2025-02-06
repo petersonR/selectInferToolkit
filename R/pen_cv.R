@@ -116,7 +116,7 @@ print.selector_pen <- function(x, ...) {
 
 #' Title
 #' @param x   model of class `selector_pen`
-#' @param ...
+#' @param ... currently not used
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
 tidy.selector_pen <- function(x, ...) {

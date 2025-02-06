@@ -4,7 +4,7 @@
 \alias{step_ic}
 \title{Stepwise forwad/backward/bidirectional selection with AIC/BIC}
 \usage{
-step_ic(x, y, std = FALSE, penalty = "AIC", direction = "both", ...)
+step_ic(x, y, std = FALSE, penalty = "AIC", direction = "forward", ...)
 }
 \arguments{
 \item{x}{Dataframe with predictors}
@@ -15,7 +15,7 @@ step_ic(x, y, std = FALSE, penalty = "AIC", direction = "both", ...)
 
 \item{penalty}{AIC or BIC}
 
-\item{direction}{the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "both"}
+\item{direction}{the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"}
 
 \item{...}{Additional arguments that can be passed with stepAIC function in MASS package}
 }

@@ -9,7 +9,7 @@
 #' @param y outcome vector
 #' @param std if TRUE (default), standardize design matrix
 #' @param penalty AIC or BIC
-#' @param direction the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "both"
+#' @param direction the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"
 #' @param ... Additional arguments that can be passed with stepAIC function in MASS package
 #'
 #' @importFrom magrittr %>%
@@ -28,7 +28,7 @@
 #' @export
 
 
-step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="both",...){
+step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",...){
 
 
 

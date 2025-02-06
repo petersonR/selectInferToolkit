@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{x}{model of class \code{boot_ic}}
+
+\item{...}{currently not used}
 }
 \value{
 A tibble containing the tidied coefficients of the model.

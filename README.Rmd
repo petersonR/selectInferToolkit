@@ -35,7 +35,6 @@ Let's say you are wanting to predict gas mileage based on all variables in the `
 
 ```{r example}
 library(practicalPSI)
-library(broom)
 
 data("mtcars")
 
@@ -55,7 +54,7 @@ head(X)
 fit_aic <- step_ic(y = mtcars$mpg, x = X, std = TRUE ) # does not work if x is matrix
 
 x <- mtcars[, !names(mtcars) %in% "mpg"]
-fit_aic_std <- step_ic(y = mtcars$mpg, x = x, std = TRUE ) # std works if x is dataframe 
+fit_aic_std <- step_ic(y = mtcars$mpg, x = x, std = TRUE) # std works if x is dataframe 
 
 fit_aic_std 
 ```
@@ -77,33 +76,47 @@ What if we wanted to adjust for the selective process? Here using `selectiveInfe
 
 ```{r AIC selectiveinference}
 fit_aic_SI <- infer(fit_aic, method = "selectiveinf")
-fit_aic_SI # both is possible for this? 
-tidy(fit_aic_SI) # why is the selection different? - this is because selectiveinference only works for forwad seelction ...see below 
+fit_aic_SI 
+tidy(fit_aic_SI) 
 ```
 
-Let's try selective inference with forward selection
-
-```{r fwd selectiveinference}
-fit_aic_fwd <- step_ic(y = mtcars$mpg, x = x, direction="forward", std= F) 
-fit_aic_fwd # fwd selection interesting selects wt, cycl, hp!
-
-fit_aic__fwd_hybrid <- infer(fit_aic_fwd , method = "hybrid")
-tidy(fit_aic__fwd_hybrid )
-
-fit_aic_SI_wfd <- infer(fit_aic_fwd, method = "selectiveinf", std=T)
-tidy(fit_aic_SI_wfd )
-```
-
-
+#### Bootstrapping 
 
 What about bootstrapping? 
 
+##### Ignored null
+
+[explain what this is]
+
 ```{r AIC bootstrap}
 set.seed(1)
-fit_aic_boot <- infer(fit_aic, method = "boot", B = 100) # needs print method
-tidy(fit_aic_boot) # needs tidy method
-fit_aic_boot$model # probably don't report median_p.value, something else instead?
+fit_aic_boot <- infer(fit_aic, method = "boot", B = 100) 
+fit_aic_boot
+tidy(fit_aic_boot) 
 ```
+
+##### Confident null non-selections
+
+[Explain what this is]
+
+```{r AIC bootstrap 2}
+set.seed(1)
+fit_aic_boot <- infer(fit_aic, method = "boot", B = 100, nonselection = "confident_nulls") 
+fit_aic_boot
+tidy(fit_aic_boot) 
+```
+
+##### uncertain null non-selections
+
+[Explain what this is]
+
+```{r}
+set.seed(1)
+fit_aic_boot <- infer(fit_aic, method = "boot", B = 100, nonselection = "uncertain_nulls") 
+fit_aic_boot
+tidy(fit_aic_boot) 
+```
+
 
 In either case, we find the selections no longer significant after adjusting for the selective inference process. What gives? 
 
@@ -121,8 +134,6 @@ fit_bic_SI # Much smaller intervals
 
 tidy(fit_bic_SI)
 ```
-
-Whoa! Now we have gear pop out as significant! But wait, "gear" is not in `fit_bic` as selection. what gives? 
 
 What about bootstrapping? 
 

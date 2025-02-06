@@ -22,13 +22,13 @@ Imports:
   parallel,
   pbapply,
   forcats,
-  tidyverse,
-  broom
+  tidyverse
 Suggests: 
     testthat (>= 3.0.0),  knitr (>= 1.49), rmarkdown (>= 2.29)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Depends: 
-    R (>= 2.10)
+  R (>= 2.10),
+  broom
 VignetteBuilder: knitr

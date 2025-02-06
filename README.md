@@ -24,7 +24,8 @@ in the `mtcars` data set.
 
 ``` r
 library(practicalPSI)
-library(broom)
+#> Loading required package: broom
+#> Warning: package 'broom' was built under R version 4.4.1
 
 data("mtcars")
 
@@ -81,17 +82,17 @@ fit_aic <- step_ic(y = mtcars$mpg, x = X, std = TRUE ) # does not work if x is m
 #> Error in UseMethod("tbl_vars"): no applicable method for 'tbl_vars' applied to an object of class "c('matrix', 'array', 'double', 'numeric')"
 
 x <- mtcars[, !names(mtcars) %in% "mpg"]
-fit_aic_std <- step_ic(y = mtcars$mpg, x = x, std = TRUE ) # std works if x is dataframe 
+fit_aic_std <- step_ic(y = mtcars$mpg, x = x, std = TRUE) # std works if x is dataframe 
 
 fit_aic_std 
 #> Stepwise Model Selection Summary:
-#> Direction of Selection:  both 
+#> Direction of Selection:  forward 
 #> Penalty used:  AIC 
 #> Design Matrix standardized: TRUE
 #> 
 #> Final Model Coefficients:
-#> (Intercept)          wt        qsec          am 
-#>   20.090625   -3.832132    2.190589    1.464956
+#> (Intercept)          wt         cyl          hp 
+#>   20.090625   -3.098748   -1.681654   -1.236744
 ```
 
 ``` r
@@ -100,10 +101,10 @@ tidy(fit_aic)
 #> # A tibble: 4 × 2
 #>   term        estimate
 #>   <chr>          <dbl>
-#> 1 (Intercept)     9.62
-#> 2 wt             -3.92
-#> 3 qsec            1.23
-#> 4 am              2.94
+#> 1 (Intercept)  38.8   
+#> 2 wt           -3.17  
+#> 3 cyl          -0.942 
+#> 4 hp           -0.0180
 ```
 
 AIC selects `wt`, `qsec`, and `am`. But where are the p-values?! This is
@@ -115,66 +116,6 @@ least squares theory is used for inference.
 ``` r
 fit_aic_hybrid <- infer(fit_aic, method = "hybrid")
 tidy(fit_aic_hybrid)
-#> # A tibble: 11 × 8
-#>    term        estimate std.error statistic     p.value conf.low conf.high ci_ln
-#>    <chr>          <dbl>     <dbl>     <dbl>       <dbl>    <dbl>     <dbl> <dbl>
-#>  1 (Intercept)     9.62     6.96       1.38  0.178       -4.64       23.9  28.5 
-#>  2 cyl            NA       NA         NA    NA           NA          NA    NA   
-#>  3 disp           NA       NA         NA    NA           NA          NA    NA   
-#>  4 hp             NA       NA         NA    NA           NA          NA    NA   
-#>  5 drat           NA       NA         NA    NA           NA          NA    NA   
-#>  6 wt             -3.92     0.711     -5.51  0.00000695  -5.37       -2.46  2.91
-#>  7 qsec            1.23     0.289      4.25  0.000216     0.635       1.82  1.18
-#>  8 vs             NA       NA         NA    NA           NA          NA    NA   
-#>  9 am              2.94     1.41       2.08  0.0467       0.0457      5.83  5.78
-#> 10 gear           NA       NA         NA    NA           NA          NA    NA   
-#> 11 carb           NA       NA         NA    NA           NA          NA    NA
-```
-
-What if we wanted to adjust for the selective process? Here using
-`selectiveInference`.
-
-``` r
-fit_aic_SI <- infer(fit_aic, method = "selectiveinf")
-fit_aic_SI # both is possible for this? 
-#> Selection method:  Stepwise    AIC .  Direction:  both 
-#> Inference methohd:  selectiveinf 
-#> Method for handling null:  ignored 
-#> Averege confidence interval length  Inf 
-#> Median confidence interval length  Inf
-tidy(fit_aic_SI) # why is the selection different? - this is because selectiveinference only works for forwad seelction ...see below 
-#> # A tibble: 11 × 6
-#>    term        estimate conf.low conf.high p.value ci_ln
-#>    <chr>          <dbl>    <dbl>     <dbl>   <dbl> <dbl>
-#>  1 (Intercept)  NA        NA         NA     NA      NA  
-#>  2 cyl          -0.942  -Inf         17.0    0.235 Inf  
-#>  3 disp         NA        NA         NA     NA      NA  
-#>  4 hp           -0.0180   -0.372    Inf      0.795 Inf  
-#>  5 drat         NA        NA         NA     NA      NA  
-#>  6 wt           -3.17    -11.8        6.00   0.224  17.8
-#>  7 qsec         NA        NA         NA     NA      NA  
-#>  8 vs           NA        NA         NA     NA      NA  
-#>  9 am           NA        NA         NA     NA      NA  
-#> 10 gear         NA        NA         NA     NA      NA  
-#> 11 carb         NA        NA         NA     NA      NA
-```
-
-Let’s try selective inference with forward selection
-
-``` r
-fit_aic_fwd <- step_ic(y = mtcars$mpg, x = x, direction="forward", std= F) 
-fit_aic_fwd # fwd selection interesting selects wt, cycl, hp!
-#> Stepwise Model Selection Summary:
-#> Direction of Selection:  forward 
-#> Penalty used:  AIC 
-#> Design Matrix standardized: FALSE
-#> 
-#> Final Model Coefficients:
-#> (Intercept)          wt         cyl          hp 
-#>  38.7517874  -3.1669731  -0.9416168  -0.0180381
-
-fit_aic__fwd_hybrid <- infer(fit_aic_fwd , method = "hybrid")
-tidy(fit_aic__fwd_hybrid )
 #> # A tibble: 11 × 8
 #>    term        estimate std.error statistic   p.value conf.low conf.high   ci_ln
 #>    <chr>          <dbl>     <dbl>     <dbl>     <dbl>    <dbl>     <dbl>   <dbl>
@@ -189,9 +130,20 @@ tidy(fit_aic__fwd_hybrid )
 #>  9 am           NA        NA          NA    NA         NA       NA       NA     
 #> 10 gear         NA        NA          NA    NA         NA       NA       NA     
 #> 11 carb         NA        NA          NA    NA         NA       NA       NA
+```
 
-fit_aic_SI_wfd <- infer(fit_aic_fwd, method = "selectiveinf", std=T)
-tidy(fit_aic_SI_wfd )
+What if we wanted to adjust for the selective process? Here using
+`selectiveInference`.
+
+``` r
+fit_aic_SI <- infer(fit_aic, method = "selectiveinf")
+fit_aic_SI 
+#> Selection method:  Stepwise    AIC .  Direction:  forward 
+#> Inference methohd:  selectiveinf 
+#> Method for handling null:  ignored 
+#> Averege confidence interval length  Inf 
+#> Median confidence interval length  Inf
+tidy(fit_aic_SI) 
 #> # A tibble: 11 × 6
 #>    term        estimate conf.low conf.high p.value ci_ln
 #>    <chr>          <dbl>    <dbl>     <dbl>   <dbl> <dbl>
@@ -208,27 +160,91 @@ tidy(fit_aic_SI_wfd )
 #> 11 carb         NA        NA         NA     NA      NA
 ```
 
+#### Bootstrapping
+
 What about bootstrapping?
+
+##### Ignored null
+
+\[explain what this is\]
 
 ``` r
 set.seed(1)
-fit_aic_boot <- infer(fit_aic, method = "boot", B = 100) # needs print method
-tidy(fit_aic_boot) # needs tidy method
+fit_aic_boot <- infer(fit_aic, method = "boot", B = 100) 
+fit_aic_boot
+#> Selection method:  Stepwise    AIC .  Direction:  forward 
+#> Inference methohd:  bootstrap with  100 boostrap samples 
+#> Method for handling null:  ignored 
+#> Averege confidence interval length  36.95472 
+#> Median confidence interval length  7.2475
+tidy(fit_aic_boot) 
 #> # A tibble: 4 × 7
-#>   term        mean_estimate conf.low conf.high  ci_ln prop.select prop.rej
-#>   <fct>               <dbl>    <dbl>     <dbl>  <dbl>       <dbl>    <dbl>
-#> 1 (Intercept)          3.14   -83.7      48.8  132.          1        0.54
-#> 2 wt                  -3.68    -8.84      1.06   9.90        0.88     0.78
-#> 3 qsec                 1.10     0         4.78   4.78        0.61     0.46
-#> 4 am                   1.66    -2.82      6.52   9.35        0.57     0.3
-fit_aic_boot$model # probably don't report median_p.value, something else instead?
-#> # A tibble: 4 × 7
-#>   term        mean_estimate conf.low conf.high  ci_ln prop.select prop.rej
-#>   <fct>               <dbl>    <dbl>     <dbl>  <dbl>       <dbl>    <dbl>
-#> 1 (Intercept)          3.14   -83.7      48.8  132.          1        0.54
-#> 2 wt                  -3.68    -8.84      1.06   9.90        0.88     0.78
-#> 3 qsec                 1.10     0         4.78   4.78        0.61     0.46
-#> 4 am                   1.66    -2.82      6.52   9.35        0.57     0.3
+#>   term        mean_estimate conf.low conf.high   ci_ln prop.select prop.rej
+#>   <fct>               <dbl>    <dbl>     <dbl>   <dbl>       <dbl>    <dbl>
+#> 1 (Intercept)       15.3    -84.2      49.0    133.           1        0.7 
+#> 2 cyl               -0.238   -2.35      2.24     4.58         0.51     0.31
+#> 3 hp                -0.0178  -0.0832    0.0235   0.107        0.5      0.34
+#> 4 wt                -3.19    -8.23      1.68     9.91         0.88     0.76
+```
+
+##### Confident null non-selections
+
+\[Explain what this is\]
+
+``` r
+set.seed(1)
+fit_aic_boot <- infer(fit_aic, method = "boot", B = 100, nonselection = "confident_nulls") 
+fit_aic_boot
+#> Selection method:  Stepwise    AIC .  Direction:  forward 
+#> Inference methohd:  bootstrap with  100 boostrap samples 
+#> Method for handling null:  confident_nulls 
+#> Averege confidence interval length  17.37981 
+#> Median confidence interval length  7.0565
+tidy(fit_aic_boot) 
+#> # A tibble: 11 × 7
+#>    term        mean_estimate conf.low conf.high    ci_ln prop.select prop.rej
+#>    <fct>               <dbl>    <dbl>     <dbl>    <dbl>       <dbl>    <dbl>
+#>  1 (Intercept)       15.3    -84.2      49.0    133.            1        0.7 
+#>  2 cyl               -0.238   -2.35      2.24     4.58          0.51     0.31
+#>  3 disp               0.0059  -0.0321    0.0634   0.0955        0.5      0.3 
+#>  4 hp                -0.0178  -0.0832    0.0235   0.107         0.5      0.34
+#>  5 drat               1.26     0         7.06     7.06          0.32     0.23
+#>  6 wt                -3.19    -8.23      1.68     9.91          0.88     0.76
+#>  7 qsec               0.628    0         4.21     4.21          0.41     0.36
+#>  8 vs                -0.329   -6.08      3.63     9.70          0.2      0.12
+#>  9 am                 1.41    -1.63      6.55     8.18          0.42     0.25
+#> 10 gear               0.791   -1.98      7.24     9.22          0.37     0.25
+#> 11 carb              -0.459   -3.18      1.71     4.89          0.44     0.33
+```
+
+##### uncertain null non-selections
+
+\[Explain what this is\]
+
+``` r
+set.seed(1)
+fit_aic_boot <- infer(fit_aic, method = "boot", B = 100, nonselection = "uncertain_nulls") 
+fit_aic_boot
+#> Selection method:  Stepwise    AIC .  Direction:  forward 
+#> Inference methohd:  bootstrap with  100 boostrap samples 
+#> Method for handling null:  uncertain_nulls 
+#> Averege confidence interval length  17.42436 
+#> Median confidence interval length  7.4793
+tidy(fit_aic_boot) 
+#> # A tibble: 11 × 7
+#>    term        mean_estimate conf.low conf.high    ci_ln prop.select prop.rej
+#>    <fct>               <dbl>    <dbl>     <dbl>    <dbl>       <dbl>    <dbl>
+#>  1 (Intercept)       15.3    -84.2      49.0    133.            1        0.7 
+#>  2 cyl               -0.237   -2.35      2.24     4.58          0.51     0.31
+#>  3 disp               0.0062  -0.0321    0.0634   0.0955        0.5      0.3 
+#>  4 hp                -0.0184  -0.0832    0.0235   0.107         0.5      0.34
+#>  5 drat               1.36    -0.423     7.06     7.48          0.32     0.23
+#>  6 wt                -3.20    -8.23      1.68     9.91          0.88     0.76
+#>  7 qsec               0.657   -0.0673    4.21     4.28          0.41     0.36
+#>  8 vs                -0.345   -6.08      3.63     9.70          0.2      0.12
+#>  9 am                 1.52    -1.63      6.55     8.18          0.42     0.25
+#> 10 gear               0.834   -1.98      7.24     9.22          0.37     0.25
+#> 11 carb              -0.486   -3.18      1.71     4.89          0.44     0.33
 ```
 
 In either case, we find the selections no longer significant after
@@ -238,28 +254,28 @@ adjusting for the selective inference process. What gives?
 fit_bic <- step_ic(y = mtcars$mpg, x=X, penalty = "BIC")
 fit_bic 
 #> Stepwise Model Selection Summary:
-#> Direction of Selection:  both 
+#> Direction of Selection:  forward 
 #> Penalty used:  BIC 
 #> Design Matrix standardized: FALSE
 #> 
 #> Final Model Coefficients:
-#> (Intercept)          wt        qsec          am 
-#>    9.617781   -3.916504    1.225886    2.935837
+#> (Intercept)          wt         cyl 
+#>   39.686261   -3.190972   -1.507795
 tidy(infer(fit_bic)) # should be same as fit_aic_hybrid, same model (I think it shouls be same as fit_bic and it is??)
 #> # A tibble: 11 × 8
-#>    term        estimate std.error statistic     p.value conf.low conf.high ci_ln
-#>    <chr>          <dbl>     <dbl>     <dbl>       <dbl>    <dbl>     <dbl> <dbl>
-#>  1 (Intercept)     9.62     6.96       1.38  0.178       -4.64       23.9  28.5 
-#>  2 cyl            NA       NA         NA    NA           NA          NA    NA   
-#>  3 disp           NA       NA         NA    NA           NA          NA    NA   
-#>  4 hp             NA       NA         NA    NA           NA          NA    NA   
-#>  5 drat           NA       NA         NA    NA           NA          NA    NA   
-#>  6 wt             -3.92     0.711     -5.51  0.00000695  -5.37       -2.46  2.91
-#>  7 qsec            1.23     0.289      4.25  0.000216     0.635       1.82  1.18
-#>  8 vs             NA       NA         NA    NA           NA          NA    NA   
-#>  9 am              2.94     1.41       2.08  0.0467       0.0457      5.83  5.78
-#> 10 gear           NA       NA         NA    NA           NA          NA    NA   
-#> 11 carb           NA       NA         NA    NA           NA          NA    NA
+#>    term        estimate std.error statistic   p.value conf.low conf.high ci_ln
+#>    <chr>          <dbl>     <dbl>     <dbl>     <dbl>    <dbl>     <dbl> <dbl>
+#>  1 (Intercept)    39.7      1.71      23.1   3.04e-20    36.2     43.2    7.02
+#>  2 cyl            -1.51     0.415     -3.64  1.06e- 3    -2.36    -0.660  1.70
+#>  3 disp           NA       NA         NA    NA           NA       NA     NA   
+#>  4 hp             NA       NA         NA    NA           NA       NA     NA   
+#>  5 drat           NA       NA         NA    NA           NA       NA     NA   
+#>  6 wt             -3.19     0.757     -4.22  2.22e- 4    -4.74    -1.64   3.10
+#>  7 qsec           NA       NA         NA    NA           NA       NA     NA   
+#>  8 vs             NA       NA         NA    NA           NA       NA     NA   
+#>  9 am             NA       NA         NA    NA           NA       NA     NA   
+#> 10 gear           NA       NA         NA    NA           NA       NA     NA   
+#> 11 carb           NA       NA         NA    NA           NA       NA     NA
 ```
 
 Selective inference:
@@ -267,7 +283,7 @@ Selective inference:
 ``` r
 fit_bic_SI <- infer(fit_bic, method = "selectiveinf")
 fit_bic_SI # Much smaller intervals
-#> Selection method:  Stepwise    BIC .  Direction:  both 
+#> Selection method:  Stepwise    BIC .  Direction:  forward 
 #> Inference methohd:  selectiveinf 
 #> Method for handling null:  ignored 
 #> Averege confidence interval length  14.89557 
@@ -290,9 +306,6 @@ tidy(fit_bic_SI)
 #> 11 carb           NA       NA        NA     NA      NA
 ```
 
-Whoa! Now we have gear pop out as significant! But wait, “gear” is not
-in `fit_bic` as selection. what gives?
-
 What about bootstrapping?
 
 ``` r
@@ -300,13 +313,12 @@ set.seed(1)
 fit_bic_boot <- infer(fit_bic, method = "boot", B = 100) 
 
 tidy(fit_bic_boot )
-#> # A tibble: 4 × 7
-#>   term        mean_estimate conf.low conf.high  ci_ln prop.select prop.rej
-#>   <fct>               <dbl>    <dbl>     <dbl>  <dbl>       <dbl>    <dbl>
-#> 1 (Intercept)         6.77   -75.6       48.5  124.          1        0.61
-#> 2 wt                 -3.57    -7.72       0      7.72        0.84     0.81
-#> 3 qsec                0.974    0          4.42   4.42        0.52     0.47
-#> 4 am                  1.55    -0.980      6.52   7.50        0.42     0.32
+#> # A tibble: 3 × 7
+#>   term        mean_estimate conf.low conf.high ci_ln prop.select prop.rej
+#>   <fct>               <dbl>    <dbl>     <dbl> <dbl>       <dbl>    <dbl>
+#> 1 (Intercept)        24.7     -47.1     48.8   95.9         1        0.85
+#> 2 cyl                -0.501    -2.25     0.216  2.47        0.42     0.33
+#> 3 wt                 -3.16     -6.83     0.386  7.22        0.87     0.83
 ```
 
 ### `pen_cv`
