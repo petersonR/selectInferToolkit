@@ -56,6 +56,7 @@ sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, ...) {
 #' @importFrom glmnet cv.glmnet
 #' @importFrom selectiveInference fixedLassoInf
 #' @importFrom magrittr %>%
+#' @importFrom tibble rownames_to_column
 #' @return returns a data frame with results from lasso selective inference
 #'
 #'
@@ -94,5 +95,5 @@ sel_inf <- function(x,y, lam = "lambda.min", std=FALSE,intercept= TRUE, ...) {
   B <- cbind(bb, res$ci, res$pv)
   dimnames(B) <- list(names(res$vars), c('estimate', 'conf.low', 'conf.high', 'p.value'))
   data.frame(B) %>%
-    rownames_to_column("term")
+    tibble::rownames_to_column("term")
 }

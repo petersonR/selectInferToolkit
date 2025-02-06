@@ -378,7 +378,7 @@ What if we wanted to adjust for the selective process? Here using
 
 ``` r
 fit_lasso_SI <- infer(fit_lso, method = "selectiveinf")
-#> Error in rownames_to_column(., "term"): could not find function "rownames_to_column"
+#> Error in list(model = lso_mod, ci_avg_ratio = ci_avg_ratio, ci_median_ratio = ci_median_ratio, : argument 9 is empty
 tidy(fit_lasso_SI)
 #> Error: object 'fit_lasso_SI' not found
 ```
