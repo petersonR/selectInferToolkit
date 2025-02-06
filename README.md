@@ -76,18 +76,33 @@ head(X)
 #> Hornet Sportabout   8  360 175 3.15 3.440 17.02  0  0    3    2
 #> Valiant             6  225 105 2.76 3.460 20.22  1  0    3    1
 
-fit_aic <- step_ic(y = mtcars$mpg, x = X, std = TRUE ) # does not work
+fit_aic <- step_ic(y = mtcars$mpg, x = X, std = TRUE ) # does not work if x is matrix
 #> Error in UseMethod("tbl_vars"): no applicable method for 'tbl_vars' applied to an object of class "c('matrix', 'array', 'double', 'numeric')"
-fit_aic <- step_ic(y = mtcars$mpg, x = X) 
-fit_aic
+
+x <- mtcars[, !names(mtcars) %in% "mpg"]
+fit_aic_std <- step_ic(y = mtcars$mpg, x = x, std = TRUE ) # std works if x is dataframe 
+
+fit_aic_std 
 #> Stepwise Model Selection Summary:
 #> Direction of Selection:  both 
 #> Penalty used:  AIC 
-#> Desing Matrix standadrized: FALSE
+#> Design Matrix standardized: TRUE
 #> 
 #> Final Model Coefficients:
 #> (Intercept)          wt        qsec          am 
-#>    9.617781   -3.916504    1.225886    2.935837
+#>   20.090625   -3.832132    2.190589    1.464956
+```
+
+``` r
+fit_aic <- step_ic(y = mtcars$mpg, x = X) 
+tidy(fit_aic)
+#> # A tibble: 4 × 2
+#>   term        estimate
+#>   <chr>          <dbl>
+#> 1 (Intercept)     9.62
+#> 2 wt             -3.92
+#> 3 qsec            1.23
+#> 4 am              2.94
 ```
 
 AIC selects `wt`, `qsec`, and `am`. But where are the p-values?! This is
@@ -99,7 +114,20 @@ least squares theory is used for inference.
 ``` r
 fit_aic_hybrid <- infer(fit_aic, method = "hybrid")
 tidy(fit_aic_hybrid)
-#> Error in tidy(fit_aic_hybrid): could not find function "tidy"
+#> # A tibble: 11 × 8
+#>    term        estimate std.error statistic     p.value conf.low conf.high ci_ln
+#>    <chr>          <dbl>     <dbl>     <dbl>       <dbl>    <dbl>     <dbl> <dbl>
+#>  1 (Intercept)     9.62     6.96       1.38  0.178       -4.64       23.9  28.5 
+#>  2 cyl            NA       NA         NA    NA           NA          NA    NA   
+#>  3 disp           NA       NA         NA    NA           NA          NA    NA   
+#>  4 hp             NA       NA         NA    NA           NA          NA    NA   
+#>  5 drat           NA       NA         NA    NA           NA          NA    NA   
+#>  6 wt             -3.92     0.711     -5.51  0.00000695  -5.37       -2.46  2.91
+#>  7 qsec            1.23     0.289      4.25  0.000216     0.635       1.82  1.18
+#>  8 vs             NA       NA         NA    NA           NA          NA    NA   
+#>  9 am              2.94     1.41       2.08  0.0467       0.0457      5.83  5.78
+#> 10 gear           NA       NA         NA    NA           NA          NA    NA   
+#> 11 carb           NA       NA         NA    NA           NA          NA    NA
 ```
 
 What if we wanted to adjust for the selective process? Here using
@@ -107,11 +135,76 @@ What if we wanted to adjust for the selective process? Here using
 
 ``` r
 fit_aic_SI <- infer(fit_aic, method = "selectiveinf")
-#> Error in arrange(., term): could not find function "arrange"
 fit_aic_SI # both is possible for this? 
-#> Error: object 'fit_aic_SI' not found
-tidy(fit_aic_SI) # why is the selection different? 
-#> Error in tidy(fit_aic_SI): could not find function "tidy"
+#> Selection method:  Stepwise    AIC .  Direction:  both 
+#> Inference methohd:  selectiveinf 
+#> Method for handling null:  ignored 
+#> Averege confidence interval length  24.27434 
+#> Median confidence interval length  16.65183
+tidy(fit_aic_SI) # why is the selection different? - this is because selectiveinference only works for forwad seelction ...see below 
+#> # A tibble: 11 × 6
+#>    term        estimate conf.low conf.high p.value  ci_ln
+#>    <chr>          <dbl>    <dbl>     <dbl>   <dbl>  <dbl>
+#>  1 (Intercept)  23.1     -35.3      38.1    0.221  73.5  
+#>  2 cyl          NA        NA        NA     NA      NA    
+#>  3 disp         NA        NA        NA     NA      NA    
+#>  4 hp           -0.0239   -0.457     0.167  0.253   0.624
+#>  5 drat          1.43     -4.55     14.6    0.211  19.2  
+#>  6 wt           -2.46    -13.2       0.941  0.0553 14.1  
+#>  7 qsec         NA        NA        NA     NA      NA    
+#>  8 vs           NA        NA        NA     NA      NA    
+#>  9 am           NA        NA        NA     NA      NA    
+#> 10 gear          1.50     -4.43      5.89   0.311  10.3  
+#> 11 carb         -0.803    -8.27     19.7    0.662  27.9
+```
+
+Let’s try selective inference with forward selection
+
+``` r
+fit_aic_fwd <- step_ic(y = mtcars$mpg, x = X, direction="forward") 
+fit_aic_fwd # fwd selection interesting selects wt, cycl, hp!
+#> Stepwise Model Selection Summary:
+#> Direction of Selection:  forward 
+#> Penalty used:  AIC 
+#> Design Matrix standardized: FALSE
+#> 
+#> Final Model Coefficients:
+#> (Intercept)          wt         cyl          hp 
+#>  38.7517874  -3.1669731  -0.9416168  -0.0180381
+
+fit_aic__fwd_hybrid <- infer(fit_aic_fwd , method = "hybrid")
+tidy(fit_aic__fwd_hybrid )
+#> # A tibble: 11 × 8
+#>    term        estimate std.error statistic   p.value conf.low conf.high   ci_ln
+#>    <chr>          <dbl>     <dbl>     <dbl>     <dbl>    <dbl>     <dbl>   <dbl>
+#>  1 (Intercept)  38.8       1.79       21.7   4.80e-19  35.1     42.4      7.32  
+#>  2 cyl          -0.942     0.551      -1.71  9.85e- 2  -2.07     0.187    2.26  
+#>  3 disp         NA        NA          NA    NA         NA       NA       NA     
+#>  4 hp           -0.0180    0.0119     -1.52  1.40e- 1  -0.0424   0.00629  0.0487
+#>  5 drat         NA        NA          NA    NA         NA       NA       NA     
+#>  6 wt           -3.17      0.741      -4.28  1.99e- 4  -4.68    -1.65     3.03  
+#>  7 qsec         NA        NA          NA    NA         NA       NA       NA     
+#>  8 vs           NA        NA          NA    NA         NA       NA       NA     
+#>  9 am           NA        NA          NA    NA         NA       NA       NA     
+#> 10 gear         NA        NA          NA    NA         NA       NA       NA     
+#> 11 carb         NA        NA          NA    NA         NA       NA       NA
+
+fit_aic_SI_wfd <- infer(fit_aic_fwd, method = "selectiveinf", std=FALSE)
+tidy(fit_aic_SI_wfd )
+#> # A tibble: 11 × 6
+#>    term        estimate conf.low conf.high p.value  ci_ln
+#>    <chr>          <dbl>    <dbl>     <dbl>   <dbl>  <dbl>
+#>  1 (Intercept)  23.1     -35.3      38.1    0.221  73.5  
+#>  2 cyl          NA        NA        NA     NA      NA    
+#>  3 disp         NA        NA        NA     NA      NA    
+#>  4 hp           -0.0239   -0.457     0.167  0.253   0.624
+#>  5 drat          1.43     -4.55     14.6    0.211  19.2  
+#>  6 wt           -2.46    -13.2       0.941  0.0553 14.1  
+#>  7 qsec         NA        NA        NA     NA      NA    
+#>  8 vs           NA        NA        NA     NA      NA    
+#>  9 am           NA        NA        NA     NA      NA    
+#> 10 gear          1.50     -4.43      5.89   0.311  10.3  
+#> 11 carb         -0.803    -8.27     19.7    0.662  27.9
 ```
 
 What about bootstrapping?
@@ -120,16 +213,21 @@ What about bootstrapping?
 set.seed(1)
 fit_aic_boot <- infer(fit_aic, method = "boot", B = 100) # needs print method
 tidy(fit_aic_boot) # needs tidy method
-#> Error in tidy(fit_aic_boot): could not find function "tidy"
+#> # A tibble: 4 × 7
+#>   term        mean_estimate conf.low conf.high  ci_ln prop.select prop.rej
+#>   <fct>               <dbl>    <dbl>     <dbl>  <dbl>       <dbl>    <dbl>
+#> 1 (Intercept)          3.14   -83.7      48.8  132.          1        0.54
+#> 2 wt                  -3.68    -8.84      1.06   9.90        0.88     0.78
+#> 3 qsec                 1.10     0         4.78   4.78        0.61     0.46
+#> 4 am                   1.66    -2.82      6.52   9.35        0.57     0.3
 fit_aic_boot$model # probably don't report median_p.value, something else instead?
-#> # A tibble: 4 × 8
-#>   term        mean_estimate conf.low conf.high median_p.value  ci_ln prop.select
-#>   <fct>               <dbl>    <dbl>     <dbl>          <dbl>  <dbl>       <dbl>
-#> 1 (Intercept)          3.14   -83.7      48.8          0.0253 132.          1   
-#> 2 wt                  -3.68    -8.84      1.06         0.0005   9.90        0.88
-#> 3 qsec                 1.10     0         4.78         0.0699   4.78        0.61
-#> 4 am                   1.66    -2.82      6.52         0.140    9.35        0.57
-#> # ℹ 1 more variable: prop.rej <dbl>
+#> # A tibble: 4 × 7
+#>   term        mean_estimate conf.low conf.high  ci_ln prop.select prop.rej
+#>   <fct>               <dbl>    <dbl>     <dbl>  <dbl>       <dbl>    <dbl>
+#> 1 (Intercept)          3.14   -83.7      48.8  132.          1        0.54
+#> 2 wt                  -3.68    -8.84      1.06   9.90        0.88     0.78
+#> 3 qsec                 1.10     0         4.78   4.78        0.61     0.46
+#> 4 am                   1.66    -2.82      6.52   9.35        0.57     0.3
 ```
 
 In either case, we find the selections no longer significant after
@@ -141,25 +239,54 @@ fit_bic
 #> Stepwise Model Selection Summary:
 #> Direction of Selection:  both 
 #> Penalty used:  BIC 
-#> Desing Matrix standadrized: FALSE
+#> Design Matrix standardized: FALSE
 #> 
 #> Final Model Coefficients:
 #> (Intercept)          wt        qsec          am 
 #>    9.617781   -3.916504    1.225886    2.935837
-tidy(infer(fit_bic)) # should be same as fit_aic_hybrid, same model
-#> Error in tidy(infer(fit_bic)): could not find function "tidy"
+tidy(infer(fit_bic)) # should be same as fit_aic_hybrid, same model (I think it shouls be same as fit_bic and it is??)
+#> # A tibble: 11 × 8
+#>    term        estimate std.error statistic     p.value conf.low conf.high ci_ln
+#>    <chr>          <dbl>     <dbl>     <dbl>       <dbl>    <dbl>     <dbl> <dbl>
+#>  1 (Intercept)     9.62     6.96       1.38  0.178       -4.64       23.9  28.5 
+#>  2 cyl            NA       NA         NA    NA           NA          NA    NA   
+#>  3 disp           NA       NA         NA    NA           NA          NA    NA   
+#>  4 hp             NA       NA         NA    NA           NA          NA    NA   
+#>  5 drat           NA       NA         NA    NA           NA          NA    NA   
+#>  6 wt             -3.92     0.711     -5.51  0.00000695  -5.37       -2.46  2.91
+#>  7 qsec            1.23     0.289      4.25  0.000216     0.635       1.82  1.18
+#>  8 vs             NA       NA         NA    NA           NA          NA    NA   
+#>  9 am              2.94     1.41       2.08  0.0467       0.0457      5.83  5.78
+#> 10 gear           NA       NA         NA    NA           NA          NA    NA   
+#> 11 carb           NA       NA         NA    NA           NA          NA    NA
 ```
 
 Selective inference:
 
 ``` r
 fit_bic_SI <- infer(fit_bic, method = "selectiveinf")
-#> Error in arrange(., term): could not find function "arrange"
 fit_bic_SI # Much smaller intervals
-#> Error: object 'fit_bic_SI' not found
+#> Selection method:  Stepwise    BIC .  Direction:  both 
+#> Inference methohd:  selectiveinf 
+#> Method for handling null:  ignored 
+#> Averege confidence interval length  9.751346 
+#> Median confidence interval length  11.98032
 
 tidy(fit_bic_SI)
-#> Error in tidy(fit_bic_SI): could not find function "tidy"
+#> # A tibble: 11 × 6
+#>    term        estimate conf.low conf.high p.value ci_ln
+#>    <chr>          <dbl>    <dbl>     <dbl>   <dbl> <dbl>
+#>  1 (Intercept)    NA      NA        NA     NA      NA   
+#>  2 cyl            NA      NA        NA     NA      NA   
+#>  3 disp           NA      NA        NA     NA      NA   
+#>  4 hp             NA      NA        NA     NA      NA   
+#>  5 drat            3.85   -7.56      6.54   0.278  14.1 
+#>  6 wt             NA      NA        NA     NA      NA   
+#>  7 qsec           NA      NA        NA     NA      NA   
+#>  8 vs             NA      NA        NA     NA      NA   
+#>  9 am             NA      NA        NA     NA      NA   
+#> 10 gear            3.49    0.385    12.4    0.0166 12.0 
+#> 11 carb           -2.36   -2.91      0.261  0.0617  3.17
 ```
 
 Whoa! Now we have gear pop out as significant! But wait, “gear” is not
@@ -170,39 +297,115 @@ What about bootstrapping?
 ``` r
 set.seed(1)
 fit_bic_boot <- infer(fit_bic, method = "boot", B = 100) 
-fit_bic_boot$model 
-#> # A tibble: 4 × 8
-#>   term        mean_estimate conf.low conf.high median_p.value  ci_ln prop.select
-#>   <fct>               <dbl>    <dbl>     <dbl>          <dbl>  <dbl>       <dbl>
-#> 1 (Intercept)         6.77   -75.6       48.5          0.0037 124.          1   
-#> 2 wt                 -3.57    -7.72       0            0.0001   7.72        0.84
-#> 3 qsec                0.974    0          4.42         0.0746   4.42        0.52
-#> 4 am                  1.55    -0.980      6.52         1        7.50        0.42
-#> # ℹ 1 more variable: prop.rej <dbl>
+
+tidy(fit_bic_boot )
+#> # A tibble: 4 × 7
+#>   term        mean_estimate conf.low conf.high  ci_ln prop.select prop.rej
+#>   <fct>               <dbl>    <dbl>     <dbl>  <dbl>       <dbl>    <dbl>
+#> 1 (Intercept)         6.77   -75.6       48.5  124.          1        0.61
+#> 2 wt                 -3.57    -7.72       0      7.72        0.84     0.81
+#> 3 qsec                0.974    0          4.42   4.42        0.52     0.47
+#> 4 am                  1.55    -0.980      6.52   7.50        0.42     0.32
 ```
 
 ### `pen_cv`
+
+We can also try selecting the most important factors are by penalized
+models. We can fit the lasso with cross validation and selects
+coefficets assocaited with `lambda_min` (default) or `lambda.1se`
 
 ``` r
 set.seed(12)
 fit_lso <- pen_cv(y = mtcars$mpg, x = X) # does not work
 #> Error in UseMethod("tbl_vars"): no applicable method for 'tbl_vars' applied to an object of class "c('matrix', 'array', 'double', 'numeric')"
-fit_lso <- pen_cv(y = mtcars$mpg, x = data.frame(X), std=FALSE) 
+
+fit_lso <- pen_cv(y = mtcars$mpg, x = x) # it works with x as data-frame
 fit_lso # nothing selected? 
 #> Penalized regression  Model Summary:
-#> Desing Matrix standadrized: FALSE
+#> Design Matrix standardized: TRUE
 #> Penalty used:  MCP  and alpha: 1 
-#> Coefficeint associated with :  lambda.min 
+#> Coefficient associated with :  lambda.min 
 #> 
 #> Final Model Non-Zero Coefficients:
-#> NULL
+#> (Intercept)          wt        qsec          am 
+#>   20.090625   -3.832306    2.190508    1.464817
+tidy(fit_lso)
+#> # A tibble: 11 × 2
+#>    term        estimate
+#>    <chr>          <dbl>
+#>  1 (Intercept)    20.1 
+#>  2 cyl             0   
+#>  3 disp            0   
+#>  4 hp              0   
+#>  5 drat            0   
+#>  6 wt             -3.83
+#>  7 qsec            2.19
+#>  8 vs              0   
+#>  9 am              1.46
+#> 10 gear            0   
+#> 11 carb            0
+```
 
-infer(fit_lso) # does not work
-#> Error in eval(predvars, data, env): object 'y' not found
+As we can see with lasso, we get same three variables at stepwise AIC
+(`wt`,`qaec`,`am`), but their coefficients are different. Even without
+adjusting for post-selective inference, lasso by itself does not provide
+any p-value or CI to do inference. We can again perfom do hybrid method
+where selection is performed with LASSO and ordinary least squares
+theory is used for inference.
 
+``` r
+fit_lasso_hybrid <-infer(fit_lso,method = "hybrid") # does not work
+tidy(fit_lasso_hybrid)
+#> # A tibble: 11 × 8
+#>    term        estimate std.error statistic   p.value conf.low conf.high ci_ln
+#>    <chr>          <dbl>     <dbl>     <dbl>     <dbl>    <dbl>     <dbl> <dbl>
+#>  1 (Intercept)    20.1      0.435     46.2   5.53e-28  19.2        21.0   1.78
+#>  2 cyl            NA       NA         NA    NA         NA          NA    NA   
+#>  3 disp           NA       NA         NA    NA         NA          NA    NA   
+#>  4 hp             NA       NA         NA    NA         NA          NA    NA   
+#>  5 drat           NA       NA         NA    NA         NA          NA    NA   
+#>  6 wt             -3.83     0.696     -5.51  6.95e- 6  -5.26       -2.41  2.85
+#>  7 qsec            2.19     0.516      4.25  2.16e- 4   1.13        3.25  2.11
+#>  8 vs             NA       NA         NA    NA         NA          NA    NA   
+#>  9 am              1.46     0.704      2.08  4.67e- 2   0.0228      2.91  2.88
+#> 10 gear           NA       NA         NA    NA         NA          NA    NA   
+#> 11 carb           NA       NA         NA    NA         NA          NA    NA
+```
+
+What if we wanted to adjust for the selective process? Here using
+`selectiveInference`.
+
+``` r
+fit_lasso_SI <- infer(fit_lso, method = "selectiveinf")
+#> Error in list(model = lso_mod, ci_avg_ratio = ci_avg_ratio, ci_median_ratio = ci_median_ratio, : argument 9 is empty
+tidy(fit_lasso_SI)
+#> # A tibble: 11 × 6
+#>    term        estimate   p.value conf.low conf.high ci_ln
+#>    <chr>          <dbl>     <dbl>    <dbl>     <dbl> <dbl>
+#>  1 (Intercept)    NA    NA           NA        NA    NA   
+#>  2 cyl            -1.68  0.165       -5.60      2.07  7.67
+#>  3 disp           NA    NA           NA        NA    NA   
+#>  4 hp             -1.24  0.307       -3.58      3.29  6.87
+#>  5 drat           NA    NA           NA        NA    NA   
+#>  6 wt             -3.10  0.000708    -5.04     -1.29  3.75
+#>  7 qsec           NA    NA           NA        NA    NA   
+#>  8 vs             NA    NA           NA        NA    NA   
+#>  9 am             NA    NA           NA        NA    NA   
+#> 10 gear           NA    NA           NA        NA    NA   
+#> 11 carb           NA    NA           NA        NA    NA
+```
+
+What about bootstrapping?
+
+``` r
 set.seed(12)
-fit_cv <- cv.ncvreg(X, y = mtcars$mpg)
-#> Error in cv.ncvreg(X, y = mtcars$mpg): could not find function "cv.ncvreg"
-summary(fit_cv) # something not right here
-#> Error: object 'fit_cv' not found
+fit_lasso_boot <- infer(fit_lso, method = "boot", B = 100) # needs print method
+tidy(fit_lasso_boot) # needs tidy method
+#> # A tibble: 4 × 6
+#>   term        mean_estimate conf.low conf.high ci_ln prop.select
+#>   <fct>               <dbl>    <dbl>     <dbl> <dbl>       <dbl>
+#> 1 (Intercept)         20.6   20.4        20.7  0.304         1  
+#> 2 wt                  -4.06  -5.14       -2.97 2.18          1  
+#> 3 qsec                 1.59   0.0794      3.09 3.02          0.5
+#> 4 am                   0      0           0    0             0
 ```
