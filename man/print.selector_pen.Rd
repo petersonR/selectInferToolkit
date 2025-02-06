@@ -4,7 +4,7 @@
 \alias{print.selector_pen}
 \title{Title}
 \usage{
-\method{print}{selector_pen}(x, ...)
+\method{print}{`selector_pen`}(x, ...)
 }
 \arguments{
 \item{x}{model of class \code{selector_pen}}

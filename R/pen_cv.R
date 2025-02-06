@@ -85,11 +85,9 @@ pen_cv <- function(x,y,std=TRUE,penalty= "MCP",lambda="lambda.min",alpha=1,...){
 #'
 #' @param x  model of class `selector_pen`
 #' @importFrom tibble as_tibble
+#' @method print `selector_pen`
 #' @return returns x invisibly
 #' @export
-#'
-#'
-
 print.selector_pen <- function(x, ...) {
   cat("Penalized regression  Model Summary:\n")
 
@@ -106,25 +104,23 @@ print.selector_pen <- function(x, ...) {
   # lambda
   cat("Coefficient associated with : ", x$lambda, "\n")
 
+  beta = x[["beta"]][x[["beta"]][["estimate"]]!=0,][,2]
+  names(beta) =x[["beta"]][x[["beta"]][["estimate"]]!=0,][,1]
+
   # Model coefficients (first few)
   cat("\nFinal Model Non-Zero Coefficients:\n")
-  print(   coef(x[["model"]])[coef(x[["model"]]) !=0])
-
+  print(beta)
 
 }
 
 
 #' Title
-#'
 #' @param x   model of class `selector_pen`
 #' @param ...
-#'
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
-#'
-
 tidy.selector_pen <- function(x, ...) {
 
-  ret<- as_tibble(lassomin[["beta"]])
+  ret<- as_tibble(x[["beta"]])
   return(ret)
 }

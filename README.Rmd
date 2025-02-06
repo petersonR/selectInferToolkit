@@ -47,33 +47,57 @@ Hmm, $R^2$ is high but nothing is "significant". What is going on? The model is 
 ### `step_ic`
 
 
-```{r}
+```{r AIC std}
 X <- model.matrix(fit_full)[,-1]
 head(X)
 
-fit_aic <- step_ic(y = mtcars$mpg, x = X, std = TRUE ) # does not work
+fit_aic <- step_ic(y = mtcars$mpg, x = X, std = TRUE ) # does not work if x is matrix
+
+x <- mtcars[, !names(mtcars) %in% "mpg"]
+fit_aic_std <- step_ic(y = mtcars$mpg, x = x, std = TRUE ) # std works if x is dataframe 
+
+fit_aic_std 
+```
+
+
+```{r AIC no std}
 fit_aic <- step_ic(y = mtcars$mpg, x = X) 
-fit_aic
+tidy(fit_aic)
 ```
 
 AIC selects `wt`, `qsec`, and `am`. But where are the p-values?! This is where post-selection inference comes in; p-values that do not adjust for the selective process are not valid (they will be too small!). We refer to this as a "hybrid" method where selection is performed and ordinary least squares theory is used for inference. 
 
-```{r}
+```{r AIC hybrid}
 fit_aic_hybrid <- infer(fit_aic, method = "hybrid")
 tidy(fit_aic_hybrid)
 ```
 
 What if we wanted to adjust for the selective process? Here using `selectiveInference`. 
 
-```{r}
+```{r AIC selectiveinference}
 fit_aic_SI <- infer(fit_aic, method = "selectiveinf")
 fit_aic_SI # both is possible for this? 
-tidy(fit_aic_SI) # why is the selection different? 
+tidy(fit_aic_SI) # why is the selection different? - this is because selectiveinference only works for forwad seelction ...see below 
 ```
+
+Let's try selective inference with forward selection
+
+```{r fwd selectiveinference}
+fit_aic_fwd <- step_ic(y = mtcars$mpg, x = X, direction="forward") 
+fit_aic_fwd # fwd selection interesting selects wt, cycl, hp!
+
+fit_aic__fwd_hybrid <- infer(fit_aic_fwd , method = "hybrid")
+tidy(fit_aic__fwd_hybrid )
+
+fit_aic_SI_wfd <- infer(fit_aic_fwd, method = "selectiveinf", std=FALSE)
+tidy(fit_aic_SI_wfd )
+```
+
+
 
 What about bootstrapping? 
 
-```{r}
+```{r AIC bootstrap}
 set.seed(1)
 fit_aic_boot <- infer(fit_aic, method = "boot", B = 100) # needs print method
 tidy(fit_aic_boot) # needs tidy method
@@ -85,7 +109,7 @@ In either case, we find the selections no longer significant after adjusting for
 ```{r}
 fit_bic <- step_ic(y = mtcars$mpg, x=X, penalty = "BIC")
 fit_bic 
-tidy(infer(fit_bic)) # should be same as fit_aic_hybrid, same model
+tidy(infer(fit_bic)) # should be same as fit_aic_hybrid, same model (I think it shouls be same as fit_bic and it is??)
 ```
 
 Selective inference: 
@@ -104,25 +128,50 @@ What about bootstrapping?
 ```{r}
 set.seed(1)
 fit_bic_boot <- infer(fit_bic, method = "boot", B = 100) 
-fit_bic_boot$model 
+
+tidy(fit_bic_boot )
 ```
 
 
 
 ### `pen_cv`
 
+We can also try selecting the most important factors are by penalized models. We can fit the lasso with cross validation and selects coefficets assocaited with  `lambda_min` (default) or `lambda.1se`
 
 ```{r}
 set.seed(12)
 fit_lso <- pen_cv(y = mtcars$mpg, x = X) # does not work
-fit_lso <- pen_cv(y = mtcars$mpg, x = data.frame(X), std=FALSE) 
+
+fit_lso <- pen_cv(y = mtcars$mpg, x = x) # it works with x as data-frame
 fit_lso # nothing selected? 
-
-infer(fit_lso) # does not work
-
-set.seed(12)
-fit_cv <- cv.ncvreg(X, y = mtcars$mpg)
-summary(fit_cv) # something not right here
+tidy(fit_lso)
 
 ```
+
+As we can see with lasso, we get same three variables at stepwise AIC (`wt`,`qaec`,`am`), but their coefficients are different. Even without adjusting for post-selective inference, lasso  by itself does not provide any p-value or CI to do inference. We can again perfom do hybrid method where selection is performed with LASSO and ordinary least squares theory is used for inference.
+
+
+```{r}
+fit_lasso_hybrid <-infer(fit_lso,method = "hybrid") # does not work
+tidy(fit_lasso_hybrid)
+```
+
+What if we wanted to adjust for the selective process? Here using `selectiveInference`. 
+
+```{r}
+fit_lasso_SI <- infer(fit_lso, method = "selectiveinf")
+tidy(fit_lasso_SI)
+```
+
+What about bootstrapping?
+
+```{r}
+set.seed(12)
+fit_lasso_boot <- infer(fit_lso, method = "boot", B = 100) # needs print method
+tidy(fit_lasso_boot) # needs tidy method
+```
+
+
+
+
 

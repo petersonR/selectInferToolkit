@@ -223,23 +223,14 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
 #'
 
 infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored"){
+  x <-model[["x"]]
+  y <- model[["y"]]
+
   if (method == "hybrid" && nonselection == "ignored") {
-    # if(model[["lambda"]]=="lambda.min"){
-    #   selected_terms <- coef(model[["model"]], which = which.min(model[["model"]]$cve))
-    #   non_zero_terms <- names(selected_terms[selected_terms != 0])[-1]  # Exclude the intercept
-    #   selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]], check.names = FALSE) %>%
-    #                                  select(all_of(non_zero_terms)))
-    #   }
-    #  else{
-    #   selected_terms <-  coef(model[["model"]], which =which(model[["model"]]$cve < min(model[["model"]]$cve +model[["model"]]$cvse))[1])
-    #   non_zero_terms <- names(selected_terms[selected_terms != 0])[-1]  # Exclude the intercept
-    #   selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]], check.names = FALSE) %>%
-    #                                  select(all_of(non_zero_terms)))
-    #  }
     non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
     non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
     selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]], check.names = FALSE),check.names = FALSE) %>%
-                      select(all_of(non_zero_terms))
+                      select(y,all_of(non_zero_terms))
 
     fit_lso <- broom::tidy(lm(y ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
       term = gsub("`", "", term),  # Remove backticks
@@ -266,7 +257,7 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
     non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
     selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]], check.names = FALSE) %>%
-                                   select(all_of(non_zero_terms)))
+                                   select(y,all_of(non_zero_terms)))
 
     fit_lso <- broom::tidy(lm(y ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
       term = gsub("`", "", term),  # Remove backticks
@@ -297,7 +288,7 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
     non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
     selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]], check.names = FALSE) %>%
-                                   select(all_of(non_zero_terms)))
+                                   select(y,all_of(non_zero_terms)))
 
     xbeta<- as.matrix(cbind("(Intercept)"=1, model[["x"]])) %*% model[["beta"]][["estimate"]]
     res <- y - xbeta
@@ -335,7 +326,11 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     ci_median_ratio <-  median(lso_mod$ci_ln , na.rm=T)
 
     result <- list(model=   lso_mod ,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                   infmethod = method, nonselection = nonselection)
+                   infmethod = method, nonselection = nonselection,
+                   selection_method=model[["penalty"]],lambda= model[["lambda"]],
+                   alpha=model[["alpha"]],
+                   )
+
     class(result) <- "infer_pen"
     return(result )
   }
@@ -366,6 +361,7 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
                    infmethod = method, nonselection = nonselection)
     class(result) <- "infer_pen"
     return(result )
+
 
   }
   else if (method == "selectiveinf" && nonselection == "uncertain_nulls"){
@@ -704,14 +700,9 @@ infer <- function(model, method="hybrid", nonselection="ignored",...){
 
 
 #' Title
-#'
 #' @param x model of class `infer_ic`
-#'
 #' @return returns x invisibly
 #' @export
-#'
-#'
-#'
 print.infer_ic <- function(x, ...) {
 
     # Penalty used for selection
@@ -738,12 +729,36 @@ print.infer_ic <- function(x, ...) {
 }
 
 #' Title
+#' @param x model of class `boot_ic`
+#' @importFrom tibble as_tibble
+#' @importFrom magrittr %>%
+#' @importFrom dplyr select
+#' @importFrom broom tidy
+#' @param ...
+#' @return A tibble containing the tidied coefficients of the model.
+#' @export
+print.boot_ic <- function(x, ...) {
+
+ # Penalty used for selection
+    cat("Selection method: ", x[["selection_method"]], "  ",x[["penalty"]],".  Direction: " ,x[["direction"]], "\n")
+
+    # lambda
+    cat("Inference methohd: ", x[["infmethod"]], "with ", x[["B"]],"boostrap samples","\n")
+
+    cat ("Method for handling null: ", x[["nonselection"]], "\n")
+
+    # Averege CI length
+    cat ("Averege confidence interval length ", x[["ci_avg_ratio"]], "\n")
+
+    # Median CI length
+    cat ("Median confidence interval length ", x[["ci_median_ratio"]], "\n")
+}
+
+#' Title
 #'
 #' @param x x model of class `infer_pen`
-#'
 #' @return returns x invisibly
 #' @export
-#'
 
 print.infer_pen <- function(x, ...) {
   if (x[["alpha"]] ==1) {
@@ -777,17 +792,41 @@ print.infer_pen <- function(x, ...) {
 
 
 #' Title
-#'
+#' @param x x model of class `boot_pen`
+#' @return returns x invisibly
+#' @export
+print.boot_pen <- function(x, ...) {
+  if (x[["alpha"]] ==1) {
+    var_method <- c("lasso")
+  } else{
+    var_method <- c("elastic Net")
+  }
+
+  # Penalty used for selection
+  cat("Selection method: ", var_method, ".  ","Choice of lambda: " ,x[["lambda"]], "\n")
+
+  # lambda
+  cat("Inference methohd: ", x[["infmethod"]], "with ", x[["B"]],"boostrap samples","\n")
+
+  cat ("Method for handling null: ", x[["nonselection"]], "\n")
+
+  # Averege CI length
+  cat ("Averege confidence intervals length ", x[["ci_avg_ratio"]],"\n")
+
+  # Median CI length
+  cat ("Median confidence intervals length ", x[["ci_median_ratio"]],"\n")
+
+}
+
+
+#' Title
 #' @param x model of class `infer_ic`
 #' @importFrom tibble as_tibble
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
 #' @importFrom broom  tidy
-#'
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
-#'
-#'
 tidy.infer_ic <- function(x, ...) {
 
   ret<- as_tibble(x[["model"]])
@@ -796,17 +835,14 @@ tidy.infer_ic <- function(x, ...) {
 
 
 #' Title
-#'
 #' @param x model of class `infer_pen`
 #' @importFrom tibble as_tibble
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
 #' @importFrom broom tidy
 #' @param ...
-#'
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
-#'
 
 tidy.infer_pen <- function(x, ...) {
 
@@ -814,4 +850,33 @@ tidy.infer_pen <- function(x, ...) {
   return(ret)
 }
 
+#' Title
+#' @param x model of class `boot_ic`
+#' @importFrom tibble as_tibble
+#' @importFrom magrittr %>%
+#' @importFrom dplyr select
+#' @importFrom broom tidy
+#' @param ...
+#' @return A tibble containing the tidied coefficients of the model.
+#' @export
+tidy.boot_ic <- function(x, ...) {
 
+  ret<- as_tibble(x[["model"]])
+  return(ret)
+}
+
+#' Title
+#'
+#' @param x model of class `boot_pen`
+#' @importFrom tibble as_tibble
+#' @importFrom magrittr %>%
+#' @importFrom dplyr select
+#' @importFrom broom tidy
+#' @param ...
+#' @return A tibble containing the tidied coefficients of the model.
+#' @export
+tidy.boot_pen <- function(x, ...) {
+
+  ret<- as_tibble(x[["model"]])
+  return(ret)
+}

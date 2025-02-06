@@ -7,7 +7,7 @@
 \method{tidy}{selector_ic}(x, ...)
 }
 \arguments{
-\item{x}{A \code{selector_ic} object to tidy.}
+\item{x}{model of class \code{selector_ic}}
 
 \item{...}{Additional arguments passed to the generic \code{tidy} function.}
 }

@@ -140,8 +140,6 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="both",...){
 #' @method print `selector_ic`
 #' @return returns x invisibily
 #' @export
-#'
-
 print.selector_ic <- function(x, ...) {
   cat("Stepwise Model Selection Summary:\n")
 
@@ -168,18 +166,14 @@ print.selector_ic <- function(x, ...) {
 
 #' Title
 #'
-#' @param x A `selector_ic` object to tidy.
+#' @param x model of class `selector_ic`
 #' @param ... Additional arguments passed to the generic `tidy` function.
 #' @importFrom tibble as_tibble
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
 #' @importFrom broom tidy
-#'
 #' @return  A tibble containing the tidied coefficients of the model.
-#'
 #' @export
-#'
-
 tidy.selector_ic <- function(x, ...) {
 
   ret<- as_tibble(x[["model_sum"]]$coefficients, rownames = "term")
