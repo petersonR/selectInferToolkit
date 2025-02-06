@@ -378,9 +378,21 @@ What if we wanted to adjust for the selective process? Here using
 
 ``` r
 fit_lasso_SI <- infer(fit_lso, method = "selectiveinf")
-#> Error in list(model = lso_mod, ci_avg_ratio = ci_avg_ratio, ci_median_ratio = ci_median_ratio, : argument 9 is empty
 tidy(fit_lasso_SI)
-#> Error: object 'fit_lasso_SI' not found
+#> # A tibble: 11 × 6
+#>    term        estimate p.value conf.low conf.high ci_ln
+#>    <chr>          <dbl>   <dbl>    <dbl>     <dbl> <dbl>
+#>  1 (Intercept)   NA     NA         NA       NA      NA  
+#>  2 cyl           -1.46   0.225     -7.63     3.27   10.9
+#>  3 disp          NA     NA         NA       NA      NA  
+#>  4 hp            -1.08   0.163    -23.3      4.41   27.7
+#>  5 drat          NA     NA         NA       NA      NA  
+#>  6 wt            -2.31   0.0122   -14.9     -0.437  14.4
+#>  7 qsec          NA     NA         NA       NA      NA  
+#>  8 vs            NA     NA         NA       NA      NA  
+#>  9 am             1.04   0.734    -15.6      2.30   17.9
+#> 10 gear          NA     NA         NA       NA      NA  
+#> 11 carb          -0.815  0.846     -2.33    27.8    30.1
 ```
 
 What about bootstrapping?

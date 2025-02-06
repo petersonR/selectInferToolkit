@@ -328,7 +328,7 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     result <- list(model=   lso_mod ,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
                    infmethod = method, nonselection = nonselection,
                    selection_method=model[["penalty"]],lambda= model[["lambda"]],
-                   alpha=model[["alpha"]],
+                   alpha=model[["alpha"]]
                    )
 
     class(result) <- "infer_pen"
