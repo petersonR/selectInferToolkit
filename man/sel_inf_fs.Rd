@@ -4,7 +4,7 @@
 \alias{sel_inf_fs}
 \title{Title}
 \usage{
-sel_inf_fs(x, y, mult = 2, intercept = FALSE, ...)
+sel_inf_fs(x, y, mult = 2, intercept = TRUE, ...)
 }
 \arguments{
 \item{x}{design matrix}

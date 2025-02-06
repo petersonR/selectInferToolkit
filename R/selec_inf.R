@@ -13,11 +13,11 @@
 #'
 #'
 
-sel_inf_fs <- function(x,y, mult=2, intercept= FALSE, ...) {
+sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, ...) {
   variable_names <- colnames(x)
 
   # Run forward stepwise selection and compute p-values and confidence intervals
-  fs_result <- fs(x, y, intercept =intercept, normalize= FALSE,... )  # Compute the forward selection object
+  fs_result <- fs(x, y, intercept =intercept, normalize= T,... )  # Compute the forward selection object
   #print(fs_result)
 
   # Get AIC-based selection with confidence intervals

@@ -84,11 +84,11 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
   }
   else if (method == "selectiveinf" && nonselection == "ignored") {
     x <-model[["x"]]
-    x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))
+    x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     y <- model[["y"]]
 
     if (model[["penalty"]]=="AIC"){
-      fs_si_aic = sel_inf_fs(x_mat, y)
+      fs_si_aic = sel_inf_fs(x_mat, y, intercept = T)
     }else{
       fs_si_aic = sel_inf_fs(x_mat, y,mult= log(length(y)))
     }

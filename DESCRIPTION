@@ -23,7 +23,7 @@ Imports:
   pbapply,
   forcats,
   tidyverse,
-  broom,
+  broom
 Suggests: 
     testthat (>= 3.0.0),  knitr (>= 1.49), rmarkdown (>= 2.29)
 Config/testthat/edition: 3

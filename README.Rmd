@@ -35,6 +35,7 @@ Let's say you are wanting to predict gas mileage based on all variables in the `
 
 ```{r example}
 library(practicalPSI)
+library(broom)
 
 data("mtcars")
 
@@ -83,13 +84,13 @@ tidy(fit_aic_SI) # why is the selection different? - this is because selectivein
 Let's try selective inference with forward selection
 
 ```{r fwd selectiveinference}
-fit_aic_fwd <- step_ic(y = mtcars$mpg, x = X, direction="forward") 
+fit_aic_fwd <- step_ic(y = mtcars$mpg, x = x, direction="forward", std= F) 
 fit_aic_fwd # fwd selection interesting selects wt, cycl, hp!
 
 fit_aic__fwd_hybrid <- infer(fit_aic_fwd , method = "hybrid")
 tidy(fit_aic__fwd_hybrid )
 
-fit_aic_SI_wfd <- infer(fit_aic_fwd, method = "selectiveinf", std=FALSE)
+fit_aic_SI_wfd <- infer(fit_aic_fwd, method = "selectiveinf", std=T)
 tidy(fit_aic_SI_wfd )
 ```
 

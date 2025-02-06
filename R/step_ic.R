@@ -61,7 +61,7 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="both",...){
       model = MASS::stepAIC(
         lm(y ~ 1, data = raw_data),  # Start with an empty model
         scope = list(lower = ~1, upper = scope_formula),
-        direction = "forward", trace = 0,...
+        direction = "forward", k=2, trace = 0,...
       )
 
 
