@@ -13,12 +13,15 @@
 #'
 #'
 
-sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, ...) {
+sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, std= T, ...) {
   variable_names <- colnames(x)
 
   # Run forward stepwise selection and compute p-values and confidence intervals
-  fs_result <- fs(x, y, intercept =intercept, normalize= T,... )  # Compute the forward selection object
+  fs_result <- fs(x, y, intercept =intercept, normalize= std,... )  # Compute the forward selection object
   #print(fs_result)
+  #fs_result <- fs(x_mat, y, intercept =T, normalize= std)  # Compute the forward selection object
+
+
 
   # Get AIC-based selection with confidence intervals
   out_aic <- fsInf(fs_result, type = "aic", mult= mult, verbose = FALSE,  alpha = 0.05,...)
@@ -66,20 +69,25 @@ sel_inf <- function(x,y, lam = "lambda.min", std=FALSE,intercept= TRUE, ...) {
   n<- nrow(x)
   data<-cbind(y,x)
 
-  # Defualt is fault assuming when fitting initial data matrix, it was standaddrized
-  if (std== TRUE){
-    X.std <- as.matrix(cbind("(Intercept)"=1,ncvreg::std(data[,-1]))) # works
-    data<- cbind(y, X.std )
+  # Defualt is fault assuming when fitting initial data matrix, it was standardized
+  #cv.glmnet standardizes by default,The coefficients are always returned on the original scale.
 
-  } else {
+  if (std== TRUE){
     X.std <-as.matrix(cbind("(Intercept)"=1,data[,-1]))
     data<- cbind(y, X.std )
+    fit_lso <- cv.glmnet(x = X.std, y = y, standardize=FALSE, intercept=intercept ,...)
+    # here if original x is already std in pen_cv we don't want to std again
+
+  } else {
+    #X.std <- as.matrix(cbind("(Intercept)"=1,ncvreg::std(data[,-1]))) # works
+    X.std <-as.matrix(cbind("(Intercept)"=1,data[,-1]))
+    data<- cbind(y, X.std )
+    fit_lso <- cv.glmnet(x = X.std, y = y, standardize=TRUE, intercept=intercept ,...)
+    # here if original x is not already std in pen_cv then instead of std, we just set
+    # TRUE in cv.glmnet so coeff will be returned on original scale
+
   }
 
-  #cv.glmnet standardizes by default,The coefficients are always returned on the original scale.
-  #fit_lso <- cv.glmnet(x = X.std, y = data$y, standardize=FALSE)
-
-  fit_lso <- cv.glmnet(x = X.std, y = y, standardize=FALSE, intercept=intercept ,...)
   lam <- fit_lso[[lam]]
   sig <- min(sqrt(fit_lso$cvm))
 

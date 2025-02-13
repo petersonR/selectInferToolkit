@@ -30,18 +30,31 @@
 
 step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",...){
 
-
-
-  if(std==TRUE){ # standardize if selected
-    x_std = x %>%
-      mutate_if(is.numeric, scale)
-    colnames(x_std) = colnames(x)
-    #x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x_std,y), na.action=na.pass))[,-1]
-
-  } else {
-    #x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x,y), na.action=na.pass))[,-1]
-    x_std=x
+  if(is.matrix(x)){
+    if(std==TRUE){
+      x_std= data.frame(x, check.names = FALSE)%>%
+        mutate_if(is.numeric, scale)
+      colnames(x_std) = colnames(x)
+    }
+    else{
+      x_std= data.frame(x, check.names = FALSE)
+    }
   }
+  else if (is.data.frame(x)){
+    if(std==TRUE){
+      x_std = x %>%
+        mutate_if(is.numeric, scale)
+      colnames(x_std) = colnames(x)
+      #x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x_std,y), na.action=na.pass))[,-1]
+
+    }
+    else{
+      x_std=x
+      #x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x,y), na.action=na.pass))[,-1]
+
+      }
+  }
+
 
   raw_data = as.data.frame(cbind(x_std,y))
   rownames(raw_data) <- NULL
@@ -80,9 +93,9 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",...){
       dplyr::left_join(aic_mod , by = "term") %>% select(term, estimate) %>% as.data.frame()
 
     val <- list(beta=aic_full, std=std,penalty=penalty, direction=direction,
-                x=raw_data %>% select(-y),
-                #x_model =model[["model"]] %>% select(-y),
+                x_original=x,
                 y= data[,1],
+                x_model =raw_data %>% select(-y),
                 model_sum= summary(model))
     class(val) <- "selector_ic"
     val
@@ -121,9 +134,9 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",...){
       dplyr::left_join(bic_mod, by = "term") %>% select(term, estimate)
 
     val <- list(beta=bic_full, std=std,penalty=penalty, direction=direction,
-                x=raw_data %>% select(-y),
+                x_original=x,
                 y= data[,1],
-                #x_model =model[["model"]] %>% select(-y),
+                x_model =raw_data %>% select(-y),
                 model_sum= summary(model))
     class(val) <- "selector_ic"
     val

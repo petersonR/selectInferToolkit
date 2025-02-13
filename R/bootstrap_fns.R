@@ -451,8 +451,8 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       x_dup<- as.data.frame(model.matrix(y ~., data_boot,check.names=FALSE))[,-1]
 
       # print(colnames(x_dup))
-      get_uncertain_nulls (mod=aic_ignore_full, res=res, x=x_dup) %>%
-        select(term, estimate, selected, p.value)
+      # get_uncertain_nulls (mod=aic_ignore_full, res=res, x=x_dup) %>%
+      #   select(term, estimate, selected, p.value)
 
       boot_fits[[b]] <-  get_uncertain_nulls (mod=aic_ignore_full, res=res, x=x_dup) %>%
         select(term, estimate, selected, p.value) %>%
@@ -562,7 +562,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
 #' @param model Selected model from whole data set and stepwise BIC method
 #' @param ... 	any additional arguments to that can be passed to stepAIC
 #' @importFrom magrittr %>%
-#' @importFrom dplyr mutate_if select mutate summarize
+#' @importFrom dplyr mutate_if select mutate summarize group_by bind_rows
 #' @importFrom broom tidy
 #' @importFrom stats lm model.frame model.matrix na.pass
 #' @importFrom MASS stepAIC
@@ -751,7 +751,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
 
     boot_fits  %>%
       dplyr:: bind_rows() %>%
-      group_by(term = forcats::fct_inorder(term)) %>%
+      dplyr:: group_by(term = forcats::fct_inorder(term)) %>%
       summarize(
         mean_estimate = round(mean(estimate),4),
         conf.low = round(quantile(estimate, .025),4),
@@ -820,7 +820,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
 
     boot_fits  %>%
       dplyr:: bind_rows() %>%
-      group_by(term = forcats::fct_inorder(term)) %>%
+      dplyr::group_by(term = forcats::fct_inorder(term)) %>%
       summarize(
         mean_estimate = round(mean(estimate,na.rm=T),4),
         conf.low = round(quantile(estimate, .025,na.rm=T),4),
@@ -981,7 +981,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
 #' "ignored", "confident_nulls" or "uncertain_nulls" supported
 #' @param ... any additional arguments to that can be passed to ncvreg
 #' @importFrom magrittr %>%
-#' @importFrom dplyr mutate_if select mutate summarize
+#' @importFrom dplyr mutate_if select mutate summarize group_by
 #' @importFrom broom tidy
 #' @importFrom stats lm model.frame model.matrix
 #' @importFrom stats na.pass
@@ -1202,7 +1202,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
     results=  boot_fits  %>%
       dplyr:: bind_rows() %>%
-      group_by(term = forcats::fct_inorder(term)) %>%
+      dplyr::group_by(term = forcats::fct_inorder(term)) %>%
       dplyr::summarize(
         mean_estimate = round(mean(beta, na.rm=T),4),
         conf.low = round(quantile(beta, .025, na.rm=T),4),

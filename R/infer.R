@@ -46,14 +46,14 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
      mod<- tidy(model[["model_sum"]], conf.int=T)
 
         full_mod= data.frame(term=model[["beta"]][["term"]]) %>%
-          select(term) %>%
-          left_join(mod, by = "term") %>%
-          mutate(  estimate = ifelse(is.na(estimate), 0,  estimate),
+          dplyr::select(term) %>%
+          dplyr::left_join(mod, by = "term") %>%
+          dplyr::mutate(  estimate = ifelse(is.na(estimate), 0,  estimate),
                    p.value = ifelse(is.na(p.value), 1, p.value),
                    std.error= ifelse(is.na(std.error), 0, std.error),
                    conf.low = ifelse(is.na(conf.low), 0, conf.low),
                    conf.high = ifelse(is.na(conf.high), 0, conf.high),
-          ) %>% select(term, estimate, p.value, std.error,conf.low, conf.high)
+          ) %>% dplyr::select(term, estimate, p.value, std.error,conf.low, conf.high)
         full_mod$ci_ln <- full_mod$conf.high - full_mod$conf.low
 
       ci_avg_ratio  <- mean(full_mod$ci_ln , na.rm=T)
@@ -68,7 +68,7 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
   else if (method == "hybrid" && nonselection == "uncertain_nulls") {
     mod<- tidy(model[["model_sum"]], conf.int=T)
     res =residuals(model[["model_sum"]])
-    x <-model[["x"]]
+    x <-model[["x_model"]]
     x_dup<- as.data.frame(model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1],
                           check.names=FALSE)
     #mod$term[mod$term=="(Intercept)"] <-"intercept"
@@ -89,14 +89,16 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
   }
   else if (method == "selectiveinf" && nonselection == "ignored") {
 
-    x <-model[["x"]]
+    x <-data.frame(model[["x_original"]], check.names = FALSE)
+    x <- droplevels(x)
     x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     y <- model[["y"]]
+    std=model[["std"]]
 
     if (model[["penalty"]]=="AIC"){
-      fs_si_aic = sel_inf_fs(x_mat, y, intercept = T)
+      fs_si_aic = sel_inf_fs(x_mat, y, intercept = T, std=std)
     }else{
-      fs_si_aic = sel_inf_fs(x_mat, y,mult= log(length(y)))
+      fs_si_aic = sel_inf_fs(x_mat, y,mult= log(length(y)),std=std)
     }
 
     full_mod <-data.frame(term=model[["beta"]][["term"]]) %>%
@@ -113,14 +115,18 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
     return(result)
   }
   else if (method == "selectiveinf" && nonselection == "confident_nulls") {
-    x <-model[["x"]]
-    x_mat <- model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))
+
+    x <-data.frame(model[["x_original"]], check.names = FALSE)
+    x <- droplevels(x)
+    x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     y <- model[["y"]]
+    std=model[["std"]]
+
 
     if (model[["penalty"]]=="AIC"){
-      fs_si_aic = sel_inf_fs(x_mat, y)
+      fs_si_aic = sel_inf_fs(x_mat, y,std=std)
     }else{
-      fs_si_aic = sel_inf_fs(x_mat, y,mult= log(length(y)))
+      fs_si_aic = sel_inf_fs(x_mat, y,mult= log(length(y)),std=std)
     }
     full_mod <-data.frame(term=model[["beta"]][["term"]]) %>%
       dplyr::left_join(fs_si_aic , by = "term")%>%
@@ -143,12 +149,15 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
 
   }
   else if (method == "selectiveinf" && nonselection == "uncertain_nulls") {
-    x <-model[["x"]]
-    x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))
+
+    x <-data.frame(model[["x_original"]], check.names = FALSE)
+    x <- droplevels(x)
+    x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     y <- model[["y"]]
+    std=model[["std"]]
 
     if (model[["penalty"]]=="AIC"){
-      fs_si = sel_inf_fs( x_mat, y)
+      fs_si = sel_inf_fs( x_mat, y,std=std)
 
       # get the residuals
       # Extract relevant terms and coefficients
@@ -166,7 +175,7 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
 
 
     }else{
-      fs_si = sel_inf_fs( x_mat, y,mult= log(length(y)))
+      fs_si = sel_inf_fs( x_mat, y,mult= log(length(y)),std=std)
       # get the residuals
       # Extract relevant terms and coefficients
       terms <- fs_si$term[fs_si$term != "(Intercept)"]
@@ -186,10 +195,9 @@ infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored"
     full_mod <-data.frame(term=model[["beta"]][["term"]]) %>%
       dplyr::left_join(fs_si , by = "term") %>%
       mutate(std.error=NA, statistic=NA) %>%
-      relocate(term, estimate,std.error, statistic, p.value, conf.low, conf.high)
+      dplyr::relocate(term, estimate,std.error, statistic, p.value, conf.low, conf.high)
 
-    x_dup<- as.data.frame(model.matrix(y ~., model.frame(~ ., cbind(model[["x"]],y=model[["y"]]), na.action=na.pass))[,-1],
-                          check.names=FALSE)
+    x_dup<- as.data.frame( x_mat, check.names=FALSE)
 
     final_mod =get_uncertain_nulls (mod=full_mod, res=res, x=  x_dup) %>% select(-std.error,-statistic)
 
@@ -262,8 +270,10 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
   else if (method == "hybrid" && nonselection == "confident_nulls") {
     non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
     non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
-    selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]], check.names = FALSE) %>%
-                                   select(y,all_of(non_zero_terms)))
+
+    selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]], check.names = FALSE),
+                                 check.names = FALSE) %>%
+      select(y,all_of(non_zero_terms))
 
     fit_lso <- broom::tidy(lm(y ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
       term = gsub("`", "", term),  # Remove backticks
@@ -293,8 +303,9 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
 
     non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
     non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
-    selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]], check.names = FALSE) %>%
-                                   select(y,all_of(non_zero_terms)))
+    selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]], check.names = FALSE),
+                                 check.names = FALSE) %>%
+      select(y,all_of(non_zero_terms))
 
     xbeta<- as.matrix(cbind("(Intercept)"=1, model[["x"]])) %*% model[["beta"]][["estimate"]]
     res <- y - xbeta
@@ -320,8 +331,9 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     x <-model[["x"]]
     y <- model[["y"]]
     lambda=model[["lambda"]]
+    std=model[["std"]]
 
-    fit_lso= sel_inf(x,y,lam = lambda, std=FALSE)
+    fit_lso= sel_inf(x,y,lam = lambda, std=std)
 
     lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% select(term) %>%
       dplyr::left_join(fit_lso, by = "term")  %>%
@@ -344,8 +356,8 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     x =model[["x"]]
     y=model[["y"]]
     lambda=model[["lambda"]]
-
-    fit_lso= sel_inf(x,y,lam = lambda, std=FALSE)
+    std=model[["std"]]
+    fit_lso= sel_inf(x,y,lam = lambda, std=std)
 
 
     lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% select(term) %>%
@@ -375,13 +387,14 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     x =model[["x"]]
     y=model[["y"]]
     lambda=model[["lambda"]]
+    std=model[["std"]]
 
-    fit_lso= sel_inf(x,y,lam = lambda, std=FALSE)
+    fit_lso= sel_inf(x,y,lam = lambda, std=std)
 
     lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% select(term) %>%
       dplyr::left_join(fit_lso, by = "term")  %>%
-      mutate(std.error=NA, statistic=NA) %>%
-      relocate(term, estimate,std.error, statistic, p.value, conf.low, conf.high)
+      dplyr::mutate(std.error=NA, statistic=NA) %>%
+      dplyr::relocate(term, estimate,std.error, statistic, p.value, conf.low, conf.high)
 
     beta <- ifelse(is.na(lso_mod$estimate),0, lso_mod$estimate)
     fitted_values <- as.matrix(cbind(1,x)) %*% as.matrix(beta)
@@ -428,7 +441,7 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
 
 boot.selector.ic  <- function(model, B=10,nonselection = "ignored",parallel=  FALSE,... ){
   direction=model[["direction"]]
-  x <-model[["x"]]
+  x <-model[["x_model"]]
   y <- model[["y"]]
   #x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))
 
@@ -668,7 +681,7 @@ infer <- function(model, method="hybrid", nonselection="ignored",...){
     }
     else{
       if (class(model)=="selector_ic"){
-        infer.selector.ic (model,nonselection="uncertain_nulls",method ="selectiveinf" )
+        infer.selector.ic (model,nonselection="uncertain_nulls",method ="selectiveinf")
       } else{
         infer.selector.pen (model,nonselection="uncertain_nulls",method ="selectiveinf")
       }

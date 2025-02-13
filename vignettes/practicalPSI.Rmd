@@ -90,14 +90,16 @@ lassomin_model =pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=TRUE)
 # 3.3  Perfoming post-seelction inference 
 
 
+## 3.3.1 Hybrid method 
+
 ```{r}
 aic_hybrid =infer(aic_model,  method = "hybrid", nonselection = "ignored")
 ```
 
 
 ```{r}
-model= step_ic (x=x,y=y,std = F, penalty = "AIC", direction = "forward")
-View(model[["beta"]])
+aic_model_fw= step_ic (x=x,y=y,std = T, penalty = "AIC", direction = "forward")
+View(aic_model_fw[["beta"]])
 
 x <-model[["x"]]
 x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
@@ -121,9 +123,23 @@ fs_result <- fs(x, y, intercept =T, normalize= F)  # Compute the forward selecti
 fit_aic__fwd_hybrid <- infer(aic_model_fw , method = "hybrid")
 tidy(fit_aic__fwd_hybrid )
 
-fit_aic_SI_wfd <- infer(aic_model_fw, method = "selectiveinf", std=T)
+fit_aic_SI_wfd <- infer(aic_model_fw, method = "selectiveinf")
 tidy(fit_aic_SI_wfd )
 ```
+
+```{r}
+## 3.2.1 Performing Stepwsie AIC model selection 
+lassomin_model =pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=TRUE)
+lassomin_hybrid =infer(lassomin_model,  method = "hybrid", nonselection = "ignored")
+lassomin_selc=infer(lassomin_model,  method = "selectiveinf", nonselection = "ignored")
+lassomin_boot=infer(lassomin_model,  method = "boot", nonselection = "ignored", B=5)
+
+tidy(lassomin_hybrid)
+tidy(lassomin_selc)
+tidy(lassomin_boot)
+```
+
+
 
 
 

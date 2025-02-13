@@ -35,7 +35,6 @@ get_uncertain_nulls <- function(mod, res, x) { # val will be residuals
     #print(tidy(lm(f,data = data), conf.int=T) )
     mod[mod$term == j,] <- tidy(lm(f,data = data), conf.int=T) %>%tail(1)
     mod$term <-gsub("`", "", mod$term )
-    #print(mod)
   }
   mod$selected <-selected
   mod %>% mutate(   ci_ln = conf.high- conf.low)

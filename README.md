@@ -25,7 +25,6 @@ in the `mtcars` data set.
 ``` r
 library(practicalPSI)
 #> Loading required package: broom
-#> Warning: package 'broom' was built under R version 4.4.1
 
 data("mtcars")
 
@@ -78,13 +77,12 @@ head(X)
 #> Hornet Sportabout   8  360 175 3.15 3.440 17.02  0  0    3    2
 #> Valiant             6  225 105 2.76 3.460 20.22  1  0    3    1
 
-fit_aic <- step_ic(y = mtcars$mpg, x = X, std = TRUE ) # does not work if x is matrix
-#> Error in UseMethod("tbl_vars"): no applicable method for 'tbl_vars' applied to an object of class "c('matrix', 'array', 'double', 'numeric')"
+fit_aic <- step_ic(y = mtcars$mpg, x = X, std = TRUE,direction = "forward" ) # does not work if x is matrix
 
-x <- mtcars[, !names(mtcars) %in% "mpg"]
-fit_aic_std <- step_ic(y = mtcars$mpg, x = x, std = TRUE) # std works if x is dataframe 
+#x <- mtcars[, !names(mtcars) %in% "mpg"]
+#fit_aic_std <- step_ic(y = mtcars$mpg, x = x, std = TRUE) # std works if x is dataframe 
 
-fit_aic_std 
+fit_aic
 #> Stepwise Model Selection Summary:
 #> Direction of Selection:  forward 
 #> Penalty used:  AIC 
@@ -94,6 +92,9 @@ fit_aic_std
 #> (Intercept)          wt         cyl          hp 
 #>   20.090625   -3.098748   -1.681654   -1.236744
 ```
+
+`step_ic()` function creates a `selector_ic` class which we can pass to
+`tidy()` function to get results in tibble:
 
 ``` r
 fit_aic <- step_ic(y = mtcars$mpg, x = X) 
@@ -107,7 +108,7 @@ tidy(fit_aic)
 #> 4 hp           -0.0180
 ```
 
-AIC selects `wt`, `qsec`, and `am`. But where are the p-values?! This is
+AIC selects `wt`, `cyl`, and `hp`. But where are the p-values?! This is
 where post-selection inference comes in; p-values that do not adjust for
 the selective process are not valid (they will be too small!). We refer
 to this as a “hybrid” method where selection is performed and ordinary
@@ -132,8 +133,9 @@ tidy(fit_aic_hybrid)
 #> 11 carb         NA        NA          NA    NA         NA       NA       NA
 ```
 
-What if we wanted to adjust for the selective process? Here using
-`selectiveInference`.
+What if we wanted to adjust for the selective process? Here we can just
+change `method` option in `infer()` function to using `selectiveinf` to
+use `selectiveInference` method.
 
 ``` r
 fit_aic_SI <- infer(fit_aic, method = "selectiveinf")
@@ -164,9 +166,27 @@ tidy(fit_aic_SI)
 
 What about bootstrapping?
 
+When bootstrapping the data and performing model selection, we have to
+decide how to get distribution of variables when sometimes that variable
+could be selected while other times, it doens’t.
+
 ##### Ignored null
 
-\[explain what this is\]
+In this case, we first perform the variable selection using whole data
+set and prefer model selection method using either `step_ic()` or
+`pen_cv()` functions. Then for inference, we only focus on variables
+that are selected on whole data when doing bootstrap.
+
+To obtain the bootstrap distribution of each $\hat{\beta}_j$ selected by
+model selection procedure,we proceed as follows: For each bootstrap
+iteration, we resample the data with replacement, apply the same model
+selection method to the re sampled data, and save the coefficients for
+variables that were selected in first step. If a variable in the prime
+model in step 1 is not selected in the current bootstrap model, we set
+its coefficient to zero. This process provides a bootstrap distribution
+for each variable that was selected in full dataset, allowing us to
+calculate confidence intervals based on the quantiles of these
+distributions.
 
 ``` r
 set.seed(1)
@@ -181,15 +201,25 @@ tidy(fit_aic_boot)
 #> # A tibble: 4 × 7
 #>   term        mean_estimate conf.low conf.high   ci_ln prop.select prop.rej
 #>   <fct>               <dbl>    <dbl>     <dbl>   <dbl>       <dbl>    <dbl>
-#> 1 (Intercept)       15.3    -84.2      49.0    133.           1        0.7 
-#> 2 cyl               -0.238   -2.35      2.24     4.58         0.51     0.31
+#> 1 (Intercept)       15.2    -84.2      49.0    133.           1        0.7 
+#> 2 cyl               -0.222   -2.35      2.24     4.58         0.51     0.3 
 #> 3 hp                -0.0178  -0.0832    0.0235   0.107        0.5      0.34
 #> 4 wt                -3.19    -8.23      1.68     9.91         0.88     0.76
 ```
 
 ##### Confident null non-selections
 
-\[Explain what this is\]
+In this setting, we are interested in making inferences for all
+variables, including those not selected by the prime model using full
+data(i.g., using `step_ic()` or `pen_cv()` on full dataset). Compared to
+the previous approach, the primary difference here is that, for each
+bootstrap iteration, after applying the model same selection method to
+boostrap sample, we retain the coefficients for all variables,
+regardless of whether they were included in the prime model or not. For
+any variable not selected in a given bootstrap sample, its coefficient
+is set to zero. This process produces a bootstrap distribution for all
+$p$ variables, allowing us to calculate CIs by using the quantiles of
+these distributions.
 
 ``` r
 set.seed(1)
@@ -204,15 +234,15 @@ tidy(fit_aic_boot)
 #> # A tibble: 11 × 7
 #>    term        mean_estimate conf.low conf.high    ci_ln prop.select prop.rej
 #>    <fct>               <dbl>    <dbl>     <dbl>    <dbl>       <dbl>    <dbl>
-#>  1 (Intercept)       15.3    -84.2      49.0    133.            1        0.7 
-#>  2 cyl               -0.238   -2.35      2.24     4.58          0.51     0.31
+#>  1 (Intercept)       15.2    -84.2      49.0    133.            1        0.7 
+#>  2 cyl               -0.222   -2.35      2.24     4.58          0.51     0.3 
 #>  3 disp               0.0059  -0.0321    0.0634   0.0955        0.5      0.3 
 #>  4 hp                -0.0178  -0.0832    0.0235   0.107         0.5      0.34
 #>  5 drat               1.26     0         7.06     7.06          0.32     0.23
 #>  6 wt                -3.19    -8.23      1.68     9.91          0.88     0.76
 #>  7 qsec               0.628    0         4.21     4.21          0.41     0.36
-#>  8 vs                -0.329   -6.08      3.63     9.70          0.2      0.12
-#>  9 am                 1.41    -1.63      6.55     8.18          0.42     0.25
+#>  8 vs                -0.299   -6.08      3.63     9.70          0.19     0.11
+#>  9 am                 1.44    -1.63      6.55     8.18          0.43     0.26
 #> 10 gear               0.791   -1.98      7.24     9.22          0.37     0.25
 #> 11 carb              -0.459   -3.18      1.71     4.89          0.44     0.33
 ```
@@ -234,15 +264,15 @@ tidy(fit_aic_boot)
 #> # A tibble: 11 × 7
 #>    term        mean_estimate conf.low conf.high    ci_ln prop.select prop.rej
 #>    <fct>               <dbl>    <dbl>     <dbl>    <dbl>       <dbl>    <dbl>
-#>  1 (Intercept)       15.3    -84.2      49.0    133.            1        0.7 
-#>  2 cyl               -0.237   -2.35      2.24     4.58          0.51     0.31
+#>  1 (Intercept)       15.2    -84.2      49.0    133.            1        0.7 
+#>  2 cyl               -0.222   -2.35      2.24     4.58          0.51     0.3 
 #>  3 disp               0.0062  -0.0321    0.0634   0.0955        0.5      0.3 
 #>  4 hp                -0.0184  -0.0832    0.0235   0.107         0.5      0.34
 #>  5 drat               1.36    -0.423     7.06     7.48          0.32     0.23
 #>  6 wt                -3.20    -8.23      1.68     9.91          0.88     0.76
 #>  7 qsec               0.657   -0.0673    4.21     4.28          0.41     0.36
-#>  8 vs                -0.345   -6.08      3.63     9.70          0.2      0.12
-#>  9 am                 1.52    -1.63      6.55     8.18          0.42     0.25
+#>  8 vs                -0.314   -6.08      3.63     9.70          0.19     0.11
+#>  9 am                 1.55    -1.63      6.55     8.18          0.43     0.26
 #> 10 gear               0.834   -1.98      7.24     9.22          0.37     0.25
 #> 11 carb              -0.486   -3.18      1.71     4.89          0.44     0.33
 ```
@@ -261,7 +291,15 @@ fit_bic
 #> Final Model Coefficients:
 #> (Intercept)          wt         cyl 
 #>   39.686261   -3.190972   -1.507795
-tidy(infer(fit_bic)) # should be same as fit_aic_hybrid, same model (I think it shouls be same as fit_bic and it is??)
+```
+
+As, expected with BIC we get fewer varaibles, specicifcially BIC does
+not select `hp`. And interestingly with hybrid method and ignoring
+non-selections, we find that both `cyl` and `hp` are signifiacnt as
+shown below.
+
+``` r
+tidy(infer(fit_bic)) 
 #> # A tibble: 11 × 8
 #>    term        estimate std.error statistic   p.value conf.low conf.high ci_ln
 #>    <chr>          <dbl>     <dbl>     <dbl>     <dbl>    <dbl>     <dbl> <dbl>
@@ -280,9 +318,13 @@ tidy(infer(fit_bic)) # should be same as fit_aic_hybrid, same model (I think it 
 
 Selective inference:
 
+We see that `Selective inference` gives wider confidence interval and
+once selection procedure is taken into account, both selected varibales
+are no longer significant.
+
 ``` r
 fit_bic_SI <- infer(fit_bic, method = "selectiveinf")
-fit_bic_SI # Much smaller intervals
+fit_bic_SI # Much bigger intervals
 #> Selection method:  Stepwise    BIC .  Direction:  forward 
 #> Inference methohd:  selectiveinf 
 #> Method for handling null:  ignored 
@@ -316,10 +358,14 @@ tidy(fit_bic_boot )
 #> # A tibble: 3 × 7
 #>   term        mean_estimate conf.low conf.high ci_ln prop.select prop.rej
 #>   <fct>               <dbl>    <dbl>     <dbl> <dbl>       <dbl>    <dbl>
-#> 1 (Intercept)        24.7     -47.1     48.8   95.9         1        0.85
-#> 2 cyl                -0.501    -2.25     0.216  2.47        0.42     0.33
+#> 1 (Intercept)        24.6     -47.1     48.8   95.9         1        0.85
+#> 2 cyl                -0.486    -2.25     0.216  2.47        0.42     0.32
 #> 3 wt                 -3.16     -6.83     0.386  7.22        0.87     0.83
 ```
+
+Again, with bootstrap with see that while `cyl` is only selected 42% of
+the times compared to `wt` which is selected 87% of the time. However
+based on bootstrapped CI, neither of them are significant.
 
 ### `pen_cv`
 
@@ -330,10 +376,7 @@ coefficets assocaited with `lambda_min` (default) or `lambda.1se`
 ``` r
 set.seed(12)
 fit_lso <- pen_cv(y = mtcars$mpg, x = X) # does not work
-#> Error in UseMethod("tbl_vars"): no applicable method for 'tbl_vars' applied to an object of class "c('matrix', 'array', 'double', 'numeric')"
-
-fit_lso <- pen_cv(y = mtcars$mpg, x = x) # it works with x as data-frame
-fit_lso # nothing selected? 
+fit_lso 
 #> Penalized regression  Model Summary:
 #> Design Matrix standardized: TRUE
 #> Penalty used:  MCP  and alpha: 1 
@@ -359,15 +402,15 @@ tidy(fit_lso)
 #> 11 carb            0
 ```
 
-As we can see with lasso, we get same three variables at stepwise AIC
-(`wt`,`qaec`,`am`), but their coefficients are different. Even without
-adjusting for post-selective inference, lasso by itself does not provide
-any p-value or CI to do inference. We can again perfom do hybrid method
-where selection is performed with LASSO and ordinary least squares
-theory is used for inference.
+As we can see with lasso, we get only 1 overlapping variable as stepwise
+AIC (`wt`), but two other selected variables are different (`qsec` and
+`am`) . Even without adjusting for post-selective inference, lasso by
+itself does not provide any p-value or CI to do inference. We can again
+perform do hybrid method where selection is performed with LASSO and
+ordinary least squares theory is used for inference.
 
 ``` r
-fit_lasso_hybrid <-infer(fit_lso,method = "hybrid") # does not work
+fit_lasso_hybrid <-infer(fit_lso,method = "hybrid") 
 tidy(fit_lasso_hybrid)
 #> # A tibble: 11 × 8
 #>    term        estimate std.error statistic   p.value conf.low conf.high ci_ln

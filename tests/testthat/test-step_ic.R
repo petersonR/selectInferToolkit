@@ -1,4 +1,4 @@
-# Test IRIS data
+###### Test IRIS data. ########
 
 data(iris)
 iris <- iris[1:100,]
@@ -22,21 +22,20 @@ y<- iris$Sepal.Length
 
 test_that("bi-direction works", {
   expect_silent({
-    obj1 <- step_ic (x=x,y=y,std = TRUE)
-    obj2 <- step_ic (x=x,y=y,std = FALSE)
+    obj1 <- step_ic (x=x,y=y,std = TRUE, direction = "both")
+    obj2 <- step_ic (x=x,y=y,std = FALSE, direction = "both")
 
   })
 
   expect_silent({
-    obj3 <- step_ic(x=x,y=y,std = TRUE,penalty="BIC")
-    obj4 <- step_ic(x=x,y=y,std = TRUE,penalty="BIC")
+    obj3 <- step_ic(x=x,y=y,std = TRUE,penalty="BIC", direction = "both")
+    obj4 <- step_ic(x=x,y=y,std = FALSE,penalty="BIC", direction = "both")
 
   })
 
   expect_error(pen_cv (x=x,y=y,penalty= "aic"))
   expect_error(pen_cv (x=x,y=y,penalty= "bic"))
-  #expect_error(pen_cv (x=x,y=y,direction = "bidirection"))
-  #expect_error(pen_cv (x=x,y=y,direction = "Both"))
+
 })
 
 test_that("forward selection works", {
@@ -48,7 +47,7 @@ test_that("forward selection works", {
 
   expect_silent({
     obj3 <- step_ic(x=x,y=y,std = TRUE,penalty="BIC",direction = "forward")
-    obj4 <- step_ic(x=x,y=y,std = TRUE,penalty="BIC",direction = "forward")
+    obj4 <- step_ic(x=x,y=y,std = FALSE,penalty="BIC",direction = "forward")
 
   })
 
@@ -66,7 +65,68 @@ test_that("backward selection works", {
 
   expect_silent({
     obj3 <- step_ic(x=x,y=y,std = TRUE,penalty="BIC",direction = "backward")
-    obj4 <- step_ic(x=x,y=y,std = TRUE,penalty="BIC",direction = "backward")
+    obj4 <- step_ic(x=x,y=y,std = FALSE,penalty="BIC",direction = "backward")
+
+  })
+
+  expect_error(pen_cv (x=x,y=y,penalty= "aic",direction = "backward"))
+  expect_error(pen_cv (x=x,y=y,penalty= "bic",direction = "backward"))
+  #expect_error(pen_cv (x=x,y=y,direction = "Backward"))
+})
+
+
+
+###### Test HERS Data set. ####
+y= raw_data$hdl1
+#x <-model.matrix(hdl1 ~., model.frame(~ ., raw_data, na.action=na.pass))[,-1]
+x <- raw_data %>% dplyr::select(-hdl1)
+
+test_that("HERS bi-direction works", {
+  expect_silent({
+    obj1 <- step_ic (x=x,y=y,std = TRUE, direction = "both")
+    obj2 <- step_ic (x=x,y=y,std = FALSE, direction = "both")
+
+  })
+
+  expect_silent({
+    obj3 <- step_ic(x=x,y=y,std = TRUE,penalty="BIC", direction = "both")
+    obj4 <- step_ic(x=x,y=y,std = FALSE,penalty="BIC", direction = "both")
+
+  })
+
+  expect_error(pen_cv (x=x,y=y,penalty= "aic"))
+  expect_error(pen_cv (x=x,y=y,penalty= "bic"))
+
+})
+
+test_that("HERS forward selection works", {
+  expect_silent({
+    obj1 <- step_ic (x=x,y=y,std = TRUE,direction = "forward")
+    obj2 <- step_ic (x=x,y=y,std = FALSE,direction = "forward")
+
+  })
+
+  expect_silent({
+    obj3 <- step_ic(x=x,y=y,std = TRUE,penalty="BIC",direction = "forward")
+    obj4 <- step_ic(x=x,y=y,std = FALSE,penalty="BIC",direction = "forward")
+
+  })
+
+  expect_error(pen_cv (x=x,y=y,penalty= "aic",direction = "forward"))
+  expect_error(pen_cv (x=x,y=y,penalty= "bic",direction = "forward"))
+  #expect_error(pen_cv (x=x,y=y,direction = "Forward"))
+})
+
+test_that("HERS backward selection works", {
+  expect_silent({
+    obj1 <- step_ic (x=x,y=y,std = TRUE,direction = "backward")
+    obj2 <- step_ic (x=x,y=y,std = FALSE,direction = "backward")
+
+  })
+
+  expect_silent({
+    obj3 <- step_ic(x=x,y=y,std = TRUE,penalty="BIC",direction = "backward")
+    obj4 <- step_ic(x=x,y=y,std = FALSE,penalty="BIC",direction = "backward")
 
   })
 
@@ -78,20 +138,8 @@ test_that("backward selection works", {
 
 
 
+#testthat::test_file("tests/testthat/test-pen_cv.R")
 
 
 
 
-
-
-
-
-
-
-data(raw_data)
-y= raw_data$hdl1
-x <-model.matrix(hdl1 ~., model.frame(~ ., raw_data, na.action=na.pass))[,-1]
-
-test_that("multiplication works", {
-  expect_equal(2 * 2, 4)
-})

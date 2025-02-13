@@ -33,16 +33,32 @@
 
 pen_cv <- function(x,y,std=TRUE,penalty= "MCP",lambda="lambda.min",alpha=1,...){
 
-
-  if(std==TRUE){
-    x_std = x %>%
-      mutate_if(is.numeric, scale)
-    colnames(x_std) = colnames(x)
-    x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x_std,y), na.action=na.pass))[,-1]
-
-  } else {
-    x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x,y), na.action=na.pass))[,-1]
+  if(is.matrix(x)){
+    if(std==TRUE){
+      x_std= data.frame(x, check.names = FALSE)%>%
+        mutate_if(is.numeric, scale)
+      colnames(x_std) = colnames(x)
+      x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x_std,y), na.action=na.pass))[,-1]
+    }
+    else{
+      x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x_std,y), na.action=na.pass))[,-1]
+          }
   }
+  else if (is.data.frame(x)){
+    if(std==TRUE){
+      x_std = x %>%
+        mutate_if(is.numeric, scale)
+      colnames(x_std) = colnames(x)
+      x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x_std,y), na.action=na.pass))[,-1]
+
+    }
+    else{
+      x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x,y), na.action=na.pass))[,-1]
+      #x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x,y), na.action=na.pass))[,-1]
+
+    }
+  }
+
   # Note: ncvreg standardizes the data and includes an intercept by default.
 
   raw_data = as.data.frame(cbind(x_dup,y))
