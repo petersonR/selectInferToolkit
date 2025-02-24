@@ -4,7 +4,11 @@
 \alias{infer.selector.ic}
 \title{Inference for selector.ic class except bootstrap which is it's own function}
 \usage{
-infer.selector.ic(model, method = "hybrid", nonselection = "ignored")
+infer.selector.ic(
+  model,
+  method = c("hybrid", "selectiveinf", "boot"),
+  nonselection = c("ignored", "confident_nulls", "uncertain_nulls")
+)
 }
 \arguments{
 \item{model}{model returned from selector_ic  class}
