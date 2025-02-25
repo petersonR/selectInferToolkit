@@ -90,7 +90,7 @@ pen_cv <- function(x,y,std=TRUE,penalty= "MCP",lambda="lambda.min",alpha=1,...){
 
   val <- list( beta=beta, std=std,penalty=penalty, lambda=lambda, lambda.select= lambda_mod,
               fold=foldid, x=raw_data %>% select(-y), y= fit[["fit"]][["y"]],
-              alpha=alpha)
+              alpha=alpha,    x_original=x)
   class(val) <- "selector_pen"
   val
 

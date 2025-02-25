@@ -99,26 +99,7 @@ aic_hybrid =infer(aic_model,  method = "hybrid", nonselection = "ignored")
 
 ```{r}
 aic_model_fw= step_ic (x=x,y=y,std = T, penalty = "AIC", direction = "forward")
-View(aic_model_fw[["beta"]])
-
-x <-model[["x"]]
-x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
-y <- model[["y"]]
-x= x_mat
-variable_names <- colnames(x)
- # Run forward stepwise selection and compute p-values and confidence intervals
-fs_result <- fs(x, y, intercept =T, normalize= F)  # Compute the forward selection object
-  #print(fs_result)
-# Get AIC-based selection with confidence intervals
-  out_aic <- fsInf(fs_result, type = "aic", mult=2, verbose = FALSE,  alpha = 0.05)
-  #print(out_aic
-  # Extract selected variable names and calculate coefficients
-  selected_vars <- variable_names[out_aic$vars]
-
-  # Calculate the coefficients
-  coefficients <- as.vector(out_aic$vmat %*% y)
-  names(coefficients) <- selected_vars
-
+#View(aic_model_fw[["beta"]])
     
 fit_aic__fwd_hybrid <- infer(aic_model_fw , method = "hybrid")
 tidy(fit_aic__fwd_hybrid )

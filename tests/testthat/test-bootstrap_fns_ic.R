@@ -38,16 +38,16 @@ test_that("Full model boot works ", {
 })
 
 test_that("Full model stepwsie aic boot bi-dirctional works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "both")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -56,12 +56,12 @@ test_that("Full model stepwsie aic boot bi-dirctional works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "both")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -70,16 +70,16 @@ test_that("Full model stepwsie aic boot bi-dirctional works ", {
 
 
 test_that("Full model stepwsie aic boot forward selection works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "forward")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "forward")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -88,12 +88,12 @@ test_that("Full model stepwsie aic boot forward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "forward")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "forward")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -105,7 +105,7 @@ test_that("Full model stepwsie aic boot forward selection works ", {
 })
 
 test_that("Full model stepwsie aic boot backward selection works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
@@ -114,7 +114,7 @@ test_that("Full model stepwsie aic boot backward selection works ", {
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -123,12 +123,12 @@ test_that("Full model stepwsie aic boot backward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -140,16 +140,16 @@ test_that("Full model stepwsie aic boot backward selection works ", {
 })
 
 test_that("Full model stepwsie bic boot bi-dirctional works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "both",penalty = "BIC")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both",penalty = "BIC")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -158,12 +158,12 @@ test_that("Full model stepwsie bic boot bi-dirctional works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "both",penalty = "BIC")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both", penalty = "BIC")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -171,16 +171,16 @@ test_that("Full model stepwsie bic boot bi-dirctional works ", {
 })
 
 test_that("Full model stepwsie bic boot forward selection works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "forward",penalty = "BIC")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "forward",penalty = "BIC")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -189,12 +189,12 @@ test_that("Full model stepwsie bic boot forward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "forward", penalty = "BIC")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "forward",penalty = "BIC")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -206,16 +206,16 @@ test_that("Full model stepwsie bic boot forward selection works ", {
 })
 
 test_that("Full model stepwsie bic boot backward selection works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward",penalty = "BIC")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward",penalty = "BIC")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -224,12 +224,12 @@ test_that("Full model stepwsie bic boot backward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward",penalty = "BIC")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward",penalty = "BIC")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -244,7 +244,7 @@ test_that("Full model stepwsie bic boot backward selection works ", {
 
 
 
-##### Test HERS data ######
+# ##### Test HERS data ######
 # Test HERS Data set
 y= raw_data$hdl1
 #x <-model.matrix(hdl1 ~., model.frame(~ ., raw_data, na.action=na.pass))[,-1]
@@ -271,12 +271,12 @@ test_that("Full model stepwsie aic boot bi-dirctional works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "both")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -285,12 +285,12 @@ test_that("Full model stepwsie aic boot bi-dirctional works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "both")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -303,12 +303,12 @@ test_that("Full model stepwsie aic boot forward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "forward")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "forward")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -317,12 +317,12 @@ test_that("Full model stepwsie aic boot forward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "forward")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "forward")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -338,12 +338,12 @@ test_that("Full model stepwsie aic boot backward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -352,12 +352,12 @@ test_that("Full model stepwsie aic boot backward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -373,12 +373,12 @@ test_that("Full model stepwsie bic boot bi-dirctional works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "both",penalty = "BIC")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both",penalty = "BIC")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -387,12 +387,12 @@ test_that("Full model stepwsie bic boot bi-dirctional works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "both",penalty = "BIC")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both", penalty = "BIC")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -404,12 +404,12 @@ test_that("Full model stepwsie bic boot forward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "forward",penalty = "BIC")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "forward",penalty = "BIC")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -418,12 +418,12 @@ test_that("Full model stepwsie bic boot forward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "forward", penalty = "BIC")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "forward",penalty = "BIC")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })
@@ -439,12 +439,12 @@ test_that("Full model stepwsie bic boot backward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward",penalty = "BIC")
     obj1 <- infer(aic_mod, method = "boot", B=5)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward",penalty = "BIC")
     obj4 <- infer(aic_mod_nostd, method = "boot", B=5)
     obj5 <- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls")
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=F, nonselection = "uncertain_nulls")
 
 
   })
@@ -453,12 +453,12 @@ test_that("Full model stepwsie bic boot backward selection works ", {
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward",penalty = "BIC")
     obj1 <-infer(aic_mod, method = "boot", B=5, parallel=T)
     obj2 <- infer(aic_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj3 <-infer(aic_mod, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward",penalty = "BIC")
     obj4 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T)
     obj5<- infer(aic_mod_nostd, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
-    #obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
+    obj6 <-infer(aic_mod_nostd, method = "boot", B=5, parallel=T, nonselection = "uncertain_nulls")
 
 
   })

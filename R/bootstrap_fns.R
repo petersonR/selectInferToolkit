@@ -74,7 +74,7 @@ full_boot <- function(model, B = 250,family="gaussian",parallel = FALSE) {
         #median_p.value = median(p.value, na.rm = TRUE),
         ci_ln = conf.high - conf.low,
         #prop.na = round(mean(is.na(estimate)), 4),
-        prop.rej = mean(p.value < 0.05, na.rm = TRUE)
+        #prop.rej = mean(p.value < 0.05, na.rm = TRUE)
       )   %>%
       dplyr::mutate(      ci_avg_ratio = mean( ci_ln, na.rm = T),
                    ci_median_ratio = median(ci_ln, na.rm=T))
@@ -121,7 +121,7 @@ full_boot <- function(model, B = 250,family="gaussian",parallel = FALSE) {
         conf.high =quantile(estimate, .975, na.rm = TRUE),
         #median_p.value =median(p.value, na.rm = TRUE),
         ci_ln = conf.high - conf.low,
-        prop.rej = mean(p.value < 0.05, na.rm = TRUE),
+        #prop.rej = mean(p.value < 0.05, na.rm = TRUE),
       ) %>%
       dplyr::mutate(
         ci_avg_ratio = mean(ci_ln , na.rm = TRUE) ,
@@ -229,7 +229,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         #median_p.value  = round(median(p.value, na.rm=T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        prop.rej= round(mean(p.value<0.05, na.rm=T),4),
+        #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
   }
   else if(nonselector=="ignored"& parallel == TRUE){
@@ -294,7 +294,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         #median_p.value  = round(median(p.value,na.rm=T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        prop.rej= round(mean(p.value<0.05, na.rm=T),4),
+        #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
   }
   else if(nonselector=="confident_nulls" & parallel == FALSE){
@@ -342,7 +342,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         #median_p.value  =  round(median(p.value),4),
         ci_ln = round(conf.high-conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        prop.rej= round(mean(p.value<0.05),4),
+        #prop.rej= round(mean(p.value<0.05),4),
         #ci_avg_ln_boot= mean(ci_length_boot, na.rm=T)
       )
 
@@ -409,7 +409,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         #median_p.value  = round(median(p.value,na.rm=T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        prop.rej= round(mean(p.value<0.05, na.rm=T),4),
+        #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
 
   }
@@ -464,12 +464,12 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       dplyr::bind_rows() %>%
       dplyr::group_by(term = forcats::fct_inorder(term)) %>%
       dplyr::summarize(
-        mean_estimate = round(mean(estimate),4),
-        conf.low = round(quantile(estimate, .025),4),
-        conf.high = round(quantile(estimate, .975),4),
+        mean_estimate = round(mean(estimate, na.rm = T),4),
+        conf.low = round(quantile(estimate, .025, na.rm = T),4),
+        conf.high = round(quantile(estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high-conf.low,4),
         prop.select = round(mean(selected==1),4),
-        prop.rej= round(mean(p.value<0.05),4),
+        #prop.rej= round(mean(p.value<0.05),4),
         #ci_avg_ln_boot= mean(ci_length_boot, na.rm=T)
       )
 
@@ -533,12 +533,12 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       dplyr:: bind_rows() %>%
       dplyr:: group_by(term = forcats::fct_inorder(term)) %>%
       dplyr::summarize(
-        mean_estimate = round(mean(estimate),4),
-        conf.low = round(quantile(estimate, .025),4),
-        conf.high = round(quantile(estimate, .975),4),
+        mean_estimate = round(mean(estimate, na.rm = T),4),
+        conf.low = round(quantile(estimate, .025, na.rm = T),4),
+        conf.high = round(quantile(estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high-conf.low,4),
         prop.select = round(mean(selected==1),4),
-        prop.rej= round(mean(p.value<0.05),4),
+        #prop.rej= round(mean(p.value<0.05),4),
         #ci_avg_ln_boot= mean(ci_length_boot, na.rm=T)
       )
 
@@ -642,7 +642,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         #median_p.value  = round(median(p.value, na.rm=T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        prop.rej= round(mean(p.value<0.05, na.rm=T),4),
+        #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
   }
   else if(nonselector=="ignored"& parallel == TRUE){
@@ -709,7 +709,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         #median_p.value  = round(median(p.value,na.rm=T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        prop.rej= round(mean(p.value<0.05, na.rm=T),4),
+        #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
   }
   else if(nonselector=="confident_nulls" & parallel == FALSE){
@@ -759,7 +759,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
        # median_p.value  =  round(median(p.value),4),
         ci_ln = round(conf.high-conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        prop.rej= round(mean(p.value<0.05),4),
+        #prop.rej= round(mean(p.value<0.05),4),
         #ci_avg_ln_boot= mean(ci_length_boot, na.rm=T)
       )
 
@@ -828,7 +828,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         #median_p.value  = round(median(p.value,na.rm=T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        prop.rej= round(mean(p.value<0.05, na.rm=T),4),
+        #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
 
   }
@@ -881,12 +881,12 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       dplyr:: bind_rows() %>%
       dplyr:: group_by(term = forcats::fct_inorder(term)) %>%
       dplyr:: summarize(
-        mean_estimate = round(mean(estimate),4),
-        conf.low = round(quantile(estimate, .025),4),
-        conf.high = round(quantile(estimate, .975),4),
+        mean_estimate = round(mean(estimate, na.rm = T),4),
+        conf.low = round(quantile(estimate, .025, na.rm = T),4),
+        conf.high = round(quantile(estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high-conf.low,4),
         prop.select = round(mean(selected==1),4),
-        prop.rej= round(mean(p.value<0.05),4),
+        #prop.rej= round(mean(p.value<0.05),4),
         #ci_avg_ln_boot= mean(ci_length_boot, na.rm=T)
       )
 
@@ -951,12 +951,12 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       dplyr:: bind_rows() %>%
       dplyr:: group_by(term = forcats::fct_inorder(term)) %>%
       dplyr:: summarize(
-        mean_estimate = round(mean(estimate),4),
-        conf.low = round(quantile(estimate, .025),4),
-        conf.high = round(quantile(estimate, .975),4),
+        mean_estimate = round(mean(estimate, na.rm=T),4),
+        conf.low = round(quantile(estimate, .025, na.rm=T),4),
+        conf.high = round(quantile(estimate, .975, na.rm=T),4),
         ci_ln = round(conf.high-conf.low,4),
         prop.select = round(mean(selected==1),4),
-        prop.rej= round(mean(p.value<0.05),4),
+        #prop.rej= round(mean(p.value<0.05),4),
         #ci_avg_ln_boot= mean(ci_length_boot, na.rm=T)
       )
 

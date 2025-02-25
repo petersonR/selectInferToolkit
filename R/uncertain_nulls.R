@@ -37,6 +37,15 @@ get_uncertain_nulls <- function(mod, res, x) { # val will be residuals
     mod$term <-gsub("`", "", mod$term )
   }
   mod$selected <-selected
-  mod %>% mutate(   ci_ln = conf.high- conf.low)
+  mod= mod %>% mutate(   ci_ln = conf.high- conf.low,
+                    na_coeff = ifelse(is.na(estimate),1,0))
+  # Check for rows where `na_coeff` is 1 and return a warning message
+  for (i in 1:nrow(mod)) {
+    if (mod$na_coeff[i] == 1) {
+      warning(paste("Coefficient for variable", mod$term[i], "is NA"))
+    }
+  }
+
+    return(mod)
 }
 

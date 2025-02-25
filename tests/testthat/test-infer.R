@@ -27,18 +27,11 @@ test_that("Stepwsie aic bi-dirctional works ", {
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj3 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    #obj4 <- infer(aic_mod, method = "selectiveinf")
-    #obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    #obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both")
-    obj7 <- infer(aic_mod, method = "hybrid")
-    obj8 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
-    obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    #obj10 <- infer(aic_mod, method = "selectiveinf")
-    #obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    #obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
-
+    obj4 <- infer(aic_mod, method = "hybrid")
+    obj5 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
+    obj6 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
 
   })
 })
@@ -49,24 +42,18 @@ test_that("Stepwsie bic bi-dirctional works ", {
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj3 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    #obj4 <- infer(aic_mod, method = "selectiveinf")
-    #obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    #obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both",penalty= "BIC")
-    obj7 <- infer(aic_mod, method = "hybrid")
-    obj8 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
-    obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    #obj10 <- infer(aic_mod, method = "selectiveinf")
-    #obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    #obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
+    obj4 <- infer(aic_mod, method = "hybrid")
+    obj5 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
+    obj6 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
 
 
   })
 })
 
 test_that("Stepwsie aic forward selection works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE)
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -88,73 +75,61 @@ test_that("Stepwsie aic forward selection works ", {
 })
 
 test_that("Stepwsie bic forward selection works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE,penalty= "BIC")
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj3 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj4 <- infer(aic_mod, method = "selectiveinf")
-    # obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
+    obj4 <- infer(aic_mod, method = "selectiveinf")
+    obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
+    obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE,penalty= "BIC")
     obj7 <- infer(aic_mod, method = "hybrid")
     obj8 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj10 <- infer(aic_mod, method = "selectiveinf")
-    # obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
+    obj10 <- infer(aic_mod, method = "selectiveinf")
+    obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
+    obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
 
   })
 })
 
 test_that("Stepwsie aic backward works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward")
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj3 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj4 <- infer(aic_mod, method = "selectiveinf")
-    # obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward")
     obj7 <- infer(aic_mod, method = "hybrid")
     obj8 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj10 <- infer(aic_mod, method = "selectiveinf")
-    # obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
 
   })
 })
 
 test_that("Stepwsie bic backward works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward",penalty= "BIC")
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj3 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj4 <- infer(aic_mod, method = "selectiveinf")
-    # obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward",penalty= "BIC")
     obj7 <- infer(aic_mod, method = "hybrid")
     obj8 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj10 <- infer(aic_mod, method = "selectiveinf")
-    # obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
 
   })
 })
 
 test_that("Full model lasso min works ", {
-  expect_silent({
+  expect_no_error({
     lasso_mod <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=TRUE)
     obj1 <- infer(lasso_mod, method = "hybrid")
     obj2 <-infer(lasso_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -176,7 +151,7 @@ test_that("Full model lasso min works ", {
 })
 
 test_that("Full model lasso 1se works ", {
-  expect_silent({
+  expect_no_error({
     lasso_mod <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.1se",std=TRUE)
     obj1 <- infer(lasso_mod, method = "hybrid")
     obj2 <-infer(lasso_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -198,7 +173,7 @@ test_that("Full model lasso 1se works ", {
 })
 
 test_that("Full model MCP min works ", {
-  expect_silent({
+  expect_no_error({
     mcp_mod <- pen_cv (x=x,y=y,penalty= "MCP",lambda="lambda.min",std=TRUE)
     obj1 <- infer(mcp_mod, method = "hybrid")
     obj2 <-infer(mcp_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -215,7 +190,7 @@ test_that("Full model MCP min works ", {
 
 
 test_that("Full model MCP 1se works ", {
-  expect_silent({
+  expect_no_error({
     mcp_mod <- pen_cv (x=x,y=y,penalty= "MCP",lambda="lambda.1se",std=TRUE)
     obj1 <- infer(mcp_mod, method = "hybrid")
     obj2 <-infer(mcp_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -231,7 +206,7 @@ test_that("Full model MCP 1se works ", {
 })
 
 test_that("Full model enet min works ", {
-  expect_silent({
+  expect_no_error({
     enet_mod <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=TRUE,alph=0.5)
     obj1 <- infer(enet_mod, method = "hybrid")
     obj2 <-infer(enet_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -246,7 +221,7 @@ test_that("Full model enet min works ", {
 })
 
 test_that("Full model enet 1se works ", {
-  expect_silent({
+  expect_no_error({
     enet_mod <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.1se",std=TRUE,alph=0.5)
     obj1 <- infer(enet_mod, method = "hybrid")
     obj2 <-infer(enet_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -268,51 +243,39 @@ y= raw_data$hdl1
 x <- raw_data %>% dplyr::select(-hdl1)
 
 test_that("HERS Stepwsie aic bi-dirctional works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "both")
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj3 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    #obj4 <- infer(aic_mod, method = "selectiveinf")
-    #obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    #obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both")
-    obj7 <- infer(aic_mod, method = "hybrid")
-    obj8 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
-    obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    #obj10 <- infer(aic_mod, method = "selectiveinf")
-    #obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    #obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
+    obj4 <- infer(aic_mod, method = "hybrid")
+    obj5 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
+    obj6 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
 
 
   })
 })
 
 test_that("HERS Stepwsie bic bi-dirctional works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "both",penalty= "BIC")
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj3 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    #obj4 <- infer(aic_mod, method = "selectiveinf")
-    #obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    #obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "both",penalty= "BIC")
     obj7 <- infer(aic_mod, method = "hybrid")
     obj8 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    #obj10 <- infer(aic_mod, method = "selectiveinf")
-    #obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    #obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
 
   })
 })
 
 test_that("HERS Stepwsie aic forward selection works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE)
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -334,73 +297,61 @@ test_that("HERS Stepwsie aic forward selection works ", {
 })
 
 test_that("HERStepwsie bic forward selection works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE,penalty= "BIC")
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj3 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj4 <- infer(aic_mod, method = "selectiveinf")
-    # obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
+    obj4 <- infer(aic_mod, method = "selectiveinf")
+    obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
+    obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE,penalty= "BIC")
     obj7 <- infer(aic_mod, method = "hybrid")
     obj8 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj10 <- infer(aic_mod, method = "selectiveinf")
-    # obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
+    obj10 <- infer(aic_mod, method = "selectiveinf")
+    obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
+    obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
 
   })
 })
 
 test_that("HERS Stepwsie aic backward works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward")
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj3 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj4 <- infer(aic_mod, method = "selectiveinf")
-    # obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward")
     obj7 <- infer(aic_mod, method = "hybrid")
     obj8 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj10 <- infer(aic_mod, method = "selectiveinf")
-    # obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
 
   })
 })
 
 test_that("HERS Stepwsie bic backward works ", {
-  expect_silent({
+  expect_no_error({
     aic_mod=step_ic (x=x,y=y,std = TRUE, direction = "backward",penalty= "BIC")
     obj1 <- infer(aic_mod, method = "hybrid")
     obj2 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj3 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj4 <- infer(aic_mod, method = "selectiveinf")
-    # obj5 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj6 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
     aic_mod_nostd=step_ic (x=x,y=y,std = FALSE, direction = "backward",penalty= "BIC")
     obj7 <- infer(aic_mod, method = "hybrid")
     obj8 <-infer(aic_mod, method = "hybrid", nonselection = "confident_nulls")
     obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
-    # obj10 <- infer(aic_mod, method = "selectiveinf")
-    # obj11 <-infer(aic_mod, method = "selectiveinf", nonselection = "confident_nulls")
-    # obj12 <- infer(aic_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
 
   })
 })
 
 test_that("HERS Full model lasso min works ", {
-  expect_silent({
+  expect_no_error({
     lasso_mod <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=TRUE)
     obj1 <- infer(lasso_mod, method = "hybrid")
     obj2 <-infer(lasso_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -422,7 +373,7 @@ test_that("HERS Full model lasso min works ", {
 })
 
 test_that("HERS Full model lasso 1se works ", {
-  expect_silent({
+  expect_no_error({
     lasso_mod <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.1se",std=TRUE)
     obj1 <- infer(lasso_mod, method = "hybrid")
     obj2 <-infer(lasso_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -444,7 +395,7 @@ test_that("HERS Full model lasso 1se works ", {
 })
 
 test_that("HERS Full model MCP min works ", {
-  expect_silent({
+  expect_no_error({
     mcp_mod <- pen_cv (x=x,y=y,penalty= "MCP",lambda="lambda.min",std=TRUE)
     obj1 <- infer(mcp_mod, method = "hybrid")
     obj2 <-infer(mcp_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -461,7 +412,7 @@ test_that("HERS Full model MCP min works ", {
 
 
 test_that("HERS Full model MCP 1se works ", {
-  expect_silent({
+  expect_no_error({
     mcp_mod <- pen_cv (x=x,y=y,penalty= "MCP",lambda="lambda.1se",std=TRUE)
     obj1 <- infer(mcp_mod, method = "hybrid")
     obj2 <-infer(mcp_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -477,7 +428,7 @@ test_that("HERS Full model MCP 1se works ", {
 })
 
 test_that("HERS Full model enet min works ", {
-  expect_silent({
+  expect_no_error({
     enet_mod <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=TRUE,alph=0.5)
     obj1 <- infer(enet_mod, method = "hybrid")
     obj2 <-infer(enet_mod, method = "hybrid", nonselection = "confident_nulls")
@@ -492,7 +443,7 @@ test_that("HERS Full model enet min works ", {
 })
 
 test_that("HERS Full model enet 1se works ", {
-  expect_silent({
+  expect_no_error({
     enet_mod <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.1se",std=TRUE,alph=0.5)
     obj1 <- infer(enet_mod, method = "hybrid")
     obj2 <-infer(enet_mod, method = "hybrid", nonselection = "confident_nulls")

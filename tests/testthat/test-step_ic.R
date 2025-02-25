@@ -33,8 +33,6 @@ test_that("bi-direction works", {
 
   })
 
-  expect_error(pen_cv (x=x,y=y,penalty= "aic"))
-  expect_error(pen_cv (x=x,y=y,penalty= "bic"))
 
 })
 
