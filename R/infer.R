@@ -19,7 +19,14 @@
 #'
 #'
 
-infer.selector.ic <- function(model, method = "hybrid", nonselection = "ignored") {
+infer.selector.ic <- function(
+    model,
+    method = c("hybrid", "selectiveinf", "boot"),
+    nonselection = c("ignored", "confident_nulls", "uncertain_nulls")
+  ) {
+
+  method <- match.arg(method)
+  nonselection <- match.arg(nonselection)
 
   if(method == "selectiveinf" & model$direction != "forward") {
     warning("Direction must be set to 'forward' for selectiveInference")
@@ -746,8 +753,8 @@ print.infer_ic <- function(x, ...) {
 
     cat ("Method for handling null: ", x[["nonselection"]], "\n")
 
-    # Averege CI length
-    cat ("Averege confidence interval length ", x[["ci_avg_ratio"]], "\n")
+    # Average CI length
+    cat ("Average confidence interval length ", x[["ci_avg_ratio"]], "\n")
 
     # Median CI length
     cat ("Median confidence interval length ", x[["ci_median_ratio"]], "\n")
@@ -776,15 +783,15 @@ print.boot_ic <- function(x, ...) {
     cat("Selection method: ", x[["selection_method"]], "  ",x[["penalty"]],".  Direction: " ,x[["direction"]], "\n")
 
     # lambda
-    cat("Inference methohd: ", x[["infmethod"]], "with ", x[["B"]],"boostrap samples","\n")
+    cat("Inference methohd: ", x[["infmethod"]], "with ", x[["B"]],"bootstrap samples","\n")
 
     cat ("Method for handling null: ", x[["nonselection"]], "\n")
 
-    # Averege CI length
-    cat ("Averege confidence interval length ", x[["ci_avg_ratio"]], "\n")
+    # Average CI length
+    cat ("Average confidence interval length: ", x[["ci_avg_ratio"]], "\n")
 
     # Median CI length
-    cat ("Median confidence interval length ", x[["ci_median_ratio"]], "\n")
+    cat ("Median confidence interval length: ", x[["ci_median_ratio"]], "\n")
 }
 
 #' Title
@@ -808,8 +815,8 @@ print.infer_pen <- function(x, ...) {
 
   cat ("Method for handling null: ", x[["nonselection"]], "\n")
 
-  # Averege CI length
-  cat ("Averege confidence intervals length ", x[["ci_avg_ratio"]],"\n")
+  # Average CI length
+  cat ("Average confidence intervals length ", x[["ci_avg_ratio"]],"\n")
 
   # Median CI length
   cat ("Median confidence intervals length ", x[["ci_median_ratio"]],"\n")
@@ -839,12 +846,12 @@ print.boot_pen <- function(x, ...) {
   cat("Selection method: ", var_method, ".  ","Choice of lambda: " ,x[["lambda"]], "\n")
 
   # lambda
-  cat("Inference methohd: ", x[["infmethod"]], "with ", x[["B"]],"boostrap samples","\n")
+  cat("Inference methohd: ", x[["infmethod"]], "with ", x[["B"]],"bootstrap samples","\n")
 
   cat ("Method for handling null: ", x[["nonselection"]], "\n")
 
-  # Averege CI length
-  cat ("Averege confidence intervals length ", x[["ci_avg_ratio"]],"\n")
+  # Average CI length
+  cat ("Average confidence intervals length ", x[["ci_avg_ratio"]],"\n")
 
   # Median CI length
   cat ("Median confidence intervals length ", x[["ci_median_ratio"]],"\n")
