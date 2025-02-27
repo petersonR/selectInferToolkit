@@ -7,7 +7,7 @@
 step_ic(x, y, std = FALSE, penalty = "AIC", direction = "forward", ...)
 }
 \arguments{
-\item{x}{Dataframe with predictors}
+\item{x}{Dataframe/model matrix with predictors (without intercept)}
 
 \item{y}{outcome vector}
 

@@ -343,9 +343,8 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     y <- model[["y"]]
     lambda=model[["lambda"]]
     std=model[["std"]]
-    x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
 
-
+    x_mat <- model.matrix(y ~ .,data.frame(x, y = model[["y"]],check.names = F) )[, -1]
     fit_lso= sel_inf(x_mat,y,lam = lambda, std=std)
 
     lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% select(term) %>%
@@ -366,11 +365,13 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     return(result )
   }
   else if (method == "selectiveinf" && nonselection == "confident_nulls") {
-    x =model[["x"]]
-    y=model[["y"]]
+    x <-model[["x_original"]]
+    y <- model[["y"]]
     lambda=model[["lambda"]]
     std=model[["std"]]
-    fit_lso= sel_inf(x,y,lam = lambda, std=std)
+
+    x_mat <- model.matrix(y ~ .,data.frame(x, y = model[["y"]],check.names = F) )[, -1]
+    fit_lso= sel_inf(x_mat,y,lam = lambda, std=std)
 
 
     lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% select(term) %>%
@@ -396,20 +397,22 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
   }
   else if (method == "selectiveinf" && nonselection == "uncertain_nulls"){
 
-    x =model[["x"]]
-    y=model[["y"]]
+    x <-model[["x_original"]]
+    y <- model[["y"]]
     lambda=model[["lambda"]]
     std=model[["std"]]
 
-    fit_lso= sel_inf(x,y,lam = lambda, std=std)
+    x_mat <- model.matrix(y ~ .,data.frame(x, y = model[["y"]],check.names = F) )[, -1]
+    fit_lso= sel_inf(x_mat,y,lam = lambda, std=std)
 
-    lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% select(term) %>%
+
+    lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% dplyr::select(term) %>%
       dplyr::left_join(fit_lso, by = "term")  %>%
       dplyr::mutate(std.error=NA, statistic=NA) %>%
       dplyr::relocate(term, estimate,std.error, statistic, p.value, conf.low, conf.high)
 
     beta <- ifelse(is.na(lso_mod$estimate),0, lso_mod$estimate)
-    fitted_values <- as.matrix(cbind(1,x)) %*% as.matrix(beta)
+    fitted_values <- as.matrix(cbind(1,x_mat)) %*% as.matrix(beta)
     res <- y - fitted_values
 
     final_mod = get_uncertain_nulls (mod= lso_mod , res=res, x=data.frame(model[["x"]], check.names = FALSE))%>% select(-std.error,-statistic)

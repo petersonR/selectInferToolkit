@@ -8,14 +8,14 @@ pen_cv(
   x,
   y,
   std = TRUE,
-  penalty = "MCP",
+  penalty = "lasso",
   lambda = "lambda.min",
   alpha = 1,
   ...
 )
 }
 \arguments{
-\item{x}{Dataframe with predictors}
+\item{x}{Dataframe/model matrix with predictors (without intercept)}
 
 \item{y}{outcome vector}
 

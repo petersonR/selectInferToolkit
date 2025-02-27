@@ -4,7 +4,7 @@
 #' models over a grid of values for the regularization parameter lambda and returns the
 #' coefficeints associated with either value of lambda that gives minimum cvm or largest value of lambda such that error is within 1 standard error of the minimum.
 #'
-#' @param x Dataframe with predictors
+#' @param x Dataframe/model matrix with predictors (without intercept)
 #' @param y outcome vector
 #' @param std if TRUE (default), standardize design matrix
 #' @param penalty lasso or MCP
@@ -31,7 +31,7 @@
 #' \item{alpha}{selected alpha for model fitting}
 #' @export
 
-pen_cv <- function(x,y,std=TRUE,penalty= "MCP",lambda="lambda.min",alpha=1,...){
+pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...){
 
   if(is.matrix(x)){
     if(std==TRUE){

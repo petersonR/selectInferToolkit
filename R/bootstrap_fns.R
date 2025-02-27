@@ -76,8 +76,8 @@ full_boot <- function(model, B = 250,family="gaussian",parallel = FALSE) {
         #prop.na = round(mean(is.na(estimate)), 4),
         #prop.rej = mean(p.value < 0.05, na.rm = TRUE)
       )   %>%
-      dplyr::mutate(      ci_avg_ratio = mean( ci_ln, na.rm = T),
-                   ci_median_ratio = median(ci_ln, na.rm=T))
+      dplyr::mutate(      ci_avg_ratio =mean(ci_ln[term != "(Intercept)"] , na.rm=T),
+                   ci_median_ratio = median(ci_ln[term != "(Intercept)"], na.rm=T))
   }
   # do with parallel computing
   else{
@@ -209,17 +209,16 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       }
       #fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = "both"), conf.int = T)[-1,]
 
-      boot_fits[[b]] <-    selected_vars    %>%
+      boot_fits[[b]] <-       selected_vars  %>%
         dplyr::select(term) %>%
         dplyr::left_join(  fit, by = "term") %>%
-        dplyr::mutate(is.select = ifelse(is.na(estimate),0,1),
-               p.value = ifelse(is.na(p.value), 1, p.value),
-               estimate = ifelse(is.na(estimate), 0,  estimate),
-               boot = b)
+        dplyr::mutate(  is.select = ifelse(is.na(estimate),0,1),
+                        p.value = ifelse(is.na(p.value), 1, p.value),
+                        estimate = ifelse(is.na(estimate), 0,  estimate),
+                        boot = b)
     }
 
-
-    boot_fits  %>%
+    boot_results=  boot_fits  %>%
       dplyr:: bind_rows() %>%
       dplyr::group_by(term = forcats::fct_inorder(term)) %>%
       dplyr::summarize(
@@ -231,6 +230,11 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         prop.select = round(mean(is.select==1),4),
         #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
+    return(data.frame(term=all_vars) %>%
+      dplyr::left_join(boot_results, by = "term"))
+
+
+
   }
   else if(nonselector=="ignored"& parallel == TRUE){
     # do with parallel computing
@@ -284,18 +288,20 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     # Stop the cluster after computation is done
     parallel::stopCluster(cl)
 
-    boot_fits  %>%
-      dplyr::bind_rows() %>%
+    boot_results=  boot_fits  %>%
+      dplyr:: bind_rows() %>%
       dplyr::group_by(term = forcats::fct_inorder(term)) %>%
       dplyr::summarize(
-        mean_estimate = round(mean(estimate,na.rm=T),4),
-        conf.low = round(quantile(estimate, .025,na.rm=T),4),
-        conf.high = round(quantile(estimate, .975,na.rm=T),4),
-        #median_p.value  = round(median(p.value,na.rm=T),4),
+        mean_estimate = round(mean(estimate, na.rm=T),4),
+        conf.low = round(quantile(estimate, .025, na.rm=T),4),
+        conf.high = round(quantile(estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
+
+   return( data.frame(term=all_vars) %>%
+      dplyr::left_join(boot_results, by = "term"))
+
   }
   else if(nonselector=="confident_nulls" & parallel == FALSE){
 
@@ -1040,7 +1046,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
                boot = b)
     }
 
-    results= boot_fits  %>%
+    boot_results = boot_fits  %>%
       dplyr:: bind_rows() %>%
       dplyr:: group_by(term = forcats::fct_inorder(term)) %>%
       dplyr:: summarize(
@@ -1050,7 +1056,8 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select ),4),
       )
-    return(results)
+    return(data.frame(term=all_vars) %>%
+             dplyr::left_join(boot_results, by = "term"))
   }
   else if(nonselection=="ignored" & parallel == TRUE){
 
@@ -1100,7 +1107,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
 
 
-   results=  boot_fits  %>%
+    boot_results=  boot_fits  %>%
      dplyr:: bind_rows() %>%
      dplyr:: group_by(term = forcats::fct_inorder(term)) %>%
        dplyr::summarize(
@@ -1109,11 +1116,10 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
         conf.high = round(quantile(beta, .975, na.rm = T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select ),4)
-      ) %>%
-      mutate(     ci_avg_ratio = mean(ci_ln, na.rm=T),
-                  ci_median_ratio = median(ci_ln, na.rm=T))
+      )
 
-    return( results)
+    return( data.frame(term=all_vars) %>%
+              dplyr::left_join(boot_results, by = "term"))
 
   }
   else if(nonselection=="confident_nulls" & parallel == FALSE){

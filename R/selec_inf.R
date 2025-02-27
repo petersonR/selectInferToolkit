@@ -91,7 +91,7 @@ sel_inf <- function(x,y, lam = "lambda.min", std=FALSE,intercept= TRUE, ...) {
   while(all(b == 0))
     b <- coef(fit_lso, s=lam*.99, exact = TRUE,  x = x.std, y = y)[-1]
 
-  # fixed lasso function reuires no intercept in beta vector
+  # fixed lasso function requires no intercept in beta vector
   res <- fixedLassoInf(x=x.std, y= y, b, lam*n, alpha = .05, sigma = sig, intercept =TRUE)
   bb <- res$vmat %*% y
   B <- cbind(bb, res$ci, res$pv)

@@ -115,9 +115,15 @@ fit_aic_boot
 tidy(fit_aic_boot) 
 ```
 
+
+Here again we notice that among all the variables, only `wt` and `cycl` variable is selected in more than 50% of the bootstrap samples. However,  here again none of our effects remain significant after adjusting for uncertainty in the model selection process. 
+
 ##### Uncertain null non-selections
 
-[Explain what this is]
+In this setting, we are also interested in making inferences for all variables, including those not selected by the prime model using full data (i.e., using step_ic() or pen_cv() on full data set). Compared to the previous approach of treating non-selections as `confident null`, the primary difference here is that, for each bootstrap iteration, in order to get coefficient for all variables, we also get the coefficient for non-selections instead of setting them to zero. That is after applying the same selection method to a bootstrap sample, we retain the coefficients for all variables, regardless of whether they were included in the prime model or not. But for any variable not selected in a given bootstrap sample, we regress the model residuals on the each non-selected variables separately to get the beta estimates for non-selections, By doing so, we're trying to explain the residual variance by variables that were not selected by model selection method. This process will again produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
+
+
+
 
 ```{r}
 set.seed(1)
@@ -125,6 +131,9 @@ fit_aic_boot <- infer(fit_aic, method = "boot", B = 100, nonselection = "uncerta
 fit_aic_boot
 tidy(fit_aic_boot) 
 ```
+
+Here again in this data set we see that even though our estimates have slightly change, out overall conclusion are still the same as none of our our effects remain significant when handling non-selections this way either. 
+
 
 ### BIC vs AIC
 
@@ -136,7 +145,7 @@ fit_bic
 tidy(infer(fit_bic, method = "hybrid"))
 ```
 
-As expected with BIC, we get fewer variables, specifically BIC does not select `hp`. And as before, a hybrid method ignoring non-selections finds that both `cyl` and `wt` are significant as shown below. 
+As expected with BIC, we get fewer variables, specifically BIC does not select `hp`. And as before, a hybrid method ignoring non-selections finds that both `cyl` and `wt` are significant as shown above. 
 
 *Selective inference*
 
@@ -174,7 +183,7 @@ tidy(fit_lso)
 
 ```
 
-The lasso also selects 3 variables, but only 1 of these overlaps with selections from stepwise AIC (`wt`). `qsec` and `am` are newly selected by the lasso. The lasso alone does not provide any p-value or CI to do inference, but we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.
+The lasso also selects 3 variables, but only 1 of these overlaps with selections from stepwise AIC (`wt`). `qsec` and `am` are newly selected by the lasso. The lasso alone does not provide any p-value or CI to do inference, but we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.
 
 ```{r}
 fit_lasso_hybrid <-infer(fit_lso, method = "hybrid") 
@@ -196,8 +205,8 @@ tidy(fit_lasso_SI)
 
 ```{r}
 set.seed(12)
-fit_lasso_boot <- infer(fit_lso, method = "boot", B = 100) # needs print method
-tidy(fit_lasso_boot) # needs tidy method
+fit_lasso_boot <- infer(fit_lso, method = "boot", B = 100)
+tidy(fit_lasso_boot)
 ```
 
 [how is conf.low > 0 if `prop.select` = 0.5?]
@@ -211,6 +220,53 @@ fit_lasso_boot <- infer(fit_lso, method = "boot", B = 100,
 tidy(fit_lasso_boot) # needs tidy method
 ```
 
-[explain or correct error]
 
-[add section that tries `lambda.1se`]
+
+### Choice of Tuining paramter `lambda`
+
+In the above scenario we used the values of parameter `lambda` that gives minimum mean cross validated error (`lambda.min` which is the default in `pen_cv` function) to get the beta/coefficient estimates. But we could also get coefficients associated with `lambda.1se` which gives coefficients associated with largest value of lambda such that error is within 1 standard error of the minimum. That is `lambda.1se` provides us with more sparser model. 
+
+
+```{r}
+set.seed(13)
+fit_lso_1se <- pen_cv(y = mtcars$mpg, x = X, lambda="lambda.1se" ) 
+fit_lso_1se
+```
+
+
+In this example, using `lambda.1se`  we only get the same three variables. 
+
+```{r}
+fit_lasso1se_hybrid <-infer(fit_lso_1se, method = "hybrid") 
+tidy(fit_lasso1se_hybrid)
+```
+
+These results indicate that for the model selected by lasso, all variables are significant. Let’s see if we can confirm this sentiment after adjusting for the selective process.
+
+
+*Selective inference* 
+
+```{r}
+fit_lasso1se_SI <- infer(fit_lso_1se, method = "selectiveinf")
+tidy(fit_lasso1se_SI)
+```
+
+
+### collating methods 
+
+Lastly, one way to compare the precision of our model selection/inference method is by looking at the length of confidence intervals. That can be done with `ciratio` function which returns a list with three cross tables. One for average CI length across all variables, second one for median CI length across all variables and lastly number of significant discoveries across all models. 
+
+```{r}
+precision= ciratio(X, y = mtcars$mpg,B=10, nonselection="ignored")
+precision[["avg_ci_ln"]]
+```
+
+
+```{r}
+precision[["med_ci_ln"]]
+```
+
+```{r}
+precision[["no_sign_disc"]]
+```
+

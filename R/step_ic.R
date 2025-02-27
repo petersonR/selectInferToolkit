@@ -5,7 +5,7 @@
 #' for use in the practicalPSI package
 #'
 #'
-#' @param x Dataframe with predictors
+#' @param x Dataframe/model matrix with predictors (without intercept)
 #' @param y outcome vector
 #' @param std if TRUE (default), standardize design matrix
 #' @param penalty AIC or BIC
