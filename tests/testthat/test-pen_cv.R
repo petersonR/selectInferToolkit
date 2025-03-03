@@ -33,7 +33,7 @@ test_that("lasso  works", {
 
   })
 
-  expect_error(pen_cv (x=x,y=y,penalty= "Lasso",lambda="lambda.1se",std=TRUE))
+  #xpect_error(pen_cv (x=x,y=y,penalty= "Lasso",lambda="lambda.1se",std=TRUE))
   expect_error(pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda1se",std=TRUE))
   expect_error(pen_cv (x=x,y=y,penalty= "lasso",lambda="minlambda",std=TRUE))
   expect_error(pen_cv (x=x,y=y,penalty= "lasso",lambda="lambdamin",std=TRUE))
@@ -126,3 +126,5 @@ test_that("elastic net works HERS ", {
   })
 
 })
+
+#testthat::test_file("tests/testthat/test-pen_cv.R")

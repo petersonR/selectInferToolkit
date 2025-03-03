@@ -469,3 +469,4 @@ test_that("Full model stepwsie bic boot backward selection works ", {
 
 })
 
+#testthat::test_file("tests/testthat/test-pen_cv.R")

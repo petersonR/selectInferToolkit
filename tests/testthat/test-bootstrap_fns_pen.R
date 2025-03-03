@@ -162,8 +162,11 @@ test_that("Elastic net lambda 1se works ", {
   })
 })
 
-# # ##### Test HERS data ######
-# # Test HERS Data set
+#testthat::test_file("tests/testthat/test-bootstrap_fns_pen.R")
+
+
+# # # ##### Test HERS data ######
+# # # Test HERS Data set
 # y= raw_data$hdl1
 # #x <-model.matrix(hdl1 ~., model.frame(~ ., raw_data, na.action=na.pass))[,-1]
 # x <- raw_data %>% dplyr::select(-hdl1)

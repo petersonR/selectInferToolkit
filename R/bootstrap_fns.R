@@ -994,6 +994,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
 #' @importFrom MASS stepAIC
 #' @importFrom forcats fct_inorder
 #' @importFrom ncvreg ncvreg
+#' @importFrom glmnet glmnet
 #' @return A tidy dataframe with bootstrap dataset
 #' \item{term}{variable name}
 #' \item{mean_estimate}{mean of regression coefficients across bootstrap samples}
@@ -1028,21 +1029,36 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       boot_idx <- sample(1:nrow(x), replace = TRUE)
       x_boot <- x[boot_idx,]
       y_boot<- y[boot_idx]
-      fit_b  <- ncvreg::ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",...)
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian", ...)
+      }else{
+        fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",...)
+
+      }
 
       # Find the lambda value in fit_b$lambda closest to lambda_full
       closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
 
-      beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
-      beta <-beta[beta != 0] # 0 are for variable that are not selected
-      # Convert beta to data frame
-      beta_df <- data.frame(term = names(beta), beta = beta,row.names = NULL)
-      beta_df$term <- gsub("`", "", beta_df$term)
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s=  closest_lambda, exact = TRUE)
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        beta_df <-beta[beta$estimate != 0, ]
+        beta_df$term <- gsub("`", "", beta_df$term)
+        is.select=ifelse(is.na(beta),0,1)
+      }else{
+        beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
+        beta <-beta[beta != 0] # 0 are for variable that are not selected
+        # Convert beta to data frame
+        beta_df <- data.frame(term = names(beta), estimate = beta,row.names = NULL)
+        beta_df$term <- gsub("`", "", beta_df$term)
+
+      }
 
       boot_fits[[b]] <- selected_vars %>% select(term) %>%
         dplyr::left_join(beta_df, by = "term")%>%
-        mutate(is.select = ifelse(is.na(beta),0,1),
-               beta = ifelse(is.na(beta), 0, beta),
+        mutate(is.select = ifelse(is.na(estimate),0,1),
+               estimate = ifelse(is.na(estimate), 0, estimate),
                boot = b)
     }
 
@@ -1050,9 +1066,9 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       dplyr:: bind_rows() %>%
       dplyr:: group_by(term = forcats::fct_inorder(term)) %>%
       dplyr:: summarize(
-        mean_estimate = round(mean(beta, na.rm=T),4),
-        conf.low = round(quantile(beta, .025, na.rm=T),4),
-        conf.high = round(quantile(beta, .975, na.rm = T),4),
+        mean_estimate = round(mean(estimate, na.rm=T),4),
+        conf.low = round(quantile(estimate, .025, na.rm=T),4),
+        conf.high = round(quantile(estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select ),4),
       )
@@ -1075,6 +1091,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       library(broom)
       library(dplyr)
       library(ncvreg)
+      library(glmnet)
     })
 
 
@@ -1082,25 +1099,41 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       boot_idx <- sample(1:nrow(x), replace = TRUE)
       x_boot <- x[boot_idx,]
       y_boot<- y[boot_idx]
-      fit_b  <- ncvreg::ncvreg(X = x_boot, y = y_boot, penalty = penalty,alpha= alpha,family="gaussian",...)
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian", ...)
+      }else{
+        fit_b <- ncvreg::ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",...)
+
+      }
 
       # Find the lambda value in fit_b$lambda closest to lambda_full
       closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
 
-      beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
-      beta <-beta[beta != 0]
-      # Convert beta to data frame
-      beta_df <- data.frame(term = names(beta), beta = beta,row.names = NULL)
-      beta_df$term <- gsub("`", "", beta_df$term)
+
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s=  closest_lambda, exact = TRUE)
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        beta_df <-beta[beta$estimate != 0, ]
+        beta_df$term <- gsub("`", "", beta_df$term)
+      }else{
+        beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
+        beta <-beta[beta != 0] # 0 are for variable that are not selected
+        # Convert beta to data frame
+        beta_df <- data.frame(term = names(beta), estimate = beta,row.names = NULL)
+        beta_df$term <- gsub("`", "", beta_df$term)
+
+      }
 
       # Return results aligned with the full model
       return(
         selected_vars %>% select(term) %>%
           dplyr::left_join(beta_df, by = "term")%>%
-          mutate(is.select = ifelse(is.na(beta),0,1),
-                 beta = ifelse(is.na(beta), 0, beta),
+          mutate(is.select = ifelse(is.na( estimate ),0,1),
+                 estimate = ifelse(is.na( estimate ), 0, estimate ),
                  boot = b)
       )
+
     }, cl = cl)
     # Stop the cluster after computation is done
     parallel::stopCluster(cl)
@@ -1111,9 +1144,9 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
      dplyr:: bind_rows() %>%
      dplyr:: group_by(term = forcats::fct_inorder(term)) %>%
        dplyr::summarize(
-        mean_estimate = round(mean(beta, na.rm=T),4),
-        conf.low = round(quantile(beta, .025, na.rm=T),4),
-        conf.high = round(quantile(beta, .975, na.rm = T),4),
+        mean_estimate = round(mean(  estimate, na.rm=T),4),
+        conf.low = round(quantile(  estimate, .025, na.rm=T),4),
+        conf.high = round(quantile(  estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select ),4)
       )
@@ -1129,20 +1162,35 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       boot_idx <- sample(1:nrow(x), replace = TRUE)
       x_boot <- x[boot_idx,]
       y_boot<- y[boot_idx]
-      fit_b  <- ncvreg::ncvreg (X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",...)
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian", ...)
+      }else{
+        fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",...)
+
+      }
 
       # Find the lambda value in fit_b$lambda closest to lambda_full
       closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
 
-      beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
-      # Convert beta to data frame
-      beta_df <- data.frame(term = names(beta), beta = beta,row.names = NULL)
-      beta_df$term <- gsub("`", "", beta_df$term)
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s=  closest_lambda, exact = TRUE)
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        beta_df <-beta[beta$estimate != 0, ]
+        beta_df$term <- gsub("`", "", beta_df$term)
+      }else{
+        beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
+        beta <-beta[beta != 0] # 0 are for variable that are not selected
+        # Convert beta to data frame
+        beta_df <- data.frame(term = names(beta), estimate = beta,row.names = NULL)
+        beta_df$term <- gsub("`", "", beta_df$term)
+
+      }
 
       boot_fits[[b]] <- all_vars  %>% select(term) %>%
         dplyr::left_join(beta_df, by = "term")%>%
-        mutate(is.select = ifelse(beta == 0,0,1),
-               beta = ifelse(is.na(beta), 0, beta),
+        mutate(is.select = ifelse(is.na(estimate),0,1),
+               estimate = ifelse(is.na(estimate), 0, estimate),
                boot = b)
     }
 
@@ -1150,9 +1198,9 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       dplyr:: bind_rows() %>%
       dplyr:: group_by(term = forcats::fct_inorder(term)) %>%
       dplyr::summarize(
-        mean_estimate = round(mean(beta, na.rm=T),4),
-        conf.low = round(quantile(beta, .025, na.rm=T),4),
-        conf.high = round(quantile(beta, .975, na.rm = T),4),
+        mean_estimate = round(mean(estimate, na.rm=T),4),
+        conf.low = round(quantile(estimate, .025, na.rm=T),4),
+        conf.high = round(quantile(estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select ),4),
       )
@@ -1175,6 +1223,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       library(broom)
       library(dplyr)
       library(ncvreg)
+      library(glmnet)
     })
 
 
@@ -1182,22 +1231,38 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       boot_idx <- sample(1:nrow(x), replace = TRUE)
       x_boot <- x[boot_idx,]
       y_boot<- y[boot_idx]
-      fit_b  <- ncvreg::ncvreg(X = x_boot, y = y_boot, penalty = penalty,alpha= alpha,family="gaussian",...)
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian", ...)
+      }else{
+        fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",...)
+
+      }
 
       # Find the lambda value in fit_b$lambda closest to lambda_full
       closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
 
-      beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
-      # Convert beta to data frame
-      beta_df <- data.frame(term = names(beta), beta = beta,row.names = NULL)
-      beta_df$term <- gsub("`", "", beta_df$term)
+
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s=  closest_lambda, exact = TRUE)
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        beta_df <-beta[beta$estimate != 0, ]
+        beta_df$term <- gsub("`", "", beta_df$term)
+      }else{
+        beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
+        beta <-beta[beta != 0] # 0 are for variable that are not selected
+        # Convert beta to data frame
+        beta_df <- data.frame(term = names(beta), estimate = beta,row.names = NULL)
+        beta_df$term <- gsub("`", "", beta_df$term)
+
+      }
 
       # Return results aligned with the full model
       return(
         all_vars  %>% select(term) %>%
           dplyr::left_join(beta_df, by = "term")%>%
-          mutate(is.select = ifelse(beta == 0,0,1),
-                 beta = ifelse(is.na(beta), 0, beta),
+          mutate(is.select = ifelse(is.na(estimate),0,1),
+                 estimate = ifelse(is.na(estimate), 0, estimate),
                  boot = b)
       )
     }, cl = cl)
@@ -1208,14 +1273,15 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
     results=  boot_fits  %>%
       dplyr:: bind_rows() %>%
-      dplyr::group_by(term = forcats::fct_inorder(term)) %>%
+      dplyr:: group_by(term = forcats::fct_inorder(term)) %>%
       dplyr::summarize(
-        mean_estimate = round(mean(beta, na.rm=T),4),
-        conf.low = round(quantile(beta, .025, na.rm=T),4),
-        conf.high = round(quantile(beta, .975, na.rm = T),4),
+        mean_estimate = round(mean(estimate, na.rm=T),4),
+        conf.low = round(quantile(estimate, .025, na.rm=T),4),
+        conf.high = round(quantile(estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high - conf.low,4),
-        prop.select = round(mean(is.select ),4)
+        prop.select = round(mean(is.select ),4),
       )
+
     return( results)
 
 
@@ -1226,22 +1292,45 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       boot_idx <- sample(1:nrow(x), replace = TRUE)
       x_boot <- x[boot_idx,]
       y_boot<- y[boot_idx]
-      fit_b  <- ncvreg::ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian")
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian", ...)
+        #fit_b <- glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian")
+
+      }else{
+        fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",...)
+        #fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian")
+      }
 
       # Find the lambda value in fit_b$lambda closest to lambda_full
       closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
 
-      beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
-      non_zero_terms  <- names(beta[beta != 0])
-      non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
-      non_zero_terms  <-  gsub("`", "",non_zero_terms )
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s=  closest_lambda, exact = TRUE)
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+      }else{
+        beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
+        non_zero_terms  <- names(beta[beta != 0])
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+      }
 
 
       selected_data <-  data.frame(y = y_boot, x_boot, check.names = FALSE) %>%
         select(all_of(non_zero_terms))
 
-      xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta
-      res <- y - xbeta
+      if (alpha==1 & penalty=="lasso"){
+        xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta$estimate
+        res <- y - xbeta
+
+      }else{
+        xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta
+        res <- y - xbeta
+      }
+
 
       fit_lso <- broom::tidy(lm(y ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
         term = gsub("`", "", term),  # Remove backticks
@@ -1250,10 +1339,19 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       lso_ignore_mod <- data.frame(term= all_vars) %>%
         select(term) %>% dplyr::left_join(fit_lso, by = "term")
 
-      boot_fits[[b]] <- get_uncertain_nulls (mod= lso_ignore_mod, res=res, x=x_boot) %>%
-        select(term, estimate) %>%
-        mutate(is.select = ifelse(beta == 0,0,1),
-               boot = b)
+      un_results = get_uncertain_nulls (mod= lso_ignore_mod, res=res, x= data.frame( x_boot, check.names = FALSE) )
+
+      if (alpha==1 & penalty=="lasso"){
+          results=  un_results %>%
+            mutate(is.select = ifelse(beta$estimate == 0,0,1),
+                   boot = b)
+
+      }else{
+        results=  un_results %>%
+          mutate(is.select = ifelse(beta == 0,0,1),
+                 boot = b)
+      }
+      boot_fits[[b]] <-    results
     }
 
     results= boot_fits  %>%
@@ -1283,27 +1381,49 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       library(broom)
       library(dplyr)
       library(ncvreg)
+      library(glmnet)
     })
 
     boot_fits <- pblapply(1:B, function(b) {
       boot_idx <- sample(1:nrow(x), replace = TRUE)
       x_boot <- x[boot_idx,]
       y_boot<- y[boot_idx]
-      fit_b  <- ncvreg::ncvreg(X = x_boot, y = y_boot, penalty = penalty,alpha= alpha,family="gaussian",...)
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian", ...)
+      }else{
+        fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",...)
+      }
 
       # Find the lambda value in fit_b$lambda closest to lambda_full
       closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
 
-      beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
-      non_zero_terms  <- names(beta[beta != 0])
-      non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
-      non_zero_terms  <-  gsub("`", "",non_zero_terms )
+
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s=  closest_lambda, exact = TRUE)
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+      }else{
+        beta <- coef(fit_b ,lambda =  closest_lambda ) # select coeff  from lambda full
+        non_zero_terms  <- names(beta[beta != 0])
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+      }
+
 
       selected_data <-  data.frame(y = y_boot, x_boot, check.names = FALSE) %>%
         select(all_of(non_zero_terms))
 
-      xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta
-      res <- y - xbeta
+      if (alpha==1 & penalty=="lasso"){
+        xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta$estimate
+        res <- y - xbeta
+
+      }else{
+        xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta
+        res <- y - xbeta
+      }
 
       fit_lso <- broom::tidy(lm(y ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
         term = gsub("`", "", term),  # Remove backticks
@@ -1312,15 +1432,22 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       lso_ignore_mod <- data.frame(term= all_vars) %>%
         select(term) %>% dplyr::left_join(fit_lso, by = "term")
 
+      un_results = get_uncertain_nulls (mod= lso_ignore_mod, res=res, x=data.frame( x_boot, check.names = FALSE))
+
+      if (alpha==1 & penalty=="lasso"){
+        results=  un_results %>%
+          mutate(is.select = ifelse(beta$estimate == 0,0,1),
+                 boot = b)
+
+      }else{
+        results=  un_results %>%
+          mutate(is.select = ifelse(beta == 0,0,1),
+                 boot = b)
+      }
 
 
       # Return results aligned with the full model
-      return(
-        get_uncertain_nulls (mod= lso_ignore_mod, res=res, x=x_boot) %>%
-          select(term, estimate) %>%
-          mutate(is.select = ifelse(beta == 0,0,1),
-                 boot = b)
-      )
+      return( results)
     }, cl = cl)
     # Stop the cluster after computation is done
     parallel::stopCluster(cl)

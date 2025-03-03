@@ -136,7 +136,7 @@ test_that("HERS backward selection works", {
 
 
 
-#testthat::test_file("tests/testthat/test-pen_cv.R")
+#testthat::test_file("tests/testthat/test-step_ic.R")
 
 
 

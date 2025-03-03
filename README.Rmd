@@ -106,7 +106,7 @@ Similar to the selective inference result, none of our 3 effects remain signific
 
 ##### Confident null non-selections
 
-In this setting, we are interested in making inferences for all variables, including those not selected by the prime model using full data (i.e., using `step_ic()` or `pen_cv()` on full dataset). Compared to the previous approach, the primary difference here is that, for each bootstrap iteration, after applying the model same selection method to a bootstrap sample, we retain the coefficients for *all variables, regardless of whether they were included in the prime model or not*. For any variable not selected in a given bootstrap sample, its coefficient is set to zero. This process produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
+In this setting, we are interested in making inferences for all variables, including those not selected by the prime model using full data (i.e., using `step_ic()` or `pen_cv()` on full dataset). Compared to the previous approach, the primary difference here is that, for each bootstrap iteration, after applying the same model selection method to a bootstrap sample, we retain the coefficients for *all variables, regardless of whether they were included in the prime model or not*. For any variable not selected in a given bootstrap sample, its coefficient is set to zero. This process produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
 
 ```{r AIC bootstrap 2}
 set.seed(1)
@@ -120,7 +120,7 @@ Here again we notice that among all the variables, only `wt` and `cycl` variable
 
 ##### Uncertain null non-selections
 
-In this setting, we are also interested in making inferences for all variables, including those not selected by the prime model using full data (i.e., using step_ic() or pen_cv() on full data set). Compared to the previous approach of treating non-selections as `confident null`, the primary difference here is that, for each bootstrap iteration, in order to get coefficient for all variables, we also get the coefficient for non-selections instead of setting them to zero. That is after applying the same selection method to a bootstrap sample, we retain the coefficients for all variables, regardless of whether they were included in the prime model or not. But for any variable not selected in a given bootstrap sample, we regress the model residuals on the each non-selected variables separately to get the beta estimates for non-selections, By doing so, we're trying to explain the residual variance by variables that were not selected by model selection method. This process will again produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
+In this setting, we are also interested in making inferences for all variables, including those not selected by the prime model using full data (i.e., using step_ic() or pen_cv() on full data set). Compared to the previous approach of treating non-selections as `confident null`, the primary difference here is that, for each bootstrap iteration, in order to get coefficient for all variables, we also get the coefficient for non-selections instead of setting them to zero. That is after applying the same selection method to a bootstrap sample, we retain the coefficients for all variables, regardless of whether they were included in the prime model or not. But for any variable not selected in a given bootstrap sample, we regress the model residuals on the each non-selected variables separately to get the beta estimates for non-selections. By doing so, we're trying to explain the residual variance by variables that were not selected by model selection method. This process will again produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
 
 
 
@@ -177,20 +177,20 @@ We can also try selecting the most important factors are by penalized models. We
 
 ```{r}
 set.seed(12)
-fit_lso <- pen_cv(y = mtcars$mpg, x = X) 
+fit_lso <- pen_cv(y = mtcars$mpg, x = X,penalty= "lasso",lambda="lambda.min") 
 fit_lso 
 tidy(fit_lso)
 
 ```
 
-The lasso also selects 3 variables, but only 1 of these overlaps with selections from stepwise AIC (`wt`). `qsec` and `am` are newly selected by the lasso. The lasso alone does not provide any p-value or CI to do inference, but we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.
+The lasso also selects the same 3 variables.  The lasso alone does not provide any p-value or CI to do inference, but we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.
 
 ```{r}
 fit_lasso_hybrid <-infer(fit_lso, method = "hybrid") 
 tidy(fit_lasso_hybrid)
 ```
 
-These results indicate that for the model selected by lasso, all variables are significant. Let's see if we can confirm this sentiment after adjusting for the selective process.
+These results indicate that for the model selected by lasso, while `cycl` and `hp` are significant, `wt` is still not significant. Let's see if we can confirm this sentiment after adjusting for the selective process.
 
 *Selective inference* 
 
@@ -199,7 +199,7 @@ fit_lasso_SI <- infer(fit_lso, method = "selectiveinf")
 tidy(fit_lasso_SI)
 ```
 
-[why is the model selected different?] 
+Here again we see that after adjusting for the selective process, we are only able to claim significance of `wt` but we have larger CIs compared to hybrid approach. 
 
 *Bootstrapping, ignoring non-selections*
 
@@ -209,7 +209,7 @@ fit_lasso_boot <- infer(fit_lso, method = "boot", B = 100)
 tidy(fit_lasso_boot)
 ```
 
-[how is conf.low > 0 if `prop.select` = 0.5?]
+With bootstrapping and only focusing on selections from full model, we see that all three variables are significant. What is we wanted to get inference on all variables assuming non-selection within each boostrap might not have true null effect aka `unccertain_nulls` approach explained above. 
 
 *Bootstrapping, uncertain null non-selections*
 
@@ -220,7 +220,7 @@ fit_lasso_boot <- infer(fit_lso, method = "boot", B = 100,
 tidy(fit_lasso_boot) # needs tidy method
 ```
 
-
+With the `unccertain_nulls` approach, we see that even though `cycl` and `wt` are selected 89% and 98% of the times, non of the variables are significant. 
 
 ### Choice of Tuining paramter `lambda`
 
@@ -230,19 +230,12 @@ In the above scenario we used the values of parameter `lambda` that gives minimu
 ```{r}
 set.seed(13)
 fit_lso_1se <- pen_cv(y = mtcars$mpg, x = X, lambda="lambda.1se" ) 
-fit_lso_1se
-```
-
-
-In this example, using `lambda.1se`  we only get the same three variables. 
-
-```{r}
 fit_lasso1se_hybrid <-infer(fit_lso_1se, method = "hybrid") 
 tidy(fit_lasso1se_hybrid)
 ```
 
-These results indicate that for the model selected by lasso, all variables are significant. Let’s see if we can confirm this sentiment after adjusting for the selective process.
 
+In this example, using `lambda.1se`  we only get the same three variables and only `wt` is significant just as with `lambda.min` and hybrid apprach . 
 
 *Selective inference* 
 
@@ -251,22 +244,31 @@ fit_lasso1se_SI <- infer(fit_lso_1se, method = "selectiveinf")
 tidy(fit_lasso1se_SI)
 ```
 
+Even though our estimates remain same, we see that our confidence interval length with selective inference are higher.
+
 
 ### collating methods 
 
 Lastly, one way to compare the precision of our model selection/inference method is by looking at the length of confidence intervals. That can be done with `ciratio` function which returns a list with three cross tables. One for average CI length across all variables, second one for median CI length across all variables and lastly number of significant discoveries across all models. 
 
 ```{r}
-precision= ciratio(X, y = mtcars$mpg,B=10, nonselection="ignored")
+set.seed(1234)
+precision= ciratio(X, y = mtcars$mpg,B=50, nonselection="ignored")
 precision[["avg_ci_ln"]]
 ```
 
+We see that in general, the selective inference method gives wider CI compared to hybrid or bootstrap for given model selection procedure. Boostrap gives wider CI compared to hybrid method for full model and stepwise methods but it is more precise on average compared to hybrid for penalized methods. We can also look at average of medianc CI for each variable as follow:
 
 ```{r}
 precision[["med_ci_ln"]]
 ```
 
+While, we see that medican CI lenght for given model is slightly lower comapred to mean CI length, we see similar trend when comparing different methods as above. 
+
+
 ```{r}
 precision[["no_sign_disc"]]
 ```
 
+
+We see that in general with bootstrap approach, we have more discovires compared to hybrid and selective inference. 

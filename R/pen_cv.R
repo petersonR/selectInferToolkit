@@ -33,29 +33,13 @@
 
 pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...){
 
-  if(is.matrix(x)){
-    if(std==TRUE){
-      x_std= data.frame(x, check.names = FALSE)%>%
-        mutate_if(is.numeric, scale)
-      colnames(x_std) = colnames(x)
-      x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x_std,y), na.action=na.pass))[,-1]
-    }
-    else{
-      x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x_std,y), na.action=na.pass))[,-1]
-          }
-  }
-  else if (is.data.frame(x)){
-    if(std==TRUE){
-      x_std = x %>%
-        mutate_if(is.numeric, scale)
-      colnames(x_std) = colnames(x)
-      x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x_std,y), na.action=na.pass))[,-1]
-
-    }
-    else{
-      x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x,y), na.action=na.pass))[,-1]
-      #x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x,y), na.action=na.pass))[,-1]
-
+  if (is.matrix(x) || is.data.frame(x)) {
+    if (std) {
+      x_std <- as.data.frame(x, check.names = FALSE) %>% mutate_if(is.numeric, scale)
+      colnames(x_std) <- colnames(x)
+      x_dup <- model.matrix(y ~ ., model.frame(~ ., cbind(x_std, y), na.action = na.pass))[, -1]
+    } else {
+      x_dup <- model.matrix(y ~ ., model.frame(~ ., cbind(x, y), na.action = na.pass))[, -1]
     }
   }
 
@@ -67,30 +51,43 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...
   full_model <- broom::tidy(lm(y~x_dup), conf.int = TRUE)[-1,] %>% select(term, estimate)
   full_model$term<- colnames(x_dup)
 
-  if (alpha==1){
-    fit <- cv.ncvreg(X = x_dup, y = y, penalty = penalty, family="gaussian",alpha=alpha,...)
+  if (alpha==1 & penalty=="lasso"){
+    fit <- cv.glmnet(x = x_dup, y = y, alpha = alpha, standardize = F, family = "gaussian", ...)
+    foldid <-fit[["foldid"]]
   }else{
     fit <- cv.ncvreg(X = x_dup, y = y,  penalty = penalty, family="gaussian",alpha=alpha,...)
+    foldid <-fit[["fold"]]
   }
 
-  foldid <-fit[["fold"]]
+
   # Calculate correct lambda
   if(lambda=="lambda.min"){
-    lambda_mod =  fit$lambda[which.min(fit$cve)]
+    lambda_mod =  fit[["lambda.min"]]
   } else if (lambda=="lambda.1se"){
-    lambda_mod <- fit$lambda[which(fit$cve < min(fit$cve + fit$cvse))[1]]
+    if(alpha==1 & penalty=="lasso"){
+      lambda_mod =  fit[["lambda.1se"]]
+    }
+    else{
+      lambda_mod <- fit$lambda[which(fit$cve < min(fit$cve + fit$cvse))[1]]
+
+    }
+  }
+
+  if (alpha==1 & penalty=="lasso"){
+      b <- coef(fit, s=  lambda_mod, exact = TRUE)
+      beta <- data.frame(term = rownames(b), estimate = as.vector(b))
+
+  }else{
+    tolerance <- 1e-6 # Define a small tolerance
+    lambda_index <- which.min(abs(fit$lambda - lambda_mod)) # Find the closest lambda
+    beta <- data.frame(term=names(coef(fit, which = lambda_index)) ,
+                       estimate=unname(coef(fit, which = lambda_index)))
 
   }
 
-  tolerance <- 1e-6 # Define a small tolerance
-  lambda_index <- which.min(abs(fit$lambda - lambda_mod)) # Find the closest lambda
-  beta <- data.frame(term=names(coef(fit, which = lambda_index)) ,
-                     estimate=unname(coef(fit, which = lambda_index)))
-
-
   val <- list( beta=beta, std=std,penalty=penalty, lambda=lambda, lambda.select= lambda_mod,
-              fold=foldid, x=raw_data %>% select(-y), y= fit[["fit"]][["y"]],
-              alpha=alpha,    x_original=x)
+              fold=foldid, x=x_dup, y= y,
+              alpha=alpha,    x_original=x, model=   fit)
   class(val) <- "selector_pen"
   val
 

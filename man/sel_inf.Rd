@@ -4,7 +4,7 @@
 \alias{sel_inf}
 \title{Title}
 \usage{
-sel_inf(x, y, lam = "lambda.min", std = FALSE, intercept = TRUE, ...)
+sel_inf(x, y, model, lam = "lambda.min", intercept = TRUE, ...)
 }
 \arguments{
 \item{x}{design matrix}
@@ -13,9 +13,9 @@ sel_inf(x, y, lam = "lambda.min", std = FALSE, intercept = TRUE, ...)
 
 \item{lam}{lambda.1se or lambda.min}
 
-\item{std}{whether to standaddize design matrix}
-
 \item{...}{addtional arguments that can be passed to  cv.glmnet}
+
+\item{std}{whether to standaddize design matrix}
 }
 \value{
 returns a data frame with results from lasso selective inference
