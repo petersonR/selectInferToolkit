@@ -638,7 +638,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     }
 
 
-    boot_fits  %>%
+    boot_results= boot_fits  %>%
       dplyr:: bind_rows() %>%
       dplyr::group_by(term = forcats::fct_inorder(term)) %>%
       summarize(
@@ -650,6 +650,12 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         prop.select = round(mean(is.select==1),4),
         #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
+
+    return(data.frame(term=all_vars) %>%
+             dplyr::left_join(boot_results, by = "term"))
+
+
+
   }
   else if(nonselector=="ignored"& parallel == TRUE){
     # do with parallel computing
@@ -705,7 +711,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     # Stop the cluster after computation is done
     parallel::stopCluster(cl)
 
-    boot_fits  %>%
+    boot_results=  boot_fits  %>%
       dplyr:: bind_rows() %>%
       dplyr::group_by(term = forcats::fct_inorder(term)) %>%
       summarize(
@@ -717,6 +723,10 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         prop.select = round(mean(is.select==1),4),
         #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
+
+    return( data.frame(term=all_vars) %>%
+              dplyr::left_join(boot_results, by = "term"))
+
   }
   else if(nonselector=="confident_nulls" & parallel == FALSE){
 
