@@ -37,9 +37,9 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...
     if (std) {
       x_std <- as.data.frame(x, check.names = FALSE) %>% mutate_if(is.numeric, scale)
       colnames(x_std) <- colnames(x)
-      x_dup <- model.matrix(y ~ ., model.frame(~ ., cbind(x_std, y), na.action = na.pass))[, -1]
+      x_dup <- model.matrix(y ~ ., model.frame(~ ., data.frame(cbind(x, y),check.names = F), na.action = na.pass))[, -1]
     } else {
-      x_dup <- model.matrix(y ~ ., model.frame(~ ., cbind(x, y), na.action = na.pass))[, -1]
+      x_dup <- model.matrix(y ~ ., model.frame(~ ., data.frame(cbind(x, y),check.names = F), na.action = na.pass))[, -1]
     }
   }
 

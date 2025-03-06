@@ -29,12 +29,13 @@ infer.selector.ic <- function(
   nonselection <- match.arg(nonselection)
 
   if(method == "selectiveinf" & model$direction != "forward") {
-    warning("Direction must be set to 'forward' for selectiveInference")
+    warning("Direction must be set to 'forward' for selectiveInference and make.levels=T")
   }
 
   if (method == "hybrid" && nonselection == "ignored") {
     mod<- tidy(model[["model_sum"]], conf.int=T)
     mod$ci_ln <- mod$conf.high - mod$conf.low
+    mod$term <- gsub("`", "", mod$term)  # Remove backticks
 
     full_mod <-data.frame(term=model[["beta"]][["term"]]) %>%
       dplyr::left_join(mod, by = "term")
@@ -51,6 +52,7 @@ infer.selector.ic <- function(
   }
    else if (method == "hybrid" && nonselection == "confident_nulls") {
      mod<- tidy(model[["model_sum"]], conf.int=T)
+     mod$term <- gsub("`", "", mod$term)  # Remove backticks
 
         full_mod= data.frame(term=model[["beta"]][["term"]]) %>%
           dplyr::select(term) %>%
@@ -75,6 +77,7 @@ infer.selector.ic <- function(
    }
   else if (method == "hybrid" && nonselection == "uncertain_nulls") {
     mod<- tidy(model[["model_sum"]], conf.int=T)
+    mod$term <- gsub("`", "", mod$term)  # Remove backticks
     res =residuals(model[["model_sum"]])
     x <-model[["x_model"]]
     x_dup<- as.data.frame(model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1],
@@ -210,8 +213,8 @@ infer.selector.ic <- function(
 
     final_mod =get_uncertain_nulls (mod=full_mod, res=res, x=  x_dup) %>% select(-std.error,-statistic)
 
-    ci_avg_ratio  <- mean(full_mod$ci_ln[full_mod$term != "(Intercept)"] , na.rm=T)
-    ci_median_ratio <-  median(full_mod$ci_ln[full_mod$term != "(Intercept)"] , na.rm=T)
+    ci_avg_ratio  <- mean(final_mod$ci_ln[final_mod$term != "(Intercept)"] , na.rm=T)
+    ci_median_ratio <-  median(final_mod $ci_ln[final_mod$term != "(Intercept)"] , na.rm=T)
 
 
     result <- list(model=  final_mod,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio  ,
