@@ -312,3 +312,6 @@ test_that("Elastic net lambda 1se works ", {
 # })
 #
 #
+
+
+#testthat::test_file("tests/testthat/test-bootstrap_fns_pen.R")

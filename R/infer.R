@@ -35,7 +35,7 @@ infer.selector.ic <- function(
   if (method == "hybrid" && nonselection == "ignored") {
     mod<- tidy(model[["model_sum"]], conf.int=T)
     mod$ci_ln <- mod$conf.high - mod$conf.low
-    mod$term <- gsub("`", "", mod$term)  # Remove backticks
+    mod$term <- gsub("`", "", mod$term)  # Remove back ticks
 
     full_mod <-data.frame(term=model[["beta"]][["term"]]) %>%
       dplyr::left_join(mod, by = "term")
@@ -101,7 +101,7 @@ infer.selector.ic <- function(
   }
   else if (method == "selectiveinf" && nonselection == "ignored") {
 
-    x <-data.frame(model[["x_original"]], check.names = FALSE)
+    x <-data.frame(model[["x_model"]], check.names = FALSE)
     x <- droplevels(x)
     x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     y <- model[["y"]]
@@ -128,7 +128,7 @@ infer.selector.ic <- function(
   }
   else if (method == "selectiveinf" && nonselection == "confident_nulls") {
 
-    x <-data.frame(model[["x_original"]], check.names = FALSE)
+    x <-data.frame(model[["x_model"]], check.names = FALSE)
     x <- droplevels(x)
     x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     y <- model[["y"]]
@@ -162,7 +162,7 @@ infer.selector.ic <- function(
   }
   else if (method == "selectiveinf" && nonselection == "uncertain_nulls") {
 
-    x <-data.frame(model[["x_original"]], check.names = FALSE)
+    x <-data.frame(model[["x_model"]], check.names = FALSE)
     x <- droplevels(x)
     x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     y <- model[["y"]]

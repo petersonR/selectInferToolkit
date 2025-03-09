@@ -175,7 +175,7 @@ full_boot <- function(model, B = 250,family="gaussian",parallel = FALSE) {
 boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignored", parallel= FALSE,
                               direction="both", model=model, ...) {
 
-  data= data.frame(cbind(y,x))
+  data= data.frame(cbind(y,x),check.names = F)
   #fit_full <- broom::tidy(lm(y ~ ., data = data))
   #fit_aic<- tidy(model[["model_sum"]])
 
@@ -201,11 +201,11 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           scope = list(lower = ~1, upper = scope_formula),
           direction = "forward", trace = 0,...
         ), conf.int = T)
-
+       fit$term <-  gsub("`", "", fit$term)
 
       } else{
         fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = direction,...), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
       }
       #fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = "both"), conf.int = T)[-1,]
 
@@ -267,11 +267,12 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           scope = list(lower = ~1, upper = scope_formula),
           direction = "forward", trace = 0,...
         ), conf.int = T)
+        fit$term <-  gsub("`", "", fit$term)
 
 
       } else{
         fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = direction,...), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
       }
 
       # Return results aligned with the full model
@@ -321,11 +322,11 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           scope = list(lower = ~1, upper = scope_formula),
           direction = "forward", trace = 0,...
         ), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
 
       } else{
         fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = direction,...), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
       }
 
       boot_fits[[b]] <-all_vars    %>%
@@ -384,11 +385,11 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           scope = list(lower = ~1, upper = scope_formula),
           direction = "forward", trace = 0,...
         ), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
 
       } else{
         fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = direction,...), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
       }
 
       # Return results aligned with the full model
@@ -440,11 +441,11 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         )
 
         tidy_fit = broom::tidy(model, conf.int = T)
-
-
+        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
       } else{
         model<-MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = direction)
         tidy_fit<- broom::tidy(model, conf.int = T)
+        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
 
       }
       res =residuals(model)
@@ -511,12 +512,14 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         )
 
         tidy_fit = broom::tidy(model, conf.int = T)
+        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
 
 
       } else{
         model<-MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),
                              k=log(nrow(na.omit(data_boot))),trace =0, direction = direction)
         tidy_fit<- broom::tidy(model, conf.int = T)
+        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
 
       }
       res =residuals(model)
@@ -591,7 +594,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
 boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignored", parallel= FALSE,
                               direction="both", model=model, ...) {
 
-  data= data.frame(cbind(y,x))
+  data= data.frame(cbind(y,x),check.names = F)
   #fit_full <- broom::tidy(lm(y ~ ., data = data))
   #fit_bic<- tidy(model[["model_sum"]])
 
@@ -619,11 +622,12 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           k=log(nrow(na.omit(data_boot))),
           direction = "forward", trace = 0,...
         ), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
 
       } else{
         fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, k=log(nrow(na.omit(data_boot))),
                                         direction = direction,...), conf.int = T)
+        fit$term <-  gsub("`", "", fit$term)
 
       }
       #fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = "both"), conf.int = T)[-1,]
@@ -689,12 +693,11 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           k=log(nrow(na.omit(data_boot))),
           direction = "forward", trace = 0,...
         ), conf.int = T)
-
-
+        fit$term <-  gsub("`", "", fit$term)
       } else{
         fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0,
                                         k=log(nrow(na.omit(data_boot))),direction = direction,...), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
       }
 
       # Return results aligned with the full model
@@ -747,12 +750,12 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           k=log(nrow(na.omit(data_boot))),
           direction = "forward", trace = 0,...
         ), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
 
       } else{
         fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0,
                                         k=log(nrow(na.omit(data_boot))), direction = direction,...), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
       }
 
       boot_fits[[b]] <-   all_vars   %>%
@@ -812,12 +815,12 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           k=log(nrow(na.omit(data_boot))),
           direction = "forward", trace = 0,...
         ), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
 
       } else{
         fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0,
                                         k=log(nrow(na.omit(data_boot))),direction = direction,...), conf.int = T)
-
+        fit$term <-  gsub("`", "", fit$term)
       }
 
       # Return results aligned with the full model
@@ -870,12 +873,13 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         )
 
         tidy_fit = broom::tidy(model, conf.int = T)
-
+        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
 
       } else{
         model<-MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),
                              k=log(nrow(na.omit(data_boot))),trace =0, direction = direction)
         tidy_fit<- broom::tidy(model, conf.int = T)
+        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
 
       }
       res =residuals(model)

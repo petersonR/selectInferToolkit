@@ -9,8 +9,7 @@
 #' @param std if TRUE (default), standardize design matrix
 #' @param penalty lasso or MCP
 #' @param lambda  extra coefficients associated with "lambda.min" or "lambda.1se"
-#' @param alpha Tuning parameter for the Mnet estimator which controls the relative contributions from the MCP/SCAD penalty
-#' and the ridge, or L2 penalty. alpha=1 is equivalent to MCP/SCAD penalty, while alpha=0 would be equivalent to ridge regression. However, alpha=0 is not supported; alpha may be arbitrarily small, but not exactly 0.
+#' @param alpha Tuning parameter  small, but not exactly 0.
 #' @param ... Additional arguments that can be passed with cv.ncvreg function in cv.ncvreg package
 #' @importFrom magrittr %>%
 #' @importFrom dplyr mutate_if select
@@ -37,7 +36,7 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...
     if (std) {
       x_std <- as.data.frame(x, check.names = FALSE) %>% mutate_if(is.numeric, scale)
       colnames(x_std) <- colnames(x)
-      x_dup <- model.matrix(y ~ ., model.frame(~ ., data.frame(cbind(x, y),check.names = F), na.action = na.pass))[, -1]
+      x_dup <- model.matrix(y ~ ., model.frame(~ ., data.frame(cbind(x_std, y),check.names = F), na.action = na.pass))[, -1]
     } else {
       x_dup <- model.matrix(y ~ ., model.frame(~ ., data.frame(cbind(x, y),check.names = F), na.action = na.pass))[, -1]
     }
