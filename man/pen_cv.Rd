@@ -25,8 +25,7 @@ pen_cv(
 
 \item{lambda}{extra coefficients associated with "lambda.min" or "lambda.1se"}
 
-\item{alpha}{Tuning parameter for the Mnet estimator which controls the relative contributions from the MCP/SCAD penalty
-and the ridge, or L2 penalty. alpha=1 is equivalent to MCP/SCAD penalty, while alpha=0 would be equivalent to ridge regression. However, alpha=0 is not supported; alpha may be arbitrarily small, but not exactly 0.}
+\item{alpha}{Tuning parameter  small, but not exactly 0.}
 
 \item{...}{Additional arguments that can be passed with cv.ncvreg function in cv.ncvreg package}
 }

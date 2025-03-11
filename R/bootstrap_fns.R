@@ -1333,20 +1333,19 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       }
 
 
-      selected_data <-  data.frame(y = y_boot, x_boot, check.names = FALSE) %>%
-        select(all_of(non_zero_terms))
-
       if (alpha==1 & penalty=="lasso"){
         xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta$estimate
-        res <- y - xbeta
+        res <- y_boot - xbeta
 
       }else{
         xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta
-        res <- y - xbeta
+        res <- y_boot - xbeta
       }
 
+      selected_data <-  data.frame(y_boot = y_boot, x_boot, check.names = FALSE) %>%
+        select(y_boot, all_of(non_zero_terms))
 
-      fit_lso <- broom::tidy(lm(y ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
+      fit_lso <- broom::tidy(lm(y_boot~ ., data = selected_data), conf.int = TRUE) %>%mutate(
         term = gsub("`", "", term),  # Remove backticks
       )
 
@@ -1355,16 +1354,9 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       un_results = get_uncertain_nulls (mod= lso_ignore_mod, res=res, x= data.frame( x_boot, check.names = FALSE) )
 
-      if (alpha==1 & penalty=="lasso"){
-          results=  un_results %>%
-            mutate(is.select = ifelse(beta$estimate == 0,0,1),
-                   boot = b)
+      results= un_results %>%
+        mutate( boot = b)
 
-      }else{
-        results=  un_results %>%
-          mutate(is.select = ifelse(beta == 0,0,1),
-                 boot = b)
-      }
       boot_fits[[b]] <-    results
     }
 
@@ -1376,7 +1368,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
         conf.low = round(quantile(estimate, .025, na.rm=T),4),
         conf.high = round(quantile(estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high - conf.low,4),
-        prop.select = round(mean(is.select ),4),
+        prop.select = round(mean(selected==1 , na.rm = T),4),
       )
     return(results)
   }
@@ -1426,20 +1418,19 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
         non_zero_terms  <-  gsub("`", "",non_zero_terms )
       }
 
-
-      selected_data <-  data.frame(y = y_boot, x_boot, check.names = FALSE) %>%
-        select(all_of(non_zero_terms))
-
       if (alpha==1 & penalty=="lasso"){
         xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta$estimate
-        res <- y - xbeta
+        res <- y_boot - xbeta
 
       }else{
         xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta
-        res <- y - xbeta
+        res <- y_boot - xbeta
       }
 
-      fit_lso <- broom::tidy(lm(y ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
+      selected_data <-  data.frame(y_boot = y_boot, x_boot, check.names = FALSE) %>%
+        select(y_boot, all_of(non_zero_terms))
+
+      fit_lso <- broom::tidy(lm(y_boot ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
         term = gsub("`", "", term),  # Remove backticks
       )
 
@@ -1448,17 +1439,8 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       un_results = get_uncertain_nulls (mod= lso_ignore_mod, res=res, x=data.frame( x_boot, check.names = FALSE))
 
-      if (alpha==1 & penalty=="lasso"){
-        results=  un_results %>%
-          mutate(is.select = ifelse(beta$estimate == 0,0,1),
-                 boot = b)
-
-      }else{
-        results=  un_results %>%
-          mutate(is.select = ifelse(beta == 0,0,1),
-                 boot = b)
-      }
-
+      results= un_results %>%
+        mutate( boot = b)
 
       # Return results aligned with the full model
       return( results)
@@ -1474,7 +1456,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
         conf.low = round(quantile(estimate, .025, na.rm=T),4),
         conf.high = round(quantile(estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high - conf.low,4),
-        prop.select = round(mean(is.select ),4),
+        prop.select = round(mean(selected==1 , na.rm = T),4),
       )
     return(results)
 

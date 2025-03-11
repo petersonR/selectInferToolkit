@@ -83,9 +83,9 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",make_level
                                  colnames(x_std_transformed))
         colnames(x_std_transformed)
         scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        raw_data <- as.data.frame(cbind(x_std_transformed, y))
+        raw_data_fs <- as.data.frame(cbind(x_std_transformed, y))
         model <- MASS::stepAIC(
-          lm(y ~ 1, data = raw_data),  # Start with an empty model
+          lm(y ~ 1, data = raw_data_fs),  # Start with an empty model
           scope = list(lower = ~1, upper = scope_formula),
           direction = "forward",
           k = 2,
@@ -122,9 +122,9 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",make_level
                                  colnames(x_std_transformed))
         colnames(x_std_transformed)
         scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        raw_data <- as.data.frame(cbind(x_std_transformed, y))
+        raw_data_fs <- as.data.frame(cbind(x_std_transformed, y))
         model <- MASS::stepAIC(
-          lm(y ~ 1, data = raw_data),  # Start with an empty model
+          lm(y ~ 1, data = raw_data_fs),  # Start with an empty model
           scope = list(lower = ~1, upper = scope_formula),
           direction = direction,
           k = 2,
@@ -139,7 +139,7 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",make_level
     }
 
 
-    ### Final dataframes to return
+    ### Final data frames to return
     if(make_levels== TRUE){
       aic_mod <-broom::tidy( model, conf.int = T)%>%mutate(term = gsub("`", "", term))
 
@@ -163,7 +163,7 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",make_level
     val <- list(beta=aic_full, std=std,penalty=penalty, direction=direction,
                 x_original=x,
                 y= data[,1],
-                x_model =raw_data %>% select(-y),
+                x_model  =raw_data %>% select(-y),
                 model_sum= summary(model))
     class(val) <- "selector_ic"
     val
@@ -189,9 +189,9 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",make_level
                                  colnames(x_std_transformed))
         colnames(x_std_transformed)
         scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        raw_data <- as.data.frame(cbind(x_std_transformed, y))
+        raw_data_fs <- as.data.frame(cbind(x_std_transformed, y))
         model <- MASS::stepAIC(
-          lm(y ~ 1, data = raw_data),  # Start with an empty model
+          lm(y ~ 1, data = raw_data_fs),  # Start with an empty model
           scope = list(lower = ~1, upper = scope_formula),
           direction = "forward",
           trace = 0,
@@ -227,9 +227,9 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",make_level
                                  colnames(x_std_transformed))
         colnames(x_std_transformed)
         scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        raw_data <- as.data.frame(cbind(x_std_transformed, y))
+        raw_data_fs <- as.data.frame(cbind(x_std_transformed, y))
         model <- MASS::stepAIC(
-          lm(y ~ 1, data = raw_data),  # Start with an empty model
+          lm(y ~ 1, data = raw_data_fs),  # Start with an empty model
           scope = list(lower = ~1, upper = scope_formula),
           direction = direction,
           k = log(nrow(raw_data)),
@@ -267,7 +267,7 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",make_level
     val <- list(beta=bic_full, std=std,penalty=penalty, direction=direction,
                 x_original=x,
                 y= data[,1],
-                x_model =raw_data %>% select(-y),
+                x_model = raw_data %>% select(-y),
                 model_sum= summary(model))
     class(val) <- "selector_ic"
     val

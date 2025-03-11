@@ -51,9 +51,11 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...
   full_model$term<- colnames(x_dup)
 
   if (alpha==1 & penalty=="lasso"){
+    #for glmnet alpha=1 is the lasso penalty, and alpha=0 the ridge penalty.
     fit <- cv.glmnet(x = x_dup, y = y, alpha = alpha, standardize = F, family = "gaussian", ...)
     foldid <-fit[["foldid"]]
   }else{
+    #alpha=1 is equivalent to MCP/SCAD penalty,
     fit <- cv.ncvreg(X = x_dup, y = y,  penalty = penalty, family="gaussian",alpha=alpha,...)
     foldid <-fit[["fold"]]
   }

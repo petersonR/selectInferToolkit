@@ -103,12 +103,12 @@ infer.selector.ic <- function(
 
     x <-data.frame(model[["x_model"]], check.names = FALSE)
     x <- droplevels(x)
-    x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     y <- model[["y"]]
+    x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     std=model[["std"]]
 
     if (model[["penalty"]]=="AIC"){
-      fs_si_aic = sel_inf_fs(x_mat, y, std=std)
+      fs_si_aic = sel_inf_fs(x_mat, y, std=F)
     }else{
       fs_si_aic = sel_inf_fs(x_mat, y,mult= log(length(y)),std=std)
     }
@@ -130,8 +130,8 @@ infer.selector.ic <- function(
 
     x <-data.frame(model[["x_model"]], check.names = FALSE)
     x <- droplevels(x)
-    x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     y <- model[["y"]]
+    x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))[,-1]
     std=model[["std"]]
 
 
