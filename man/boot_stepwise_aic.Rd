@@ -13,6 +13,7 @@ boot_stepwise_aic(
   parallel = FALSE,
   direction = "both",
   model = model,
+  make_levels = F,
   ...
 )
 }

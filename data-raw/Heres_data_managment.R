@@ -106,12 +106,12 @@ colnames(x.std_df) <- colnames(x_raw)
 
 # Join the standardize matrix with outcome again
 std_data <- cbind(hdl1=hers_comp$hdl1,x.std_df )
-raw_data <- cbind(hdl1=hers_comp$hdl1,x_raw )
+#raw_data <- cbind(hdl1=hers_comp$hdl1,x_raw )
 
 #  select the variables for analysis
 #saveRDS(std_data , "hers_clean.rds")
 
 usethis::use_data(raw_data, overwrite = TRUE)
-
+usethis::use_data(std_data, overwrite = TRUE)
 
 

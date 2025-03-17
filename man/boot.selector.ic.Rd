@@ -10,6 +10,7 @@ boot.selector.ic(
   B = 10,
   nonselection = "ignored",
   parallel = FALSE,
+  make_levels = FALSE,
   ...
 )
 }

@@ -164,7 +164,8 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",make_level
                 x_original=x,
                 y= data[,1],
                 x_model  =raw_data %>% select(-y),
-                model_sum= summary(model))
+                model_sum= summary(model),
+                make_levels= make_levels)
     class(val) <- "selector_ic"
     val
 
@@ -268,7 +269,8 @@ step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",make_level
                 x_original=x,
                 y= data[,1],
                 x_model = raw_data %>% select(-y),
-                model_sum= summary(model))
+                model_sum= summary(model),
+                make_levels= make_levels)
     class(val) <- "selector_ic"
     val
 

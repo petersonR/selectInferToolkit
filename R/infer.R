@@ -325,18 +325,19 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     xbeta<- as.matrix(cbind("(Intercept)"=1, model[["x"]])) %*% model[["beta"]][["estimate"]]
     res <- y - xbeta
 
-    fit_lso <- broom::tidy(lm(y ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
+    fit_lm <- broom::tidy(lm(y ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
       term = gsub("`", "", term),  # Remove backticks
     )
 
-    lso_ignore_mod <- data.frame(term=model[["beta"]][["term"]]) %>%
-      select(term) %>% dplyr::left_join(fit_lso, by = "term")
-    final_mod= get_uncertain_nulls (mod= lso_ignore_mod, res=res, x=data.frame(model[["x"]], check.names = FALSE))
+    hybrid_mod <- data.frame(term=model[["beta"]][["term"]]) %>%
+      select(term) %>% dplyr::left_join(fit_lm,  by = "term")
+    final_mod_hybrid= get_uncertain_nulls (mod= hybrid_mod, res=res,
+                                           x=data.frame(model[["x"]], check.names = FALSE))
 
-    ci_avg_ratio  <- mean(final_mod$ci_ln[final_mod$term != "(Intercept)"] , na.rm=T)
-    ci_median_ratio <-  median(final_mod$ci_ln[final_mod$term != "(Intercept)"] , na.rm=T)
+    ci_avg_ratio  <- mean(final_mod_hybrid$ci_ln[final_mod_hybrid$term != "(Intercept)"] , na.rm=T)
+    ci_median_ratio <-  median(final_mod_hybrid$ci_ln[final_mod_hybrid$term != "(Intercept)"] , na.rm=T)
 
-    result <- list(model=   final_mod,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
+    result <- list(model=   final_mod_hybrid,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
                    selection_method=model[["penalty"]],lambda= model[["lambda"]],
                    alpha=model[["alpha"]],
                    infmethod = method, nonselection = nonselection)
@@ -350,7 +351,7 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     lam=model[["lambda"]]
     std=model[["std"]]
 
-    fit_lso= sel_inf(x,y,lam = lam, std=std, model=model)
+    fit_lso= sel_inf(x,y,lam = lam, std=T, model=model)
 
     lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% select(term) %>%
       dplyr::left_join(fit_lso, by = "term")  %>%
@@ -407,25 +408,39 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     lam=model[["lambda"]]
     std=model[["std"]]
 
-    fit_lso= sel_inf(x,y,lam = lam, std=std, model=model)
+    non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
+    non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+    selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]], check.names = FALSE),check.names = FALSE) %>%
+      select(y,all_of(non_zero_terms))
 
+    xbeta<- as.matrix(cbind("(Intercept)"=1, model[["x"]])) %*% model[["beta"]][["estimate"]]
+    res <- y - xbeta
 
-    lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% dplyr::select(term) %>%
-      dplyr::left_join(fit_lso, by = "term")  %>%
+    fit_lm <- broom::tidy(lm(y ~ ., data = selected_data), conf.int = TRUE) %>%mutate(
+      term = gsub("`", "", term),  # Remove backticks
+    )
+
+    fit_lm_intercept  <- as.data.frame(fit_lm  %>%filter(term == "(Intercept)") %>%
+          select(term, estimate, std.error, statistic, p.value, conf.low, conf.high),check.names = FALSE)
+
+    fit_si= sel_inf(x,y,lam = lam, std=std, model=model)
+
+    si_mod <- data.frame(term=model[["beta"]][["term"]])   %>% dplyr::select(term) %>%
+      dplyr::left_join(fit_si, by = "term")  %>%
       dplyr::mutate(std.error=NA, statistic=NA) %>%
-      dplyr::relocate(term, estimate,std.error, statistic, p.value, conf.low, conf.high)
+      dplyr::relocate(term, estimate,std.error, statistic, p.value, conf.low, conf.high)  %>%
+      filter(term !="(Intercept)")
 
-    beta <- ifelse(is.na(lso_mod$estimate),0, lso_mod$estimate)
-    fitted_values <- as.matrix(cbind(1,x)) %*% as.matrix(beta)
-    res <- y - fitted_values
+    si_mod_intercept <-  rbind(fit_lm_intercept,si_mod )
 
-    final_mod = get_uncertain_nulls (mod= lso_mod , res=res, x=data.frame(model[["x"]], check.names = FALSE))%>% select(-std.error,-statistic)
+    final_si = get_uncertain_nulls (mod= si_mod_intercept , res=res, x=data.frame(model[["x"]], check.names = FALSE)) %>%
+            select(-std.error,-statistic)
 
-    ci_avg_ratio  <- mean(final_mod$ci_ln[final_mod$term != "(Intercept)"] , na.rm=T)
-    ci_median_ratio <-  median(final_mod$ci_ln[final_mod$term != "(Intercept)"] , na.rm=T)
+    ci_avg_ratio  <- mean(final_si$ci_ln[final_si$term != "(Intercept)"] , na.rm=T)
+    ci_median_ratio <-  median(final_si$ci_ln[final_si$term != "(Intercept)"] , na.rm=T)
 
 
-    result <- list(model=  final_mod,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio  ,
+    result <- list(model=  final_si,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio  ,
                    selection_method=model[["penalty"]],lambda= model[["lambda"]],
                    alpha=model[["alpha"]],
                    infmethod = method, nonselection = nonselection)
@@ -459,17 +474,18 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
 #'
 
 
-boot.selector.ic  <- function(model, B=10,nonselection = "ignored",parallel=  FALSE,... ){
+boot.selector.ic  <- function(model, B=10,nonselection = "ignored",parallel=  FALSE,make_levels= FALSE,... ){
   direction=model[["direction"]]
   x <-model[["x_model"]]
   y <- model[["y"]]
+  make_levels=model[["make_levels"]]
   #x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))
 
 
   if(model[["penalty"]]=="AIC"){
     if(nonselection == "ignored"){
       results=boot_stepwise_aic (x, y, B=B,family="gaussian",direction=direction, nonselector="ignored",
-                                 parallel=  parallel, model=model)
+                                 parallel=  parallel, model=model, make_levels=make_levels)
 
       ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
       ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)

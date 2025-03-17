@@ -13,7 +13,7 @@
 #'
 #'
 
-sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, std= T, ...) {
+sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, std= F, ...) {
   variable_names <- colnames(x)
 
   # Run forward stepwise selection and compute p-values and confidence intervals

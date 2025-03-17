@@ -173,7 +173,7 @@ full_boot <- function(model, B = 250,family="gaussian",parallel = FALSE) {
 #'
 
 boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignored", parallel= FALSE,
-                              direction="both", model=model, ...) {
+                              direction="both", model=model,make_levels=F,  ...) {
 
   data= data.frame(cbind(y,x),check.names = F)
   #fit_full <- broom::tidy(lm(y ~ ., data = data))
@@ -190,30 +190,15 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-       fit = broom::tidy(MASS::stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", trace = 0,...
-        ), conf.int = T)
-       fit$term <-  gsub("`", "", fit$term)
-
-      } else{
-        fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = direction,...), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
-      }
-      #fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = "both"), conf.int = T)[-1,]
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "AIC",
+                        make_levels = make_levels, ...)
+      fit <- tidy(boot_ic )
+      fit$term <-  gsub("`", "", fit$term)
 
       boot_fits[[b]] <-       selected_vars  %>%
         dplyr::select(term) %>%
         dplyr::left_join(  fit, by = "term") %>%
         dplyr::mutate(  is.select = ifelse(is.na(estimate),0,1),
-                        p.value = ifelse(is.na(p.value), 1, p.value),
                         estimate = ifelse(is.na(estimate), 0,  estimate),
                         boot = b)
     }
@@ -249,6 +234,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     parallel::clusterEvalQ(cl, {
       library(broom)
       library(dplyr)
+      library(practicalPSI)
     })
 
     # Parallel bootstrap operation
@@ -256,24 +242,11 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        fit = broom::tidy(MASS::stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", trace = 0,...
-        ), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "AIC",
+                        make_levels = make_levels, ...)
+      fit <- tidy(boot_ic )
+      fit$term <-  gsub("`", "", fit$term)
 
-
-      } else{
-        fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = direction,...), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
-      }
 
       # Return results aligned with the full model
       return(
@@ -281,7 +254,6 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           dplyr:: select(term) %>%
           dplyr::left_join(  fit, by = "term") %>%
           dplyr::mutate(  is.select = ifelse(is.na(estimate),0,1),
-                   p.value = ifelse(is.na(p.value), 1, p.value),
                    estimate = ifelse(is.na(estimate), 0,  estimate),
                    boot = b)
       )
