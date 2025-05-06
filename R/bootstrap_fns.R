@@ -228,7 +228,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     cl <- parallel::makeCluster(n_cores)
 
     # Export required variables to each worker
-    parallel::clusterExport(cl, varlist = c("x", "y", "selected_vars","direction" ),envir = environment())
+    parallel::clusterExport(cl, varlist = c("x", "y", "selected_vars","direction","make_levels" ),envir = environment())
 
     # Ensure required packages are loaded in each worker
     parallel::clusterEvalQ(cl, {
@@ -283,29 +283,18 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     for(b in 1:B) {
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        fit = broom::tidy(MASS::stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", trace = 0,...
-        ), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
 
-      } else{
-        fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = direction,...), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
-      }
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "AIC",
+                        make_levels = make_levels, ...)
+      fit <- tidy(boot_ic )
+      fit$term <-  gsub("`", "", fit$term)
+
+
 
       boot_fits[[b]] <-all_vars    %>%
         select(term) %>%
         dplyr::left_join(  fit, by = "term") %>%
         dplyr::mutate(is.select = ifelse(is.na(estimate),0,1),
-               p.value = ifelse(is.na(p.value), 1, p.value),
                estimate = ifelse(is.na(estimate), 0,  estimate),
                boot = b)
     }
@@ -320,9 +309,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         conf.high = round(quantile(estimate, .975),4),
         #median_p.value  =  round(median(p.value),4),
         ci_ln = round(conf.high-conf.low,4),
-        prop.select = round(mean(is.select==1),4),
-        #prop.rej= round(mean(p.value<0.05),4),
-        #ci_avg_ln_boot= mean(ci_length_boot, na.rm=T)
+        prop.select = round(mean(is.select==1),4)
       )
 
 
@@ -333,7 +320,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     cl <- parallel::makeCluster(n_cores)
 
     # Export required variables to each worker
-    parallel::clusterExport(cl, varlist = c("x", "y", "all_vars","direction"),envir = environment())
+    parallel::clusterExport(cl, varlist = c("x", "y", "all_vars","direction", "make_levels" ),envir = environment())
 
     # Ensure required packages are loaded in each worker
     parallel::clusterEvalQ(cl, {
@@ -346,23 +333,11 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        fit = broom::tidy(MASS::stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", trace = 0,...
-        ), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
 
-      } else{
-        fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = direction,...), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
-      }
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "AIC",
+                        make_levels = make_levels, ...)
+      fit <- tidy(boot_ic )
+      fit$term <-  gsub("`", "", fit$term)
 
       # Return results aligned with the full model
       return(
@@ -370,7 +345,6 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           dplyr:: select(term) %>%
           dplyr::left_join(  fit, by = "term") %>%
           dplyr::mutate(  is.select = ifelse(is.na(estimate),0,1),
-                   p.value = ifelse(is.na(p.value), 1, p.value),
                    estimate = ifelse(is.na(estimate), 0,  estimate),
                    boot = b)
       )
@@ -400,40 +374,23 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        model<- MASS::stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", trace = 0
-        )
 
-        tidy_fit = broom::tidy(model, conf.int = T)
-        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
-      } else{
-        model<-MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = direction)
-        tidy_fit<- broom::tidy(model, conf.int = T)
-        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "AIC",
+                        make_levels = make_levels, ...)
 
-      }
-      res =residuals(model)
+      mod<- tidy( boot_ic [["model_sum"]], conf.int=T)
+      mod$term <- gsub("`", "", mod$term)  # Remove backticks
+      res =residuals(boot_ic[["model_sum"]])
+      x <- boot_ic[["x_model"]]
+      x_dup<- as.data.frame(model.matrix(y ~., model.frame(~ ., cbind(x,y= boot_ic[["y"]]), na.action=na.pass))[,-1],
+                            check.names=FALSE)
 
-      aic_ignore_full <-all_vars   %>%
-        dplyr::select(term) %>%
-        dplyr::left_join(tidy_fit, by = "term")
+      full_mod <-data.frame(term=boot_ic [["beta"]][["term"]]) %>%
+        dplyr::left_join(mod, by = "term")
+      final_mod= get_uncertain_nulls (mod=full_mod, res=res, x=x_dup)
 
-      data_boot <- droplevels(data_boot)
-      x_dup<- as.data.frame(model.matrix(y ~., data_boot,check.names=FALSE))[,-1]
 
-      # print(colnames(x_dup))
-      # get_uncertain_nulls (mod=aic_ignore_full, res=res, x=x_dup) %>%
-      #   select(term, estimate, selected, p.value)
-
-      boot_fits[[b]] <-  get_uncertain_nulls (mod=aic_ignore_full, res=res, x=x_dup) %>%
+      boot_fits[[b]] <-   final_mod %>%
         select(term, estimate, selected, p.value) %>%
         dplyr::mutate(   boot = b)
     }
@@ -458,7 +415,7 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     n_cores <- parallel::detectCores() - 1
     cl <- parallel::makeCluster(n_cores)
 
-    parallel::clusterExport(cl, varlist = c("x", "y", "all_vars","direction" ),envir = environment())
+    parallel::clusterExport(cl, varlist = c("x", "y", "all_vars","direction","make_levels"  ),envir = environment())
 
     parallel::clusterEvalQ(cl, {
       library(broom)
@@ -471,42 +428,24 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        model<- stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", trace = 0
-        )
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "AIC",
+                        make_levels = make_levels, ...)
 
-        tidy_fit = broom::tidy(model, conf.int = T)
-        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
+      mod<- tidy( boot_ic [["model_sum"]], conf.int=T)
+      mod$term <- gsub("`", "", mod$term)  # Remove backticks
+      res =residuals(boot_ic[["model_sum"]])
+      x <- boot_ic[["x_model"]]
+      x_dup<- as.data.frame(model.matrix(y ~., model.frame(~ ., cbind(x,y= boot_ic[["y"]]), na.action=na.pass))[,-1],
+                            check.names=FALSE)
+
+      full_mod <-data.frame(term=boot_ic [["beta"]][["term"]]) %>%
+        dplyr::left_join(mod, by = "term")
+      final_mod= get_uncertain_nulls (mod=full_mod, res=res, x=x_dup)
 
 
-      } else{
-        model<-MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),
-                             k=log(nrow(na.omit(data_boot))),trace =0, direction = direction)
-        tidy_fit<- broom::tidy(model, conf.int = T)
-        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
-
-      }
-      res =residuals(model)
-
-      aic_ignore_full <-  all_vars  %>%
-        dplyr::select(term) %>%
-        dplyr::left_join(tidy_fit, by = "term")
-
-      data_boot <- droplevels(data_boot)
-      x_dup<- as.data.frame(model.matrix(y ~., data_boot,check.names=FALSE))[,-1]
-
-      return(get_uncertain_nulls (mod=aic_ignore_full, res=res, x=x_dup) %>%
-               select(term, estimate, selected, p.value) %>%
-               dplyr::mutate(   boot = b)
-      )},cl=cl)
+      return( final_mod %>%
+                select(term, estimate, selected, p.value) %>%
+                dplyr::mutate(   boot = b))},cl=cl)
 
     parallel::stopCluster(cl)
 
@@ -564,11 +503,9 @@ boot_stepwise_aic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
 #'
 
 boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignored", parallel= FALSE,
-                              direction="both", model=model, ...) {
+                              direction="both", model=model, make_levels=F,...) {
 
   data= data.frame(cbind(y,x),check.names = F)
-  #fit_full <- broom::tidy(lm(y ~ ., data = data))
-  #fit_bic<- tidy(model[["model_sum"]])
 
   non_zero_terms <- model[["beta"]][["term"]][! is.na(model[["beta"]][["estimate"]]) ] # Exclude the intercept
   selected_vars <- data.frame(term =   non_zero_terms)
@@ -582,33 +519,18 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        fit = broom::tidy(MASS::stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          k=log(nrow(na.omit(data_boot))),
-          direction = "forward", trace = 0,...
-        ), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "BIC",
+                        make_levels = make_levels, ...)
+      fit <- tidy(boot_ic )
+      fit$term <-  gsub("`", "", fit$term)
 
-      } else{
-        fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, k=log(nrow(na.omit(data_boot))),
-                                        direction = direction,...), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
 
-      }
       #fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0, direction = "both"), conf.int = T)[-1,]
 
       boot_fits[[b]] <-     selected_vars   %>%
         select(term) %>%
         dplyr::left_join(  fit, by = "term") %>%
         dplyr::mutate(is.select = ifelse(is.na(estimate),0,1),
-               p.value = ifelse(is.na(p.value), 1, p.value),
                estimate = ifelse(is.na(estimate), 0,  estimate),
                boot = b)
     }
@@ -621,10 +543,8 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         mean_estimate = round(mean(estimate, na.rm=T),4),
         conf.low = round(quantile(estimate, .025, na.rm=T),4),
         conf.high = round(quantile(estimate, .975, na.rm = T),4),
-        #median_p.value  = round(median(p.value, na.rm=T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
 
     return(data.frame(term=all_vars) %>%
@@ -640,7 +560,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     cl <- parallel::makeCluster(n_cores)
 
     # Export required variables to each worker
-    parallel::clusterExport(cl, varlist = c("x", "y", "selected_vars","direction" ),envir = environment())
+    parallel::clusterExport(cl, varlist = c("x", "y", "selected_vars","direction","make_levels"  ),envir = environment())
 
     # Ensure required packages are loaded in each worker
     parallel::clusterEvalQ(cl, {
@@ -653,24 +573,10 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        fit = broom::tidy(MASS::stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          k=log(nrow(na.omit(data_boot))),
-          direction = "forward", trace = 0,...
-        ), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
-      } else{
-        fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0,
-                                        k=log(nrow(na.omit(data_boot))),direction = direction,...), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
-      }
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "BIC",
+                        make_levels = make_levels, ...)
+      fit <- tidy(boot_ic )
+      fit$term <-  gsub("`", "", fit$term)
 
       # Return results aligned with the full model
       return(
@@ -678,7 +584,6 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           dplyr:: select(term) %>%
           dplyr::left_join(  fit, by = "term") %>%
           dplyr::mutate(  is.select = ifelse(is.na(estimate),0,1),
-                   p.value = ifelse(is.na(p.value), 1, p.value),
                    estimate = ifelse(is.na(estimate), 0,  estimate),
                    boot = b)
       )
@@ -710,31 +615,18 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     for(b in 1:B) {
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        fit = broom::tidy(MASS::stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          k=log(nrow(na.omit(data_boot))),
-          direction = "forward", trace = 0,...
-        ), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
 
-      } else{
-        fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0,
-                                        k=log(nrow(na.omit(data_boot))), direction = direction,...), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
-      }
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "AIC",
+                        make_levels = make_levels, ...)
+      fit <- tidy(boot_ic )
+      fit$term <-  gsub("`", "", fit$term)
+
+
 
       boot_fits[[b]] <-   all_vars   %>%
         select(term) %>%
         dplyr::left_join(  fit, by = "term") %>%
         dplyr::mutate(is.select = ifelse(is.na(estimate),0,1),
-               p.value = ifelse(is.na(p.value), 1, p.value),
                estimate = ifelse(is.na(estimate), 0,  estimate),
                boot = b)
     }
@@ -747,11 +639,8 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         mean_estimate = round(mean(estimate),4),
         conf.low = round(quantile(estimate, .025),4),
         conf.high = round(quantile(estimate, .975),4),
-       # median_p.value  =  round(median(p.value),4),
         ci_ln = round(conf.high-conf.low,4),
-        prop.select = round(mean(is.select==1),4),
-        #prop.rej= round(mean(p.value<0.05),4),
-        #ci_avg_ln_boot= mean(ci_length_boot, na.rm=T)
+        prop.select = round(mean(is.select==1),4)
       )
 
 
@@ -762,7 +651,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     cl <- parallel::makeCluster(n_cores)
 
     # Export required variables to each worker
-    parallel::clusterExport(cl, varlist = c("x", "y", "all_vars","direction"),envir = environment())
+    parallel::clusterExport(cl, varlist = c("x", "y", "all_vars","direction", "make_levels" ),envir = environment())
 
     # Ensure required packages are loaded in each worker
     parallel::clusterEvalQ(cl, {
@@ -775,25 +664,11 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        fit = broom::tidy(MASS::stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          k=log(nrow(na.omit(data_boot))),
-          direction = "forward", trace = 0,...
-        ), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "BIC",
+                        make_levels = make_levels, ...)
+      fit <- tidy(boot_ic )
+      fit$term <-  gsub("`", "", fit$term)
 
-      } else{
-        fit<- broom::tidy(MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),  trace =0,
-                                        k=log(nrow(na.omit(data_boot))),direction = direction,...), conf.int = T)
-        fit$term <-  gsub("`", "", fit$term)
-      }
 
       # Return results aligned with the full model
       return(
@@ -801,7 +676,6 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
           dplyr:: select(term) %>%
           dplyr::left_join(  fit, by = "term") %>%
           dplyr::mutate(  is.select = ifelse(is.na(estimate),0,1),
-                   p.value = ifelse(is.na(p.value), 1, p.value),
                    estimate = ifelse(is.na(estimate), 0,  estimate),
                    boot = b)
       )
@@ -816,10 +690,8 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         mean_estimate = round(mean(estimate,na.rm=T),4),
         conf.low = round(quantile(estimate, .025,na.rm=T),4),
         conf.high = round(quantile(estimate, .975,na.rm=T),4),
-        #median_p.value  = round(median(p.value,na.rm=T),4),
         ci_ln = round(conf.high - conf.low,4),
         prop.select = round(mean(is.select==1),4),
-        #prop.rej= round(mean(p.value<0.05, na.rm=T),4),
       )
 
   }
@@ -831,38 +703,22 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        model<- MASS::stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          k=log(nrow(na.omit(data_boot))),
-          direction = "forward", trace = 0
-        )
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "BIC",
+                        make_levels = make_levels, ...)
 
-        tidy_fit = broom::tidy(model, conf.int = T)
-        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
+      mod<- tidy( boot_ic [["model_sum"]], conf.int=T)
+      mod$term <- gsub("`", "", mod$term)  # Remove backticks
+      res =residuals(boot_ic[["model_sum"]])
+      x <- boot_ic[["x_model"]]
+      x_dup<- as.data.frame(model.matrix(y ~., model.frame(~ ., cbind(x,y= boot_ic[["y"]]), na.action=na.pass))[,-1],
+                            check.names=FALSE)
 
-      } else{
-        model<-MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),
-                             k=log(nrow(na.omit(data_boot))),trace =0, direction = direction)
-        tidy_fit<- broom::tidy(model, conf.int = T)
-        tidy_fit$term <-  gsub("`", "", tidy_fit$term)
+      full_mod <-data.frame(term=boot_ic [["beta"]][["term"]]) %>%
+        dplyr::left_join(mod, by = "term")
+      final_mod= get_uncertain_nulls (mod=full_mod, res=res, x=x_dup)
 
-      }
-      res =residuals(model)
 
-      bic_ignore_full <-  all_vars  %>%
-        dplyr::select(term) %>%
-        dplyr::left_join(tidy_fit, by = "term")
-
-      x_dup<- as.data.frame(model.matrix(y ~., data_boot,check.names=FALSE))[,-1]
-
-      boot_fits[[b]] <-  get_uncertain_nulls (mod=bic_ignore_full, res=res, x=x_dup) %>%
+      boot_fits[[b]] <-   final_mod %>%
         select(term, estimate, selected, p.value) %>%
         dplyr::mutate(   boot = b)
 
@@ -878,8 +734,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
         conf.high = round(quantile(estimate, .975, na.rm = T),4),
         ci_ln = round(conf.high-conf.low,4),
         prop.select = round(mean(selected==1),4),
-        #prop.rej= round(mean(p.value<0.05),4),
-        #ci_avg_ln_boot= mean(ci_length_boot, na.rm=T)
+
       )
 
 
@@ -889,7 +744,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
     n_cores <- parallel::detectCores() - 1
     cl <- parallel::makeCluster(n_cores)
 
-    parallel::clusterExport(cl, varlist = c("x", "y", "all_vars","direction" ),envir = environment())
+    parallel::clusterExport(cl, varlist = c("x", "y", "all_vars","direction","make_levels"  ),envir = environment())
 
     parallel::clusterEvalQ(cl, {
       library(broom)
@@ -902,40 +757,24 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      if (direction == "forward") {
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x)),
-                                 paste0("`", colnames(x), "`"),
-                                 colnames(x))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        model<- stepAIC(
-          lm(y ~ 1, data=na.omit(data_boot)),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          k=log(nrow(na.omit(data_boot))),
-          direction = "forward", trace = 0
-        )
+      boot_ic = step_ic(x=data_boot %>% select(-y),data_boot %>% select(y),std=F, direction=direction, penalty = "BIC",
+                        make_levels = make_levels, ...)
 
-        tidy_fit = broom::tidy(model, conf.int = T)
+      mod<- tidy( boot_ic [["model_sum"]], conf.int=T)
+      mod$term <- gsub("`", "", mod$term)  # Remove backticks
+      res =residuals(boot_ic[["model_sum"]])
+      x <- boot_ic[["x_model"]]
+      x_dup<- as.data.frame(model.matrix(y ~., model.frame(~ ., cbind(x,y= boot_ic[["y"]]), na.action=na.pass))[,-1],
+                            check.names=FALSE)
 
+      full_mod <-data.frame(term=boot_ic [["beta"]][["term"]]) %>%
+        dplyr::left_join(mod, by = "term")
+      final_mod= get_uncertain_nulls (mod=full_mod, res=res, x=x_dup)
 
-      } else{
-        model<-MASS::stepAIC(lm(y ~ ., data=na.omit(data_boot)),
-                             k=log(nrow(na.omit(data_boot))),trace =0, direction = direction)
-        tidy_fit<- broom::tidy(model, conf.int = T)
+      return( final_mod %>%
+                select(term, estimate, selected, p.value) %>%
+                dplyr::mutate(   boot = b))},cl=cl)
 
-      }
-      res =residuals(model)
-
-      bic_ignore_full <-  all_vars  %>%
-        dplyr::select(term) %>%
-        dplyr::left_join(tidy_fit, by = "term")
-
-      x_dup<- as.data.frame(model.matrix(y ~., data_boot,check.names=FALSE))[,-1]
-
-     return(get_uncertain_nulls (mod=bic_ignore_full, res=res, x=x_dup) %>%
-        select(term, estimate, selected, p.value) %>%
-          dplyr::mutate(   boot = b)
-     )},cl=cl)
 
     parallel::stopCluster(cl)
 
@@ -1015,6 +854,8 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       boot_idx <- sample(1:nrow(x), replace = TRUE)
       x_boot <- x[boot_idx,]
       y_boot<- y[boot_idx]
+
+
 
       if (alpha==1 & penalty=="lasso"){
         fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian", ...)
