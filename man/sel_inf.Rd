@@ -4,7 +4,7 @@
 \alias{sel_inf}
 \title{Title}
 \usage{
-sel_inf(x, y, model, lam = "lambda.min", intercept = TRUE, ...)
+sel_inf(x, y, model, lam = "lambda.min", intercept = TRUE, alpha = 1, ...)
 }
 \arguments{
 \item{x}{design matrix}

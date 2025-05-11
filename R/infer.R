@@ -239,6 +239,9 @@ infer.selector.ic <- function(
 #' @param nonselection A character string specifying how to handle variables not selected by model selection procedure. One of
 #' "ignored", "confident_nulls" or "uncertain_nulls" supported
 #' @return "infer_pen" class list with
+#' @importFrom broom tidy
+#' @importFrom dplyr filter
+#' @importFrom dplyr select
 #' \item{model}{A dataframe with model results including columns for term, estimate, std.error, statistics, p.value, conf.low, conf.high, ci_ln}
 #' \item{ci_avg_ratio}{Average CI length across all variables in model}
 #' \item{ci_median_ratio}{median CI length across all variables in model}
@@ -350,8 +353,9 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     y <- model[["y"]]
     lam=model[["lambda"]]
     std=model[["std"]]
+    alpha = model[["alpha"]]
 
-    fit_lso= sel_inf(x,y,lam = lam, std=T, model=model)
+    fit_lso= sel_inf(x,y,lam = lam, std=T, model=model,alpha =alpha  )
 
     lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% select(term) %>%
       dplyr::left_join(fit_lso, by = "term")  %>%
@@ -376,8 +380,9 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     y <- model[["y"]]
     lam=model[["lambda"]]
     std=model[["std"]]
+    alpha = model[["alpha"]]
 
-    fit_lso= sel_inf(x,y,lam = lam, std=std, model=model)
+    fit_lso= sel_inf(x,y,lam = lam, std=std, model=model,alpha =alpha)
 
     lso_mod <- data.frame(term=model[["beta"]][["term"]])   %>% select(term) %>%
       dplyr::left_join(fit_lso, by = "term") %>%
@@ -407,6 +412,7 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     y <- model[["y"]]
     lam=model[["lambda"]]
     std=model[["std"]]
+    alpha = model[["alpha"]]
 
     non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
     non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
@@ -423,7 +429,7 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     fit_lm_intercept  <- as.data.frame(fit_lm  %>%filter(term == "(Intercept)") %>%
           select(term, estimate, std.error, statistic, p.value, conf.low, conf.high),check.names = FALSE)
 
-    fit_si= sel_inf(x,y,lam = lam, std=std, model=model)
+    fit_si= sel_inf(x,y,lam = lam, std=std, model=model,  alpha =  alpha )
 
     si_mod <- data.frame(term=model[["beta"]][["term"]])   %>% dplyr::select(term) %>%
       dplyr::left_join(fit_si, by = "term")  %>%

@@ -13,6 +13,7 @@ boot_stepwise_bic(
   parallel = FALSE,
   direction = "both",
   model = model,
+  make_levels = F,
   ...
 )
 }
