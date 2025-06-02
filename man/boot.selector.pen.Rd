@@ -6,9 +6,10 @@
 \usage{
 boot.selector.pen(
   model,
-  B = 10,
+  B = 250,
   nonselection = "ignored",
   parallel = FALSE,
+  save_beta = F,
   ...
 )
 }

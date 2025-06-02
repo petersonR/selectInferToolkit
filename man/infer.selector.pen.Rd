@@ -17,14 +17,6 @@ infer.selector.pen(model, method = "hybrid", nonselection = "ignored")
 }
 \value{
 "infer_pen" class list with
-\item{model}{A dataframe with model results including columns for term, estimate, std.error, statistics, p.value, conf.low, conf.high, ci_ln}
-\item{ci_avg_ratio}{Average CI length across all variables in model}
-\item{ci_median_ratio}{median CI length across all variables in model}
-\item{selection_method}{'lasso' or 'MCP' Note: Same as in ncvreg, even with elastic net-it says lasso but can be differntiated with value of alpha}
-\item{lambda}{selected lambda for inference , either "lambda.min" or "lambda.1se"}
-\item{alpha}{selected alpha for inference}
-\item{infmethod}{Inference method chosen}
-\item{nonselection}{method chosen  to deal with non selection}
 }
 \description{
 Inference for selector.pen class except bootstrap which is it's own function

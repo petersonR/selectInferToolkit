@@ -1,3 +1,46 @@
+
+# Helper: clean colnames to avoid special characters
+#' Title
+#'
+#' @param nms a vector with column names to be cleaned
+#'
+#' @return a vector with clean columns
+#'
+#'
+
+clean_colnames_fn <- function(nms) {
+  ifelse(grepl("[^a-zA-Z0-9._]", nms), paste0("`", nms, "`"), nms)
+}
+
+
+
+
+# Transform factor variables to dummies if needed
+#' Title
+#'
+#' @param data  data to be processed
+#' @param make_levels whether to make dummy variables for each factor level
+#'
+#' @return model matrix with clean dataset
+
+dummy_col_fn <- function(data, make_levels) {
+  if (!make_levels) return(data)
+
+  # Identify factor and numeric variables
+  fact_vars <- names(data)[sapply(data, is.factor)]
+  if (length(fact_vars) == 0) return(data)
+
+  dummy_data <- model.matrix(~ . - 1, data = data[, fact_vars, drop = FALSE])[,-1]
+  numeric_data <- data[, !names(data) %in% fact_vars, drop = FALSE]
+
+  cbind(numeric_data, dummy_data)
+}
+
+
+
+
+
+
 #' Stepwise forwad/backward/bidirectional selection with AIC/BIC
 #'
 #'
@@ -30,261 +73,107 @@
 
 
 
-step_ic <- function(x,y,std=FALSE,penalty= "AIC", direction="forward",make_levels= FALSE,...){
-
-  if(is.matrix(x)){
-    if(std==TRUE){
-      x_std= data.frame(x, check.names = FALSE)%>%
-        mutate_if(is.numeric, scale)
-      colnames(x_std) = colnames(x)
+step_ic <- function(x, y, std = FALSE, penalty = "AIC", direction = "forward", make_levels = FALSE, ...) {
+  if (is.matrix(x)) {
+    if (std == TRUE) {
+      x_df <- as.data.frame(x, check.names = FALSE)
+      numeric_cols <- sapply(x_df, is.numeric)
+      x_df[numeric_cols] <- lapply(x_df[numeric_cols], scale)
+      colnames(x_df) <- colnames(x)
+      x_std <- x_df
+    } else {
+      x_std <- as.data.frame(x, check.names = FALSE)
     }
-    else{
-      x_std= data.frame(x, check.names = FALSE)
-    }
-  }
-  else if (is.data.frame(x)){
-    if(std==TRUE){
-      x_std = x %>%
-        mutate_if(is.numeric, scale)
-      colnames(x_std) = colnames(x)
-      #x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x_std,y), na.action=na.pass))[,-1]
-
-    }
-    else{
-      x_std=x
-      #x_dup<- model.matrix(y ~., model.frame(~ ., cbind(x,y), na.action=na.pass))[,-1]
-
+  } else if (is.data.frame(x)) {
+    if (std == TRUE) {
+      numeric_cols <- sapply(x, is.numeric)
+      x[numeric_cols] <- lapply(x[numeric_cols], scale)
+      colnames(x) <- colnames(x) # optional, redundant unless colnames were altered
+      x_std <- x
+    } else {
+      x_std <- x
     }
   }
 
-
-  raw_data = as.data.frame(cbind(x_std,y))
+  raw_data <- as.data.frame(cbind(x_std, y))
   rownames(raw_data) <- NULL
 
   # fit full model to get term names
-  full_model <- broom::tidy(lm(y~., data= raw_data ), conf.int = TRUE) %>% select(term, estimate)
+  full_model <- lm(y ~ ., data = raw_data)
+  coef_est <- coef(full_model)
+  full_model_df <- data.frame(term = names(coef_est), estimate = as.numeric(coef_est))
+  # Set penalty value
+  k_val <- if (penalty == "AIC") 2 else if (penalty == "BIC") log(nrow(raw_data)) else stop("Unsupported penalty")
 
-  #full_model$term<- c("(Intercept)",colnames(x_dup))
+  # Prepare x_input and raw_data_fs if needed
+  x_input <- if (make_levels) dummy_col_fn(x_std, TRUE) else x_std
+  use_scope <- make_levels || direction == "forward"
 
-  if(penalty=="AIC"){
-    if (direction == "forward") {
-      if(make_levels== TRUE){
-        fact_vars <- names(x_std)[sapply(x_std, is.factor)]
-        if (length(fact_vars) > 0) {
-          dummy_data <- model.matrix(~ . - 1, data = x_std[, fact_vars, drop = FALSE])  # -1 removes intercept
-          x_std_transformed <- cbind(x_std[, !names(x_std) %in% fact_vars, drop = FALSE], dummy_data)
-        } else {
-          x_std_transformed <- x_std  # If no factors, use the original dataset
-        }
-
-        # Clean column names (optional, if needed for safety)
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x_std_transformed)),
-                                 paste0("`", colnames(x_std_transformed), "`"),
-                                 colnames(x_std_transformed))
-        colnames(x_std_transformed)
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        raw_data_fs <- as.data.frame(cbind(x_std_transformed, y))
-        model <- MASS::stepAIC(
-          lm(y ~ 1, data = raw_data_fs),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward",
-          k = 2,
-          trace = 0, ...
-        )
-      }
-      else{
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x_std)),
-                                 paste0("`", colnames(x_std), "`"),
-                                 colnames(x_std))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        model = MASS::stepAIC(
-          lm(y ~ 1, data = raw_data),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", k=2, trace = 0,...)
-      }
-
-
-    }
-    else{
-      if(make_levels== TRUE){
-        fact_vars <- names(x_std)[sapply(x_std, is.factor)]
-        if (length(fact_vars) > 0) {
-          dummy_data <- model.matrix(~ . - 1, data = x_std[, fact_vars, drop = FALSE])  # -1 removes intercept
-          x_std_transformed <- cbind(x_std[, !names(x_std) %in% fact_vars, drop = FALSE], dummy_data)
-        } else {
-          x_std_transformed <- x_std  # If no factors, use the original dataset
-        }
-
-        # Clean column names (optional, if needed for safety)
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x_std_transformed)),
-                                 paste0("`", colnames(x_std_transformed), "`"),
-                                 colnames(x_std_transformed))
-        colnames(x_std_transformed)
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        raw_data_fs <- as.data.frame(cbind(x_std_transformed, y))
-        model <- MASS::stepAIC(
-          lm(y ~ 1, data = raw_data_fs),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = direction,
-          k = 2,
-          trace = 0, ...)
-      }
-
-      else{
-        model=  MASS::stepAIC(lm(y~., data = raw_data), trace =0, direction = direction,...)
-
-      }
-
-    }
-
-
-    ### Final data frames to return
-    if(make_levels== TRUE){
-      aic_mod <-broom::tidy( model, conf.int = T)%>%mutate(term = gsub("`", "", term))
-
-
-      aic_full <- data.frame(term= colnames(x_std_transformed)) %>%dplyr::full_join(aic_mod, by = "term") %>%
-        select(term, estimate) %>%
-        as.data.frame()
-
-
-      } else {
-        aic_mod <-broom::tidy( model, conf.int = T)
-
-
-        aic_full <-full_model %>%
-          dplyr::select(term) %>%
-          dplyr::left_join(aic_mod , by = "term") %>% select(term, estimate) %>% as.data.frame()
-
-      }
-
-    data = model[["model"]]
-    val <- list(beta=aic_full, std=std,penalty=penalty, direction=direction,
-                x_original=x,
-                y= data[,1],
-                x_model  =raw_data %>% select(-y),
-                model_sum= summary(model),
-                make_levels= make_levels)
-    class(val) <- "selector_ic"
-    val
-
+  if (use_scope) {
+    clean_colnames <- clean_colnames_fn(colnames(x_input))
+    raw_data_fs <- as.data.frame(cbind(x_input, y))
+    scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
+    model <- stepAIC(
+      lm(y ~ 1, data = raw_data_fs),
+      scope = list(lower = ~1, upper = scope_formula),
+      direction = direction,
+      k = k_val,
+      trace = 0,
+      ...
+    )
+  } else {
+    model <- stepAIC(
+      lm(y ~ ., data = raw_data),
+      direction = direction,
+      trace = 0,
+      k = k_val,
+      ...
+    )
   }
 
+  # Extract model coefficients
+  coefs <- coef(model)
+  mod_df <- data.frame(term = names(coefs), estimate = as.numeric(coefs), stringsAsFactors = FALSE)
+  mod_df$term <- gsub("`", "", mod_df$term)
 
-  else if(penalty=="BIC"){
-    # stepwise BIC
-    if(direction =="forward"){
-      if(make_levels== TRUE){
-        fact_vars <- names(x_std)[sapply(x_std, is.factor)]
-        if (length(fact_vars) > 0) {
-          dummy_data <- model.matrix(~ . - 1, data = x_std[, fact_vars, drop = FALSE])  # -1 removes intercept
-          x_std_transformed <- cbind(x_std[, !names(x_std) %in% fact_vars, drop = FALSE], dummy_data)
-        } else {
-          x_std_transformed <- x_std  # If no factors, use the original dataset
-        }
+  # Create final coefficient table
+  all_terms <- if (make_levels) colnames(raw_data_fs)[colnames(raw_data_fs) != "y"] else full_model_df$term
+  all_terms <- full_model_df$term
+  coef_full <- merge(
+    data.frame(term = all_terms, stringsAsFactors = FALSE),
+    mod_df,
+    by = "term",
+    all.x = TRUE,
+    all.y = T,
+    sort = F
+  )
+  coef_full <- coef_full[match(all_terms, coef_full$term), ]
 
-        # Clean column names (optional, if needed for safety)
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x_std_transformed)),
-                                 paste0("`", colnames(x_std_transformed), "`"),
-                                 colnames(x_std_transformed))
-        colnames(x_std_transformed)
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        raw_data_fs <- as.data.frame(cbind(x_std_transformed, y))
-        model <- MASS::stepAIC(
-          lm(y ~ 1, data = raw_data_fs),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward",
-          trace = 0,
-          k=log(nrow(raw_data)), ...)
-      }
-      else{
-        # Clean variable names for forward selection
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x_std)),
-                                 paste0("`", colnames(x_std), "`"),
-                                 colnames(x_std))
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        model = MASS::stepAIC(
-          lm(y ~ 1, data = raw_data),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = "forward", k=log(nrow(raw_data)), trace = 0,...
-        )
-      }
+  # Assemble final output
+  data <- model[["model"]]
+  val <- list(
+    beta = coef_full,
+    std = std,
+    penalty = penalty,
+    direction = direction,
+    x_original = x,
+    y = data[[1]],
+    x_model = raw_data[, setdiff(names(raw_data), "y"), drop = FALSE],
+    model_sum = model,
+    make_levels = make_levels
+  )
+  class(val) <- "selector_ic"
+  val
 
-      #model=  MASS::stepAIC(lm(y~., data = raw_data), trace =0, k=log(nrow(raw_data)),direction = direction)
-    } else{
-      #clean_colnames <- sapply(colnames(x_dup), function(name) {
-      if(make_levels== TRUE){
-        fact_vars <- names(x_std)[sapply(x_std, is.factor)]
-        if (length(fact_vars) > 0) {
-          dummy_data <- model.matrix(~ . - 1, data = x_std[, fact_vars, drop = FALSE])  # -1 removes intercept
-          x_std_transformed <- cbind(x_std[, !names(x_std) %in% fact_vars, drop = FALSE], dummy_data)
-        } else {
-          x_std_transformed <- x_std  # If no factors, use the original dataset
-        }
-        # Clean column names (optional, if needed for safety)
-        clean_colnames <- ifelse(grepl("[^a-zA-Z0-9._]", colnames(x_std_transformed)),
-                                 paste0("`", colnames(x_std_transformed), "`"),
-                                 colnames(x_std_transformed))
-        colnames(x_std_transformed)
-        scope_formula <- as.formula(paste("~", paste(clean_colnames, collapse = " + ")))
-        raw_data_fs <- as.data.frame(cbind(x_std_transformed, y))
-        model <- MASS::stepAIC(
-          lm(y ~ 1, data = raw_data_fs),  # Start with an empty model
-          scope = list(lower = ~1, upper = scope_formula),
-          direction = direction,
-          k = log(nrow(raw_data)),
-          trace = 0, ...)
-      }
-
-      else{
-        model=  MASS::stepAIC(lm(y~., data = raw_data), trace =0, k=log(nrow(raw_data)), direction = direction,...)
-
-      }
-
-    }
-
-    ### Final dataframes to return
-    if(make_levels== TRUE){
-      bic_mod <-broom::tidy( model, conf.int = T)%>%mutate(term = gsub("`", "", term))
-
-
-      bic_full <- data.frame(term= colnames(x_std_transformed)) %>%dplyr::full_join(bic_mod, by = "term") %>%
-        select(term, estimate) %>%
-        as.data.frame()
-
-
-    } else {
-      bic_mod <-broom::tidy( model, conf.int = T)
-
-
-      bic_full <-full_model %>%
-        dplyr::select(term) %>%
-        dplyr::left_join(bic_mod , by = "term") %>% select(term, estimate) %>% as.data.frame()
-
-    }
-
-    data = model[["model"]]
-    val <- list(beta=bic_full, std=std,penalty=penalty, direction=direction,
-                x_original=x,
-                y= data[,1],
-                x_model = raw_data %>% select(-y),
-                model_sum= summary(model),
-                make_levels= make_levels)
-    class(val) <- "selector_ic"
-    val
-
-
-  }
 
 }
 
 #' Title
 #'
 #' @param x model of class `selector_ic`
-#' @param ... additioanl arugments (currerntly not suported)
+#' @param ... additional arguments (currently not supported)
 #' @method print `selector_ic`
-#' @return returns x invisibily
+#' @return returns x invisibly
 #' @export
 print.selector_ic <- function(x, ...) {
   cat("Stepwise Model Selection Summary:\n")
@@ -296,7 +185,7 @@ print.selector_ic <- function(x, ...) {
   cat("Penalty used: ", x$penalty, "\n")
 
   # Standard errors used in the model
-  if(x$std) {
+  if (x$std) {
     cat("Design Matrix standardized: TRUE\n")
   } else {
     cat("Design Matrix standardized: FALSE\n")
@@ -304,9 +193,7 @@ print.selector_ic <- function(x, ...) {
 
   # Model coefficients (first few)
   cat("\nFinal Model Coefficients:\n")
-  print( x[["model_sum"]][["coefficients"]][,1])
-
-
+  print(summary(x[["model_sum"]])[["coefficients"]][, 1])
 }
 
 
@@ -321,8 +208,7 @@ print.selector_ic <- function(x, ...) {
 #' @return  A tibble containing the tidied coefficients of the model.
 #' @export
 tidy.selector_ic <- function(x, ...) {
-
-  ret<- as_tibble(x[["model_sum"]]$coefficients, rownames = "term")
+  ret <- as_tibble(summary(x[["model_sum"]])$coefficients, rownames = "term")
   colnames(ret) <- c("term", "estimate", "std.error", "statistic", "p.value")
 
   ret <- ret %>% select(term, estimate)

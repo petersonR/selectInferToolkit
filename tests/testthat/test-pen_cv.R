@@ -1,4 +1,4 @@
-# Test IRIS data
+###### Test IRIS data ########
 
 data(iris)
 iris <- iris[1:100,]
@@ -76,7 +76,7 @@ test_that("elastic net works", {
 })
 
 
-# Test HERS Data set
+###### Test HERS Data set. ####
 y= raw_data$hdl1
 #x <-model.matrix(hdl1 ~., model.frame(~ ., raw_data, na.action=na.pass))[,-1]
 x <- raw_data %>% dplyr::select(-hdl1)
@@ -91,7 +91,7 @@ test_that("lasso  works, HERS", {
 
   expect_silent({
     obj3 <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.1se",std=TRUE)
-    obj4 <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.1se",std=TRUE)
+    obj4 <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.1se",std=FALSE)
 
   })
 })

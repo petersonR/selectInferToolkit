@@ -4,7 +4,15 @@
 \alias{full_boot}
 \title{Title}
 \usage{
-full_boot(model, B = 250, family = "gaussian", parallel = FALSE)
+full_boot(
+  model,
+  B = 250,
+  family = "gaussian",
+  parallel = FALSE,
+  std = F,
+  save_beta = F,
+  ...
+)
 }
 \arguments{
 \item{model}{lm object with design matrix and output variable}

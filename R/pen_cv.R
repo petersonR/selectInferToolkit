@@ -34,30 +34,49 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...
 
   if (is.matrix(x) || is.data.frame(x)) {
     if (std) {
-      x_std <- as.data.frame(x, check.names = FALSE) %>% mutate_if(is.numeric, scale)
+      # Standardize numeric columns
+      x_std <- as.data.frame(x, check.names = FALSE)
+      num_cols <- sapply(x_std, is.numeric)
+      x_std[num_cols] <- lapply(x_std[num_cols], scale)
+
+      # Preserve original column names
       colnames(x_std) <- colnames(x)
-      x_dup <- model.matrix(y ~ ., model.frame(~ ., data.frame(cbind(x_std, y),check.names = F), na.action = na.pass))[, -1]
+
+      # Create model matrix
+      x_dup <- model.matrix(
+        y ~ .,
+        model.frame(~., data = data.frame(cbind(x_std, y), check.names = FALSE), na.action = na.pass)
+      )[, -1]
     } else {
-      x_dup <- model.matrix(y ~ ., model.frame(~ ., data.frame(cbind(x, y),check.names = F), na.action = na.pass))[, -1]
+      # No standardization, directly build model matrix
+      x_dup <- model.matrix(
+        y ~ .,
+        model.frame(~., data = data.frame(cbind(x, y), check.names = FALSE), na.action = na.pass)
+      )[, -1]
     }
   }
-
   # Note: ncvreg standardizes the data and includes an intercept by default.
 
   raw_data = as.data.frame(cbind(x_dup,y))
   rownames(raw_data) <- NULL
 
-  full_model <- broom::tidy(lm(y~x_dup), conf.int = TRUE)[-1,] %>% select(term, estimate)
-  full_model$term<- colnames(x_dup)
+  full_model <- lm(y ~ ., data= raw_data)
+  coef_est <- coef(full_model)
+  full_model_df <- data.frame(term = names(coef_est))
+  full_model$term <- gsub("`", "", full_model$term)
+
 
   if (alpha==1 & penalty=="lasso"){
     #for glmnet alpha=1 is the lasso penalty, and alpha=0 the ridge penalty.
     fit <- cv.glmnet(x = x_dup, y = y, alpha = alpha, standardize = F, family = "gaussian", ...)
     foldid <-fit[["foldid"]]
+    lmax <- max(fit$lambda)
   }else{
     #alpha=1 is equivalent to MCP/SCAD penalty,
     fit <- cv.ncvreg(X = x_dup, y = y,  penalty = penalty, family="gaussian",alpha=alpha,...)
     foldid <-fit[["fold"]]
+    lmax <- max(fit$lambda)
+
   }
 
 
@@ -86,7 +105,8 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...
 
   }
 
-  val <- list( beta=beta, std=std,penalty=penalty, lambda=lambda, lambda.select= lambda_mod,
+  val <- list( beta=beta, std=std,penalty=penalty, lambda=lambda,
+               lambda.select= lambda_mod,lmax=lmax,
               fold=foldid, x=x_dup, y= y,
               alpha=alpha,    x_original=x, model=   fit)
   class(val) <- "selector_pen"

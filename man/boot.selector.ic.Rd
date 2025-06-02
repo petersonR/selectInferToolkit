@@ -7,10 +7,11 @@ other methods are supposed in infer.selector.ic}
 \usage{
 boot.selector.ic(
   model,
-  B = 10,
+  B = 250,
   nonselection = "ignored",
   parallel = FALSE,
   make_levels = FALSE,
+  save_beta = F,
   ...
 )
 }

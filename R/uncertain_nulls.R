@@ -12,33 +12,35 @@
 
 get_uncertain_nulls <- function(mod, res, x) { # val will be residuals
   selections <- mod$term[!is.na(mod$estimate)]
-  #selections <- setdiff(selections , "(Intercept)")
   nulls <- mod$term[is.na(mod$estimate)]
-
   nulls <- setdiff(nulls , "(Intercept)")
 
   selected <- ifelse(is.na(mod$estimate),0,1)
-  #f <- as.formula(paste0("y ~ 1 + ", paste0(selections, collapse = "+ ")))
-  #fit <- lm(f, data = data)
-  # instead of refitting get the residuals
-
   data = cbind(x,res)
   for(j in nulls) {
-    #f <- as.formula(paste0("res ~ 1 + ",  j))
-
     f <- as.formula(paste0("res ~ 1 + `", j, "`"))
+    model <- lm(f,data = data)
+    coefs <- summary(model)$coefficients
+    conf_int <- confint( model)
 
-    #print(f)
+    # Create full_mod data frame
+    model_sum <- data.frame(
+      term = gsub("`", "", rownames(coefs)),
+      estimate = coefs[, "Estimate"],
+      std.error = coefs[,"Std. Error"],
+      p.value = coefs[, "Pr(>|t|)"],
+      conf.low = conf_int[, 1],
+      conf.high = conf_int[, 2],
+      stringsAsFactors = FALSE
+    )
+    rownames( model_sum) <- NULL
 
-    # model the residuals 1+ variable j
-    #print(mod$term == j)
-    #print(tidy(lm(f,data = data), conf.int=T) )
-    mod[mod$term == j,] <- tidy(lm(f,data = data), conf.int=T) %>%tail(1)
-    mod$term <-gsub("`", "", mod$term )
+    mod[mod$term == j,] <- model_sum[2,]
   }
   mod$selected <-selected
-  mod= mod %>% mutate(   ci_ln = conf.high- conf.low,
-                    na_coeff = ifelse(is.na(estimate),1,0))
+  mod$ci_ln <- mod$conf.high-mod$conf.low
+  mod$na_coeff = ifelse(is.na(mod$estimate),1,0)
+
   # Check for rows where `na_coeff` is 1 and return a warning message
   for (i in 1:nrow(mod)) {
     if (mod$na_coeff[i] == 1) {

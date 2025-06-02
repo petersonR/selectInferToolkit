@@ -9,10 +9,10 @@
 \arguments{
 \item{x}{model of class \code{selector_ic}}
 
-\item{...}{additioanl arugments (currerntly not suported)}
+\item{...}{additional arguments (currently not supported)}
 }
 \value{
-returns x invisibily
+returns x invisibly
 }
 \description{
 Title

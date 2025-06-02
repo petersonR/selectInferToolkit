@@ -14,6 +14,7 @@ boot_stepwise_bic(
   direction = "both",
   model = model,
   make_levels = F,
+  save_beta = F,
   ...
 )
 }
@@ -39,7 +40,7 @@ with a default of "both". If the scope argument is missing the default for direc
 \item{...}{any additional arguments to that can be passed to stepAIC}
 }
 \value{
-Tidy dataframe with bootstrap result and CIs
+Dataframe with bootstrap result and CIs
 \item{term}{variable name}
 \item{mean_estimate}{mean of regression coefficients across bootstrap samples}
 \item{conf.low}{lower 2.5 percentile bootstrap interval}

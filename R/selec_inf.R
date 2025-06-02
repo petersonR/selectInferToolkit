@@ -18,14 +18,9 @@ sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, std= F, ...) {
 
   # Run forward stepwise selection and compute p-values and confidence intervals
   fs_result <- fs(x, y, intercept =intercept, normalize= std,... )  # Compute the forward selection object
-  #print(fs_result)
-  #fs_result <- fs(x_mat, y, intercept =T, normalize= std)  # Compute the forward selection object
-
-
 
   # Get AIC-based selection with confidence intervals
   out_aic <- fsInf(fs_result, type = "aic", mult= mult, verbose = FALSE,  alpha = 0.05,...)
-  #print(out_aic)
 
   # Extract selected variable names and calculate coefficients
   selected_vars <- variable_names[out_aic$vars]
@@ -67,30 +62,14 @@ sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, std= F, ...) {
 
 sel_inf <- function(x,y, model, lam = "lambda.min", intercept= TRUE,alpha = 1, ...) {
   n<- nrow(x)
-
-  # Defualt is fault assuming when fitting initial data matrix, it was standardized
-  #cv.glmnet standardizes by default,The coefficients are always returned on the original scale.
-
-  # if (std== TRUE){
-  #   x.std=x
-  #   fit_lso <- cv.glmnet(x = x.std, y = y, standardize=FALSE,intercept=intercept , ...)
-  #
-  # } else {
-  #     #x.std=std(x)
-  #   x.std=x
-  #     fit_lso <- cv.glmnet(x = x.std, y = y, standardize=TRUE,intercept=intercept , ...)
-  #
-  # }
-
   fit_lso <- model[["model"]]
   lam <- fit_lso[[lam]]
   sig <- min(sqrt(fit_lso$cvm))
-
   b <- coef(fit_lso, s=lam, exact = TRUE,  x = x, y = y)[-1]
 
-  # re-compute with smaller lambda if none selected (other)
-  while(all(b == 0))
-    b <- coef(fit_lso, s=lam*.99, exact =T,  x = x, y = y, alpha=alpha)[-1]
+  # # re-compute with smaller lambda if none selected (other)
+  # while(all(b == 0))
+  #   b <- coef(fit_lso, s=lam*.99, exact =T,  x = x, y = y, alpha=alpha)[-1]
 
   # fixed lasso function requires no intercept in beta vector
   res <- fixedLassoInf(x=x, y= y, b, lam*n, alpha = .05, sigma = sig, intercept =TRUE)

@@ -10,6 +10,7 @@ boot_pen(
   family = "gaussian",
   nonselection = "ignored",
   parallel = FALSE,
+  save_beta = F,
   ...
 )
 }
