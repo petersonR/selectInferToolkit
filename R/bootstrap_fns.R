@@ -1818,7 +1818,14 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       selected_data <-  data.frame(y_boot = y_boot,
                                    data.frame(x_boot,check.names = FALSE),check.names = FALSE)
-      selected_data <- selected_data[, c("y_boot", non_zero_terms)]
+
+      if(length(non_zero_terms) !=0 ){
+        selected_data <- selected_data[, c("y_boot", non_zero_terms)]
+      }
+      else{
+        selected_data <- data.frame("y_boot"=selected_data)
+      }
+
 
       fit <- lm(y_boot ~ ., data = selected_data)
       conf <- confint(fit)
@@ -1954,7 +1961,12 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       selected_data <-  data.frame(y_boot = y_boot,
                                    data.frame(x_boot,check.names = FALSE),check.names = FALSE)
-      selected_data <- selected_data[, c("y_boot", non_zero_terms)]
+      if(length(non_zero_terms) !=0 ){
+        selected_data <- selected_data[, c("y_boot", non_zero_terms)]
+      }
+      else{
+        selected_data <- data.frame("y_boot"=selected_data)
+      }
 
       fit <- lm(y_boot ~ ., data = selected_data)
       conf <- confint(fit)
