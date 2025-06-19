@@ -474,8 +474,6 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
   }
   else if (method == "selectiveinf" && nonselection == "ignored"){
 
-    x <-model[["x"]]
-    y <- model[["y"]]
     lam=model[["lambda"]]
     std=model[["std"]]
     alpha = model[["alpha"]]
@@ -503,8 +501,6 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
   }
   else if (method == "selectiveinf" && nonselection == "confident_nulls") {
 
-    x <-model[["x"]]
-    y <- model[["y"]]
     lam=model[["lambda"]]
     std=model[["std"]]
     alpha = model[["alpha"]]
@@ -536,9 +532,6 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
   }
   else if (method == "selectiveinf" && nonselection == "uncertain_nulls"){
 
-
-    x <-model[["x"]]
-    y <- model[["y"]]
     lam=model[["lambda"]]
     std=model[["std"]]
     alpha = model[["alpha"]]
@@ -547,7 +540,11 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
     non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
     selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]],
                        check.names = FALSE),check.names = FALSE)
-    selected_data <- selected_data[, c("y", non_zero_terms)]
+    if (length(non_zero_terms) == 0) {
+      selected_data <- data.frame(y)
+    } else {
+      selected_data <- selected_data[, c("y", non_zero_terms)]
+    }
 
     xbeta<- as.matrix(cbind("(Intercept)"=1, model[["x"]])) %*% model[["beta"]][["estimate"]]
     res <- y - xbeta
@@ -580,7 +577,7 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
 
     si_mod_intercept <-  rbind(fit_lm_intercept,full_mod )
     si_mod_intercept$std.error <- NA
-
+    si_mod_intercept <- si_mod_intercept [, c("term", "estimate", "std.error", "p.value","conf.low", "conf.high")]
     final_si = get_uncertain_nulls (mod= si_mod_intercept , res=res, x=data.frame(model[["x"]], check.names = FALSE))
     final_si= final_si[, c("term", "estimate", "conf.low","conf.high", "p.value", "selected",  "ci_ln",
                            "na_coeff" )]

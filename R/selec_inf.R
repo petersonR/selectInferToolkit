@@ -68,8 +68,8 @@ sel_inf <- function(x,y, model, lam = "lambda.min", intercept= TRUE,alpha = 1, .
   b <- coef(fit_lso, s=lam, exact = TRUE,  x = x, y = y)[-1]
 
   # # re-compute with smaller lambda if none selected (other)
-  # while(all(b == 0))
-  #   b <- coef(fit_lso, s=lam*.99, exact =T,  x = x, y = y, alpha=alpha)[-1]
+   while(all(b == 0))
+    b <- coef(fit_lso, s=lam*.99, exact =T,  x = x, y = y, alpha=alpha)[-1]
 
   # fixed lasso function requires no intercept in beta vector
   res <- fixedLassoInf(x=x, y= y, b, lam*n, alpha = .05, sigma = sig, intercept =TRUE)

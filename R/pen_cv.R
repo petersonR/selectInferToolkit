@@ -71,11 +71,14 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...
     fit <- cv.glmnet(x = x_dup, y = y, alpha = alpha, standardize = F, family = "gaussian", ...)
     foldid <-fit[["foldid"]]
     lmax <- max(fit$lambda)
+    lambda_seq= fit[["lambda"]]
+
   }else{
     #alpha=1 is equivalent to MCP/SCAD penalty,
     fit <- cv.ncvreg(X = x_dup, y = y,  penalty = penalty, family="gaussian",alpha=alpha,...)
     foldid <-fit[["fold"]]
     lmax <- max(fit$lambda)
+    lambda_seq=  fit[["lambda"]]
 
   }
 
@@ -105,7 +108,7 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...
 
   }
 
-  val <- list( beta=beta, std=std,penalty=penalty, lambda=lambda,
+  val <- list( beta=beta, std=std,penalty=penalty, lambda_seq=  lambda_seq, lambda=lambda,
                lambda.select= lambda_mod,lmax=lmax,
               fold=foldid, x=x_dup, y= y,
               alpha=alpha,    x_original=x, model=   fit)

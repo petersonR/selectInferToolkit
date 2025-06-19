@@ -1356,10 +1356,19 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
   penalty = model[["penalty"]]
   alpha=model[["alpha"]]
   selected_terms <- model[["beta"]][["term"]][model[["beta"]][["estimate"]] !=0]
+  lambda_seq= model[["lambda_seq"]]
   #non_zero_terms <-  non_zero_terms [  non_zero_terms != "(Intercept)"]
   #selected_vars <- data.frame(term =   non_zero_terms)
   all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
-  lam_seq <- exp(seq(log(lmax), log(lambda_full), len=10))
+  if (lmax==lambda_full) {
+    lam_seq <- exp(seq(log(lmax), min( lambda_seq), len=10))
+    nlambda <-10
+  } else {
+    lam_seq <- exp(seq(log(lmax), log(lambda_full), len=10))
+    nlambda<-10
+  }
+
+
 
   if (nonselection=="ignored" & parallel == FALSE){
     boot_fits <- list(numeric(B))
@@ -1371,10 +1380,10 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       if (alpha==1 & penalty=="lasso"){
         fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian",
-                                lambda=lam_seq, ...)
+                                lambda=lam_seq, nlambda= nlambda, ...)
       }else{
         fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",
-                        lambda=lam_seq,  ...)
+                        lambda=lam_seq, nlambda= nlambda,  ...)
 
       }
 
@@ -1382,7 +1391,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
      # closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
 
       if (alpha==1 & penalty=="lasso"){
-        bb <- coef(fit_b, s=  lambda_full)
+        bb <- coef(fit_b, s= round(lambda_full,3))
         beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
         beta_df <-beta[beta$estimate != 0, ]
         beta_df$term <- gsub("`", "", beta_df$term)
@@ -1469,7 +1478,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
     # Export required variables to each worker
     parallel::clusterExport(cl, varlist = c("x","y","alpha", "penalty", "lambda_full",
-                                           "lam_seq", "selected_terms"),
+                                           "lam_seq", "nlambda", "selected_terms"),
                             envir = environment())
 
     # Ensure required packages are loaded in each worker
@@ -1487,10 +1496,10 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       if (alpha==1 & penalty=="lasso"){
         fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F,
-                                lambda=lam_seq, family = "gaussian", ...)
+                                lambda=lam_seq,nlambda= nlambda, family = "gaussian", ...)
       }else{
         fit_b <- ncvreg::ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,
-                                lambda=lam_seq,family="gaussian",...)
+                                lambda=lam_seq,nlambda= nlambda,family="gaussian",...)
 
       }
 
@@ -1582,10 +1591,10 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       if (alpha==1 & penalty=="lasso"){
         fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F,
-                                lambda=lam_seq, family = "gaussian", ...)
+                                lambda=lam_seq, nlambda= nlambda,family = "gaussian", ...)
       }else{
         fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,
-                        lambda=lam_seq, family="gaussian",...)
+                        lambda=lam_seq, nlambda= nlambda,family="gaussian",...)
 
       }
 
@@ -1672,7 +1681,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
     # Export required variables to each worker
     parallel::clusterExport(cl, varlist = c("x","y","alpha", "penalty", "lambda_full",
-                                            "lam_seq","all_terms"),
+                                            "lam_seq","nlambda", "all_terms"),
                             envir = environment())
 
     # Ensure required packages are loaded in each worker
@@ -1691,10 +1700,10 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       if (alpha==1 & penalty=="lasso"){
         fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F,
-                                lambda=lam_seq, family = "gaussian", ...)
+                                lambda=lam_seq, nlambda= nlambda,family = "gaussian", ...)
       }else{
         fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,
-                        lambda=lam_seq, family="gaussian",...)
+                        lambda=lam_seq, nlambda= nlambda,family="gaussian",...)
 
       }
 
@@ -1783,11 +1792,11 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       if (alpha==1 & penalty=="lasso"){
         fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F,
-                                lambda=lam_seq, family = "gaussian", ...)
+                                lambda=lam_seq, nlambda= nlambda,family = "gaussian", ...)
 
       }else{
         fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,
-                        lambda=lam_seq,  family="gaussian",...)
+                        lambda=lam_seq, nlambda= nlambda, family="gaussian",...)
       }
 
       # Find the lambda value in fit_b$lambda closest to lambda_full
@@ -1823,7 +1832,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
         selected_data <- selected_data[, c("y_boot", non_zero_terms)]
       }
       else{
-        selected_data <- data.frame("y_boot"=selected_data)
+        selected_data <- data.frame("y_boot"= y_boot)
       }
 
 
@@ -1910,7 +1919,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
     # Export required variables to each worker
     parallel::clusterExport(cl, varlist = c("x","y","alpha", "penalty", "lambda_full",
-                                         "lam_seq",  "all_terms"),
+                                         "lam_seq", "nlambda",  "all_terms"),
                             envir = environment())
 
     # Ensure required packages are loaded in each worker
@@ -1927,10 +1936,10 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       if (alpha==1 & penalty=="lasso"){
         fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F,
-                                lambda=lam_seq,family = "gaussian", ...)
+                                lambda=lam_seq,nlambda= nlambda,family = "gaussian", ...)
       }else{
         fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,
-                        lambda=lam_seq,family="gaussian",...)
+                        lambda=lam_seq,nlambda= nlambda,family="gaussian",...)
       }
 
       # Find the lambda value in fit_b$lambda closest to lambda_full
@@ -1965,7 +1974,8 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
         selected_data <- selected_data[, c("y_boot", non_zero_terms)]
       }
       else{
-        selected_data <- data.frame("y_boot"=selected_data)
+        selected_data <- data.frame("y_boot"= y_boot)
+
       }
 
       fit <- lm(y_boot ~ ., data = selected_data)
