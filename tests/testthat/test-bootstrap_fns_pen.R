@@ -173,11 +173,14 @@ x <- raw_data %>% dplyr::select(-hdl1)
 test_that("Lasso min works ", {
   expect_no_error({
     lasso_mod <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=TRUE)
-    obj1s <- infer(lasso_mod, method = "boot", B=5)
+    obj1s <- infer(lasso_mod, method = "boot", B=100)
+    obj1ss <- infer(lasso_mod, method = "boot", B=100, boot_desparse=T)
     obj2s <-infer(lasso_mod, method = "boot", B=5, parallel=T)
-    obj3s <- infer(lasso_mod, method = "boot", B=5, nonselection = "confident_nulls")
+    obj3s <- infer(lasso_mod, method = "boot", B=100, nonselection = "confident_nulls")
+    obj3ss <- infer(lasso_mod, method = "boot", B=100, nonselection = "confident_nulls", boot_desparse=T)
     obj4s <- infer(lasso_mod, method = "boot", B=5, nonselection = "confident_nulls",parallel=T)
     obj5s <-infer(lasso_mod, method = "boot", B=5, nonselection = "uncertain_nulls")
+
     obj6s <-infer(lasso_mod, method = "boot", B=5, nonselection = "uncertain_nulls",parallel=T)
 
     lasso_mod_nostd <- pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=FALSE)

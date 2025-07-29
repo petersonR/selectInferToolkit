@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="Jinal Shah &amp; Ryan A Peterson" />
+
+<meta name="date" content="2025-02-03" />
+
+<title>Using the practicalPSI Package</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Using the practicalPSI Package</h1>
+<h4 class="author">Jinal Shah &amp; Ryan A Peterson</h4>
+<h4 class="date">2025-02-03</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction" id="toc-introduction">1
+Introduction</a></li>
+<li><a href="#general-workflow-for-using-pacakge" id="toc-general-workflow-for-using-pacakge">2 General workflow for using
+pacakge</a></li>
+<li><a href="#use-case-hers-data" id="toc-use-case-hers-data">3 Use
+case: HERS data</a>
+<ul>
+<li><a href="#dataset-description" id="toc-dataset-description">3.1
+Dataset description</a></li>
+</ul></li>
+<li><a href="#performing-model-selection" id="toc-performing-model-selection">3.2 Performing model selection</a>
+<ul>
+<li><a href="#perfoming-stepwsie-aic-model-selection" id="toc-perfoming-stepwsie-aic-model-selection">3.2.1 Perfoming Stepwsie
+AIC model selection</a></li>
+<li><a href="#perfoming-penalized-model-selection" id="toc-perfoming-penalized-model-selection">3.2.1 Perfoming penalized
+model selection</a></li>
+</ul></li>
+<li><a href="#perfoming-post-seelction-inference" id="toc-perfoming-post-seelction-inference">3.3 Perfoming post-seelction
+inference</a></li>
+<li><a href="#full-model-bootstrap-without-any-model-selection" id="toc-full-model-bootstrap-without-any-model-selection">3.4 Full model
+bootstrap without any model selection</a></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level1">
+<h1>1 Introduction</h1>
+<p>The <code>practicalPSI</code> package stands for “practical
+post-selection inference”. It makes it easier to implement
+post-selection inference after model selection using stepwsie and
+penalized regression in linear regression setting.</p>
+<p>The following model selection methods are supported, with help from
+ncvreg, glmnet and MASS on the backed:</p>
+<ol style="list-style-type: decimal">
+<li>Stepwise regression methods using AIC/BIC (performs step wise search
+in “backward”, “forward” or “both” direction)</li>
+<li>Penalized regression methods (Lasso, MCP and elastic net)</li>
+</ol>
+<p>In this package, we support following three post-selection inference
+approaches, with help from selectiveInference package:</p>
+<ol style="list-style-type: decimal">
+<li>Hybrid-OLS,</li>
+<li>Bootstrap, and</li>
+<li>Selective inference (Currently only implemented for lasso and
+forward selection)</li>
+</ol>
+<p>Additionally, within each of theses inference method, there are three
+ways to handle the non-selections:</p>
+<ol style="list-style-type: decimal">
+<li>Ignoring non-selections</li>
+<li>Treating non-selections as confident null, and</li>
+<li>Treating non-selections as uncertain null</li>
+</ol>
+<p>This document goes through several use cases of the package on
+different data sets.</p>
+</div>
+<div id="general-workflow-for-using-pacakge" class="section level1">
+<h1>2 General workflow for using pacakge</h1>
+<p>In order to first use the model selection procedure, user can use
+either <code>step_ic()</code> function or <code>pen_cv()</code> function
+to fit either the stepwise or penalized models respectively.
+Specifically, there are three option to choose for direction
+(“backward”, “forward” or “both” (default)) and they have two option for
+penalty (either “AIC” or “BIC”), Similarly, for penalized models, one
+needs to use the pen_cv function with either “lasso” or “MCP” option for
+penalty. Users can also choose to extract the coefficients associated
+with either “lambda.min” or “lambda.1se”.</p>
+<p>Both <code>step_ic()</code> and <code>pen_cv()</code> will produce
+<code>selector</code> class object which can then be passed to
+<code>infer()</code> function to make post-selection inference. User can
+choose one of three <code>method</code> options: “hybrid”,
+“selectiveinf” or “boot” for performing post-selection inference using
+either “Hybrid”, “selective inference” or “boostrap” methods
+respectively.</p>
+</div>
+<div id="use-case-hers-data" class="section level1">
+<h1>3 Use case: HERS data</h1>
+<div id="dataset-description" class="section level2">
+<h2>3.1 Dataset description</h2>
+<p>To illustrate a realistic example, we use the data from the Heart and
+Estrogen/Progestin Replacement Study (HERS). HERS was a randomized,
+double-blind, placebo-controlled secondary prevention trial conducted
+between January 1993 and September 1994 in outpatient and community
+settings at 20 U.S. clinical centers. In this trial, 2,763
+postmenopausal women with established coronary heart disease (CHD) were
+randomized to receive either a placebo or estrogen plus progestin
+therapy to assess whether treatment influenced the risk of future CHD
+events. In our guiding application, we aim to model the continuous
+outcome of High-Density Lipoprotein (HDL) one year after treatment,
+based on baseline covariates. A total of 25 baseline characteristics are
+available to predict HDL levels one-year post-treatment for 2,571
+observations with complete covariate data. Covariates of interest
+include treatment group, demographic variables, lifestyle factors,
+health status/activity levels, comorbidities, medications, baseline
+physical measurements, and baseline lab values.</p>
+<p>First let’s look at the data a litte:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;raw_data&quot;</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">summary</span>(raw_data)</span></code></pre></div>
+<pre><code>##       hdl1                      ht            age       
+##  Min.   : 14.00   placebo        :1303   Min.   :44.00  
+##  1st Qu.: 42.00   hormone therapy:1268   1st Qu.:62.00  
+##  Median : 50.00                          Median :67.00  
+##  Mean   : 51.83                          Mean   :66.62  
+##  3rd Qu.: 59.00                          3rd Qu.:72.00  
+##  Max.   :124.00                          Max.   :79.00  
+##               raceth     smoking    drinkany   exercise  
+##  White           :2299   no :2243   no :1551   no :1559  
+##  African American: 184   yes: 328   yes:1020   yes:1012  
+##  Other           :  88                                   
+##                                                          
+##                                                          
+##                                                          
+##                  physact         globrat     medcond    htnmeds    statins   
+##  much less active    :170   poor     :  46   no :1624   no : 464   no :1620  
+##  somewhat less active:459   fair     : 536   yes: 947   yes:2107   yes: 951  
+##  about as active     :854   good     :1229                                   
+##  somewhat more active:794   very good: 648                                   
+##  much more active    :294   excellent: 112                                   
+##                                                                              
+##  diabetes   dmpills    insulin        weight            bmi       
+##  no :1909   no :2325   no :2327   Min.   : 37.60   Min.   :15.49  
+##  yes: 662   yes: 246   yes: 244   1st Qu.: 62.20   1st Qu.:24.64  
+##                                   Median : 70.90   Median :27.75  
+##                                   Mean   : 72.66   Mean   :28.54  
+##                                   3rd Qu.: 81.20   3rd Qu.:31.66  
+##                                   Max.   :132.00   Max.   :54.13  
+##      waist            whr            glucose           ldl       
+##  Min.   : 56.9   Min.   :0.6240   Min.   : 29.0   Min.   : 36.8  
+##  1st Qu.: 82.0   1st Qu.:0.8100   1st Qu.: 91.0   1st Qu.:119.5  
+##  Median : 90.5   Median :0.8660   Median : 99.0   Median :141.0  
+##  Mean   : 91.6   Mean   :0.8688   Mean   :111.7   Mean   :144.8  
+##  3rd Qu.:100.0   3rd Qu.:0.9220   3rd Qu.:114.0   3rd Qu.:165.6  
+##  Max.   :170.0   Max.   :1.2180   Max.   :298.0   Max.   :393.4  
+##       hdl               tg             sbp             dbp        
+##  Min.   : 14.00   Min.   : 31.0   Min.   : 83.0   Min.   : 45.00  
+##  1st Qu.: 41.00   1st Qu.:116.0   1st Qu.:121.0   1st Qu.: 67.00  
+##  Median : 49.00   Median :157.0   Median :134.0   Median : 72.00  
+##  Mean   : 50.31   Mean   :165.3   Mean   :134.8   Mean   : 73.09  
+##  3rd Qu.: 57.00   3rd Qu.:208.0   3rd Qu.:146.0   3rd Qu.: 80.00  
+##  Max.   :130.00   Max.   :476.0   Max.   :224.0   Max.   :102.00</code></pre>
+<p>Next we create our doutcome varaible and dataframe with all
+predictors.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>y<span class="ot">=</span> raw_data<span class="sc">$</span>hdl1</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>x <span class="ot">&lt;-</span> raw_data <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>hdl1)</span></code></pre></div>
+</div>
+</div>
+<div id="performing-model-selection" class="section level1">
+<h1>3.2 Performing model selection</h1>
+<div id="perfoming-stepwsie-aic-model-selection" class="section level2">
+<h2>3.2.1 Perfoming Stepwsie AIC model selection</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>aic_model<span class="ot">=</span><span class="fu">step_ic</span> (<span class="at">x=</span>x,<span class="at">y=</span>y,<span class="at">std =</span> <span class="cn">TRUE</span>, <span class="at">penalty =</span> <span class="st">&quot;AIC&quot;</span>, <span class="at">direction =</span> <span class="st">&quot;both&quot;</span>)</span></code></pre></div>
+</div>
+<div id="perfoming-penalized-model-selection" class="section level2">
+<h2>3.2.1 Perfoming penalized model selection</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>lassomin_model <span class="ot">=</span><span class="fu">pen_cv</span> (<span class="at">x=</span>x,<span class="at">y=</span>y,<span class="at">penalty=</span> <span class="st">&quot;lasso&quot;</span>,<span class="at">lambda=</span><span class="st">&quot;lambda.min&quot;</span>,<span class="at">std=</span><span class="cn">TRUE</span>)</span></code></pre></div>
+</div>
+</div>
+<div id="perfoming-post-seelction-inference" class="section level1">
+<h1>3.3 Perfoming post-seelction inference</h1>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>aic_hybrid <span class="ot">=</span><span class="fu">infer</span>(aic_model,  <span class="at">method =</span> <span class="st">&quot;hybrid&quot;</span>, <span class="at">nonselection =</span> <span class="st">&quot;ignored&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>lasso_sel_confident  <span class="ot">=</span> <span class="fu">infer</span>(lassomin_model , <span class="at">method=</span><span class="st">&quot;selectiveinf&quot;</span>,<span class="at">nonselection=</span><span class="st">&quot;confident_nulls&quot;</span>)</span></code></pre></div>
+</div>
+<div id="full-model-bootstrap-without-any-model-selection" class="section level1">
+<h1>3.4 Full model bootstrap without any model selection</h1>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>model<span class="ot">&lt;-</span> <span class="fu">lm</span>(y<span class="sc">~</span>., <span class="at">data=</span><span class="fu">cbind</span>(y,x), <span class="at">x=</span> <span class="cn">TRUE</span>, <span class="at">y=</span><span class="cn">TRUE</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>full_model_linear <span class="ot">&lt;-</span> <span class="fu">full_boot</span>(model, <span class="at">B=</span><span class="dv">5</span>, <span class="at">family=</span><span class="st">&quot;gaussian&quot;</span>,<span class="at">parallel =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>full_model_linear</span></code></pre></div>
+<pre><code>## # A tibble: 32 × 9
+##    term          mean_estimate conf.low conf.high median_p.value  ci_ln prop.rej
+##    &lt;fct&gt;                 &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;          &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;
+##  1 (Intercept)         15.9      9.10      22.7         2.98e- 4 13.6        1  
+##  2 hthormone th…        5.09     4.78       5.40        4.28e-40  0.623      1  
+##  3 age                  0.0855   0.0477     0.150       1.46e- 2  0.103      0.8
+##  4 racethAfrica…        1.77     1.09       2.77        4.53e- 2  1.67       0.6
+##  5 racethOther         -1.67    -2.42      -0.985       1.81e- 1  1.44       0.4
+##  6 smokingyes          -0.229   -0.763      0.336       5.26e- 1  1.10       0  
+##  7 drinkanyyes          0.601    0.156      1.28        1.94e- 1  1.12       0.2
+##  8 exerciseyes          0.176   -0.205      0.596       4.26e- 1  0.801      0  
+##  9 physactsomew…        0.806   -0.165      2.48        4.05e- 1  2.65       0.2
+## 10 physactabout…        0.467   -0.154      1.39        8.30e- 1  1.55       0  
+## # ℹ 22 more rows
+## # ℹ 2 more variables: ci_avg_ratio &lt;dbl&gt;, ci_median_ratio &lt;dbl&gt;</code></pre>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1346,7 +1346,7 @@ boot_stepwise_bic <- function(x,y, B = 250,family="gaussian",nonselector="ignore
 #'
 
 boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
-                               parallel= FALSE, save_beta=F,   ...) {
+                               parallel= FALSE, save_beta=F,boot_desparse=F, ...) {
 
   x <-model[["x"]]
   y <- model[["y"]]
@@ -1370,7 +1370,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
 
 
-  if (nonselection=="ignored" & parallel == FALSE){
+  if (nonselection=="ignored" & boot_desparse==F  & parallel == FALSE){
     boot_fits <- list(numeric(B))
     for(b in 1:B) {
       boot_idx <- sample(1:nrow(x), replace = TRUE)
@@ -1408,8 +1408,6 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       }else{
         beta <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
         beta <-beta[beta != 0] # 0 are for variable that are not selected
-        # Convert beta to data frame
-        #print(beta)
         beta_df <- data.frame(term = names(beta), estimate = beta,row.names = NULL)
         beta_df$term <- gsub("`", "", beta_df$term)
         # Match estimates to selected terms
@@ -1469,11 +1467,117 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
     }
 
   }
-  else if(nonselection=="ignored" & parallel == TRUE){
+  else if (nonselection=="ignored" & boot_desparse==T  & parallel == FALSE){
+    boot_fits <- list(numeric(B))
+    for(b in 1:B) {
+      boot_idx <- sample(1:nrow(x), replace = TRUE)
+      x_boot <- x[boot_idx,]
+      y_boot<- y[boot_idx]
 
-    # do with parallel computing
-    # Number of cores to use
-    n_cores <- parallel::detectCores() - 1
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian",
+                                lambda=lam_seq, nlambda= nlambda, ...)
+      }else{
+        fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",
+                        lambda=lam_seq, nlambda= nlambda, ...)
+
+      }
+
+      # Find the lambda value in fit_b$lambda closest to lambda_full
+      # closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
+
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s= round(lambda_full,3))
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+
+
+      }else{
+        beta <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
+        non_zero_terms  <- names(beta[beta != 0])
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+
+      }
+
+      selected_data <-  data.frame(y_boot = y_boot,
+                                   data.frame(x_boot,check.names = FALSE),check.names = FALSE)
+      if(length(non_zero_terms) !=0 ){
+        selected_data <- selected_data[, c("y_boot", non_zero_terms)]
+      }
+      else{
+        selected_data <- data.frame("y_boot"= y_boot)
+      }
+
+      fit <- lm(y_boot ~ ., data = selected_data)
+      coefs <- data.frame(coef(summary(fit)), check.names = F)
+      coefs$term <-gsub("`", "", rownames(coefs))
+      rownames(coefs) <- NULL
+      coefs$is.select <-1
+
+      # Match estimates to selected terms
+      match_idx <- match(selected_terms, coefs $term )
+      estimates <-   coefs $Estimate[match_idx]
+      is.select <- coefs$is.select[match_idx]
+      # Replace NAs with 0 for estimate and 0/1 for is.select
+      is.select <- ifelse(is.na(is.select),0, is.select)
+      estimates[is.na(estimates)] <- 0
+
+
+      boot_fits[[b]] <-  data.frame(
+        term = selected_terms,
+        estimate = estimates,
+        is.select = is.select,
+        boot = b,
+        stringsAsFactors = FALSE
+      )
+
+    }
+    boot_results_df <- do.call(rbind, boot_fits)
+
+    # Split by term
+    term_split <- split(boot_results_df, boot_results_df$term)
+
+    # Compute summary statistics
+    mean_estimate <- sapply(term_split, function(x) mean(x$estimate))
+    conf.low <- sapply(term_split, function(x) quantile(x$estimate, 0.025))
+    conf.high <- sapply(term_split, function(x) quantile(x$estimate, 0.975))
+    prop.select <- sapply(term_split, function(x) mean(x$is.select))
+
+    # Combine into a data frame
+    boot_summary <- data.frame(
+      term = names(mean_estimate),
+      mean_estimate = mean_estimate,
+      conf.low = conf.low,
+      conf.high = conf.high,
+      prop.select = prop.select,
+      row.names = NULL
+    )
+
+
+    # Add CI width
+    boot_summary$ci_ln <- boot_summary$conf.high - boot_summary$conf.low
+    rownames(boot_summary)<- NULL
+
+    full_mod <-merge(all_terms, boot_summary, by = "term", all.x = TRUE, sort = FALSE)
+    matched_rows <- match(all_terms$term, full_mod$term)
+    full_mod <- full_mod[matched_rows, ]
+    full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
+
+    if (save_beta== T){
+      return(list( beta= boot_results_df, results = full_mod))
+    } else{
+      return(full_mod)
+    }
+
+
+  }
+  else if(nonselection=="ignored"  & boot_desparse==F & parallel == TRUE){
+
+    n_cores <- parallel::detectCores() - 1     # Number of cores to use
     cl <- parallel::makeCluster(n_cores)
 
     # Export required variables to each worker
@@ -1503,27 +1607,33 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       }
 
-      # Find the lambda value in fit_b$lambda closest to lambda_full
-      #closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
 
       if (alpha==1 & penalty=="lasso"){
-        bb <- coef(fit_b, s=  lambda_full)
-
+        bb <- coef(fit_b, s= round(lambda_full,3))
         beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
         beta_df <-beta[beta$estimate != 0, ]
         beta_df$term <- gsub("`", "", beta_df$term)
+
+        # Match estimates to selected terms
         match_idx <- match(selected_terms, beta_df$term)
         estimates <-   beta_df$estimate[match_idx]
+
+        # Replace NAs with 0 for estimate and 0/1 for is.select
         is.select <- as.integer(!is.na(estimates))
         estimates[is.na(estimates)] <- 0
+
       }else{
         beta <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
         beta <-beta[beta != 0] # 0 are for variable that are not selected
         # Convert beta to data frame
+        #print(beta)
         beta_df <- data.frame(term = names(beta), estimate = beta,row.names = NULL)
         beta_df$term <- gsub("`", "", beta_df$term)
+        # Match estimates to selected terms
         match_idx <- match(selected_terms, beta_df$term)
         estimates <-   beta_df$estimate[match_idx]
+
+        # Replace NAs with 0 for estimate and 0/1 for is.select
         is.select <- as.integer(!is.na(estimates))
         estimates[is.na(estimates)] <- 0
       }
@@ -1563,9 +1673,127 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
     boot_summary$ci_ln <- boot_summary$conf.high - boot_summary$conf.low
     rownames(boot_summary)<- NULL
 
-    # Add CI width
+    full_mod <-merge(all_terms, boot_summary, by = "term", all.x = TRUE, sort = FALSE)
+    matched_rows <- match(all_terms$term, full_mod$term)
+    full_mod <- full_mod[matched_rows, ]
+    full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
+
+
+    if (save_beta== T){
+      return(list( beta= boot_results_df, results = full_mod))
+    } else{
+      return(full_mod)
+    }
+
+
+  }
+  else if(nonselection=="ignored"  & boot_desparse==T & parallel == TRUE){
+
+    # do with parallel computing
+    # Number of cores to use
+    n_cores <- parallel::detectCores() - 1
+    cl <- parallel::makeCluster(n_cores)
+
+    # Export required variables to each worker
+    parallel::clusterExport(cl, varlist = c("x","y","alpha", "penalty", "lambda_full",
+                                            "lam_seq", "nlambda", "selected_terms"),
+                            envir = environment())
+
+    # Ensure required packages are loaded in each worker
+    parallel::clusterEvalQ(cl, {
+      library(dplyr)
+      library(ncvreg)
+      library(glmnet)
+    })
+
+
+    boot_fits <- pblapply(1:B, function(b) {
+      boot_idx <- sample(1:nrow(x), replace = TRUE)
+      x_boot <- x[boot_idx,]
+      y_boot<- y[boot_idx]
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F,
+                                lambda=lam_seq,nlambda= nlambda, family = "gaussian", ...)
+      }else{
+        fit_b <- ncvreg::ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,
+                                lambda=lam_seq,nlambda= nlambda,family="gaussian",...)
+
+      }
+
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s= round(lambda_full,3))
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+
+      }else{
+        beta <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
+        non_zero_terms  <- names(beta[beta != 0])
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+      }
+
+      selected_data <-  data.frame(y_boot = y_boot,
+                                   data.frame(x_boot,check.names = FALSE),check.names = FALSE)
+
+      if(length(non_zero_terms) !=0 ){
+        selected_data <- selected_data[, c("y_boot", non_zero_terms)]
+      }
+      else{
+        selected_data <- data.frame("y_boot"= y_boot)
+      }
+
+
+      fit <- lm(y_boot ~ ., data = selected_data)
+      coefs <- data.frame(coef(summary(fit)), check.names = F)
+      coefs$term <-gsub("`", "", rownames(coefs))
+      rownames(coefs) <- NULL
+      coefs$is.select <-1
+
+      # Match estimates to selected terms
+      match_idx <- match(selected_terms, coefs $term )
+      estimates <-   coefs $Estimate[match_idx]
+      is.select <- coefs$is.select[match_idx]
+      is.select <- ifelse(is.na(is.select),0, is.select)
+      estimates[is.na(estimates)] <- 0
+
+      # Return results aligned with the full model
+      return(
+        data.frame(
+          term = selected_terms,
+          estimate = estimates,
+          is.select = is.select,
+          boot = b,
+          stringsAsFactors = FALSE
+        ))
+
+    }, cl = cl)
+    # Stop the cluster after computation is done
+    parallel::stopCluster(cl)
+
+    boot_results_df <- do.call(rbind, boot_fits)
+    term_split <- split(boot_results_df, boot_results_df$term)
+
+    # Compute summary statistics
+    mean_estimate <- sapply(term_split, function(x) mean(x$estimate))
+    conf.low <- sapply(term_split, function(x) quantile(x$estimate, 0.025))
+    conf.high <- sapply(term_split, function(x) quantile(x$estimate, 0.975))
+    prop.select <- sapply(term_split, function(x) mean(x$is.select))
+
+    # Combine into a data frame
+    boot_summary <- data.frame(
+      term = names(mean_estimate),
+      mean_estimate = mean_estimate,
+      conf.low = conf.low,
+      conf.high = conf.high,
+      prop.select = prop.select,
+      row.names = NULL
+    )
     boot_summary$ci_ln <- boot_summary$conf.high - boot_summary$conf.low
     rownames(boot_summary)<- NULL
+
 
     full_mod <-merge(all_terms, boot_summary, by = "term", all.x = TRUE, sort = FALSE)
     matched_rows <- match(all_terms$term, full_mod$term)
@@ -1581,7 +1809,8 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
 
   }
-  else if(nonselection=="confident_nulls" & parallel == FALSE){
+
+  else if(nonselection=="confident_nulls" & parallel == FALSE & boot_desparse==F){
 
     boot_fits <- list(numeric(B))
     for(b in 1:B) {
@@ -1597,9 +1826,6 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
                         lambda=lam_seq, nlambda= nlambda,family="gaussian",...)
 
       }
-
-      # Find the lambda value in fit_b$lambda closest to lambda_full
-      #closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
 
       if (alpha==1 & penalty=="lasso"){
         bb <- coef(fit_b, s= lambda_full)
@@ -1673,9 +1899,119 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
 
   }
-  else if(nonselection=="confident_nulls" & parallel == TRUE){
-    # do with parallel computing
-    # Number of cores to use
+  else if(nonselection=="confident_nulls" & parallel == FALSE & boot_desparse==T){
+    boot_fits <- list(numeric(B))
+    for(b in 1:B) {
+      boot_idx <- sample(1:nrow(x), replace = TRUE)
+      x_boot <- x[boot_idx,]
+      y_boot<- y[boot_idx]
+
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F, family = "gaussian",
+                                lambda=lam_seq, nlambda= nlambda)
+      }else{
+        fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,family="gaussian",
+                        lambda=lam_seq, nlambda= nlambda)
+
+      }
+
+      # Find the lambda value in fit_b$lambda closest to lambda_full
+      # closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
+
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s= round(lambda_full,3))
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+
+
+      }else{
+        beta <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
+        non_zero_terms  <- names(beta[beta != 0])
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+
+      }
+
+      selected_data <-  data.frame(y_boot = y_boot,
+                                   data.frame(x_boot,check.names = FALSE),check.names = FALSE)
+
+      if(length(non_zero_terms) !=0 ){
+        selected_data <- selected_data[, c("y_boot", non_zero_terms)]
+      }
+      else{
+        selected_data <- data.frame("y_boot"= y_boot)
+      }
+
+
+      fit <- lm(y_boot ~ ., data = selected_data)
+      coefs <- data.frame(coef(summary(fit)), check.names = F)
+      coefs$term <-gsub("`", "", rownames(coefs))
+      rownames(coefs) <- NULL
+      coefs$is.select <-1
+
+      # Match estimates to selected terms
+      match_idx <- match(all_terms$term, coefs $term )
+      estimates <-   coefs $Estimate[match_idx]
+      is.select <- coefs$is.select[match_idx]
+      # Replace NAs with 0 for estimate and 0/1 for is.select
+      is.select <- ifelse(is.na(is.select),0, is.select)
+      estimates[is.na(estimates)] <- 0
+
+
+      boot_fits[[b]] <-  data.frame(
+        term = all_terms$term,
+        estimate = estimates,
+        is.select = is.select,
+        boot = b,
+        stringsAsFactors = FALSE
+      )
+
+    }
+    boot_results_df <- do.call(rbind, boot_fits)
+
+    # Split by term
+    term_split <- split(boot_results_df, boot_results_df$term)
+
+    # Compute summary statistics
+    mean_estimate <- sapply(term_split, function(x) mean(x$estimate))
+    conf.low <- sapply(term_split, function(x) quantile(x$estimate, 0.025))
+    conf.high <- sapply(term_split, function(x) quantile(x$estimate, 0.975))
+    prop.select <- sapply(term_split, function(x) mean(x$is.select))
+
+    # Combine into a data frame
+    boot_summary <- data.frame(
+      term = names(mean_estimate),
+      mean_estimate = mean_estimate,
+      conf.low = conf.low,
+      conf.high = conf.high,
+      prop.select = prop.select,
+      row.names = NULL
+    )
+
+
+    # Add CI width
+    boot_summary$ci_ln <- boot_summary$conf.high - boot_summary$conf.low
+    rownames(boot_summary)<- NULL
+    match_idx <- match(all_terms$term, boot_summary$term)   # Match terms and align boot_results to all_vars
+    boot_summary <-  boot_summary[match_idx,]
+
+
+    if (save_beta== T){
+      return(list( beta= boot_results_df, results =  boot_summary))
+    } else{
+      return( boot_summary)
+    }
+
+
+
+
+
+
+  }
+  else if(nonselection=="confident_nulls" & parallel == TRUE & boot_desparse==F){
     n_cores <- parallel::detectCores() - 1
     cl <- parallel::makeCluster(n_cores)
 
@@ -1707,8 +2043,9 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
 
       }
 
+
       if (alpha==1 & penalty=="lasso"){
-        bb <- coef(fit_b, s=  lambda_full)
+        bb <- coef(fit_b, s= lambda_full)
         beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
         beta_df <-beta[beta$estimate != 0, ]
         beta_df$term <- gsub("`", "", beta_df$term)
@@ -1720,6 +2057,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
         beta_df$term <- gsub("`", "", beta_df$term)
 
       }
+
       # Merge all_vars and beta_df by "term"
       full_mod <-merge(all_terms,  beta_df, by = "term", all.x = TRUE, sort = FALSE)
       matched_rows <- match(all_terms$term, full_mod$term)
@@ -1783,7 +2121,133 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
     }
 
   }
-  else if(nonselection=="uncertain_nulls" & parallel == FALSE){
+  else if(nonselection=="confident_nulls" & parallel == TRUE & boot_desparse==T){
+    n_cores <- parallel::detectCores() - 1
+    cl <- parallel::makeCluster(n_cores)
+
+    # Export required variables to each worker
+    parallel::clusterExport(cl, varlist = c("x","y","alpha", "penalty", "lambda_full",
+                                            "lam_seq","nlambda", "all_terms"),
+                            envir = environment())
+
+    # Ensure required packages are loaded in each worker
+    parallel::clusterEvalQ(cl, {
+      library(broom)
+      library(dplyr)
+      library(ncvreg)
+      library(glmnet)
+    })
+
+
+    boot_fits <- pblapply(1:B, function(b) {
+      boot_idx <- sample(1:nrow(x), replace = TRUE)
+      x_boot <- x[boot_idx,]
+      y_boot<- y[boot_idx]
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F,
+                                lambda=lam_seq, nlambda= nlambda,family = "gaussian", ...)
+      }else{
+        fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,
+                        lambda=lam_seq, nlambda= nlambda,family="gaussian",...)
+
+      }
+
+
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s= round(lambda_full,3))
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+
+      }else{
+        beta <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
+        non_zero_terms  <- names(beta[beta != 0])
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+
+      }
+
+      selected_data <-  data.frame(y_boot = y_boot,
+                                   data.frame(x_boot,check.names = FALSE),check.names = FALSE)
+
+      if(length(non_zero_terms) !=0 ){
+        selected_data <- selected_data[, c("y_boot", non_zero_terms)]
+      }
+      else{
+        selected_data <- data.frame("y_boot"= y_boot)
+      }
+
+      fit <- lm(y_boot ~ ., data = selected_data)
+      coefs <- data.frame(coef(summary(fit)), check.names = F)
+      coefs$term <-gsub("`", "", rownames(coefs))
+      rownames(coefs) <- NULL
+      coefs$is.select <-1
+
+      # Match estimates to selected terms
+      match_idx <- match(all_terms$term, coefs $term )
+      estimates <-   coefs $Estimate[match_idx]
+      is.select <- coefs$is.select[match_idx]
+      # Replace NAs with 0 for estimate and 0/1 for is.select
+      is.select <- ifelse(is.na(is.select),0, is.select)
+      estimates[is.na(estimates)] <- 0
+
+      full_mod =data.frame(
+        term = all_terms$term,
+        estimate = estimates,
+        is.select = is.select,
+        boot = b,
+        stringsAsFactors = FALSE
+      )
+
+
+      # Return results aligned with the full model
+      return(full_mod)
+    }, cl = cl)
+    # Stop the cluster after computation is done
+    parallel::stopCluster(cl)
+
+
+
+    boot_results_df <- do.call(rbind, boot_fits)
+
+    # Split by term
+    term_split <- split(boot_results_df, boot_results_df$term)
+
+    # Compute summary statistics
+    mean_estimate <- sapply(term_split, function(x) mean(x$estimate))
+    conf.low <- sapply(term_split, function(x) quantile(x$estimate, 0.025))
+    conf.high <- sapply(term_split, function(x) quantile(x$estimate, 0.975))
+    prop.select <- sapply(term_split, function(x) mean(x$is.select))
+
+    # Combine into a data frame
+    boot_summary <- data.frame(
+      term = names(mean_estimate),
+      mean_estimate = mean_estimate,
+      conf.low = conf.low,
+      conf.high = conf.high,
+      prop.select = prop.select,
+      row.names = NULL
+    )
+
+
+    # Add CI width
+    boot_summary$ci_ln <- boot_summary$conf.high - boot_summary$conf.low
+    rownames(boot_summary)<- NULL
+    match_idx <- match(all_terms$term, boot_summary$term)
+    boot_summary <-  boot_summary[match_idx,]
+
+
+    if (save_beta== T){
+      return(list( beta= boot_results_df, results = boot_summary))
+    } else{
+      return(boot_summary)
+    }
+
+  }
+
+  else if(nonselection=="uncertain_nulls" & parallel == FALSE & boot_desparse==F){
     boot_fits <- list(numeric(B))
     for(b in 1:B) {
       boot_idx <- sample(1:nrow(x), replace = TRUE)
@@ -1799,9 +2263,6 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
                         lambda=lam_seq, nlambda= nlambda, family="gaussian",...)
       }
 
-      # Find the lambda value in fit_b$lambda closest to lambda_full
-     # closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
-
       if (alpha==1 & penalty=="lasso"){
         bb <- coef(fit_b, s=  lambda_full)
         beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
@@ -1809,22 +2270,16 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
         non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
         non_zero_terms  <-  gsub("`", "",non_zero_terms )
       }else{
-        beta <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
-        non_zero_terms  <- names(beta[beta != 0])
+        bb <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
+        beta <- data.frame(term = names(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
         non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
         non_zero_terms  <-  gsub("`", "",non_zero_terms )
       }
 
 
-      if (alpha==1 & penalty=="lasso"){
-        xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta$estimate
-        res <- y_boot - xbeta
-
-      }else{
-        xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta
-        res <- y_boot - xbeta
-      }
-
+      xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta$estimate
+      res <- y_boot - xbeta
       selected_data <-  data.frame(y_boot = y_boot,
                                    data.frame(x_boot,check.names = FALSE),check.names = FALSE)
 
@@ -1836,18 +2291,13 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       }
 
 
-      fit <- lm(y_boot ~ ., data = selected_data)
-      conf <- confint(fit)
-      coefs <- coef(summary(fit))
-      terms <- gsub("`", "", rownames(coefs))
-
       full_mod <- data.frame(
-        term = terms,
-        estimate = coefs[, "Estimate"],
-        std.error = coefs[,"Std. Error"],
-        p.value = coefs[, "Pr(>|t|)"],
-        conf.low = conf[, 1],
-        conf.high = conf[, 2],
+        term = beta$term[beta$estimate != 0],
+        estimate = beta$estimate[beta$estimate != 0],
+        std.error = NA,
+        p.value = NA,
+        conf.low = NA,
+        conf.high = NA,
         stringsAsFactors = FALSE
       )
       rownames(full_mod) <- NULL
@@ -1856,6 +2306,7 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       matched_rows <- match(all_terms$term, full_mod$term)
       full_mod <- full_mod[matched_rows, ]
       full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
+      full_mod<- full_mod [, c("term", "estimate", "std.error", "p.value","conf.low", "conf.high")]
 
 
       un_results = get_uncertain_nulls (mod= full_mod, res=res,
@@ -1911,9 +2362,129 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       return(final_results)
     }
   }
-  else if(nonselection=="uncertain_nulls" & parallel == TRUE){
-    # do with parallel computing
-    # Number of cores to use
+  else if(nonselection=="uncertain_nulls" & parallel == FALSE & boot_desparse==T){
+    boot_fits <- list(numeric(B))
+    for(b in 1:B) {
+      boot_idx <- sample(1:nrow(x), replace = TRUE)
+      x_boot <- x[boot_idx,]
+      y_boot<- y[boot_idx]
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F,
+                                lambda=lam_seq, nlambda= nlambda,family = "gaussian", ...)
+
+      }else{
+        fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,
+                        lambda=lam_seq, nlambda= nlambda, family="gaussian",...)
+      }
+
+      # Find the lambda value in fit_b$lambda closest to lambda_full
+      # closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
+
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s=  lambda_full)
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+      }else{
+        bb <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
+        beta <- data.frame(term = names(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+      }
+
+      selected_data <-  data.frame(y_boot = y_boot,
+                                   data.frame(x_boot,check.names = FALSE),check.names = FALSE)
+
+      if(length(non_zero_terms) !=0 ){
+        selected_data <- selected_data[, c("y_boot", non_zero_terms)]
+      }
+      else{
+        selected_data <- data.frame("y_boot"= y_boot)
+      }
+
+
+      fit <- lm(y_boot ~ ., data = selected_data)
+      coefs <- coef(summary(fit))
+      terms <- gsub("`", "", rownames(coefs))
+      full_mod <- data.frame(
+        term = terms,
+        estimate = coefs[,1],
+        std.error = NA,
+        p.value = NA,
+        conf.low = NA,
+        conf.high = NA,
+        stringsAsFactors = FALSE
+      )
+      rownames(full_mod) <- NULL
+
+      all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
+      full_mod <-merge(all_terms, full_mod, by = "term", all.x = TRUE, sort = FALSE)
+      matched_rows <- match(all_terms$term, full_mod$term)
+      full_mod <- full_mod[matched_rows, ]
+      full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
+      full_mod<- full_mod [, c("term", "estimate", "std.error", "p.value","conf.low", "conf.high")]
+      estimates <- full_mod$estimate
+      estimates[is.na(estimates)] <- 0
+      xbeta<- as.matrix(cbind("(Intercept)"=1, x_boot)) %*% estimates
+      res <- y_boot - xbeta
+
+      un_results = get_uncertain_nulls (mod= full_mod, res=res,
+                                        x= data.frame( x_boot, check.names = FALSE) )
+      un_results$boot= b
+
+      boot_fits[[b]] <-    un_results
+    }
+
+    boot_results_df <- do.call(rbind, boot_fits)
+
+    # Split by term
+    term_split <- split(boot_results_df, boot_results_df$term)
+
+    # Compute summary statistics
+    mean_estimate <- sapply(term_split, function(x) mean(x$estimate))
+    conf.low <- sapply(term_split, function(x) quantile(x$estimate, 0.025))
+    conf.high <- sapply(term_split, function(x) quantile(x$estimate, 0.975))
+    prop.select <- sapply(term_split, function(x) mean(x$selected))
+
+    # Combine into a data frame
+    boot_summary <- data.frame(
+      term = names(mean_estimate),
+      mean_estimate = mean_estimate,
+      conf.low = conf.low,
+      conf.high = conf.high,
+      prop.select = prop.select,
+      row.names = NULL
+    )
+
+
+    # Add CI width
+    boot_summary$ci_ln <- boot_summary$conf.high - boot_summary$conf.low
+    rownames(boot_summary)<- NULL
+
+    # Match terms and align boot_results to all_vars
+    match_idx <- match(all_terms$term, boot_summary$term)
+
+    # Create output with NA where terms weren't selected
+    final_results <- data.frame(
+      term = all_terms,
+      mean_estimate =  boot_summary$mean_estimate[match_idx],
+      conf.low =  boot_summary$conf.low[match_idx],
+      conf.high =  boot_summary$conf.high[match_idx],
+      ci_ln =  boot_summary$ci_ln[match_idx],
+      prop.select =  boot_summary$prop.select[match_idx],
+      stringsAsFactors = FALSE
+    )
+
+    if (save_beta== T){
+      return(list( beta= boot_results_df, results = final_results))
+    } else{
+      return(final_results)
+    }
+  }
+  else if(nonselection=="uncertain_nulls" & parallel == TRUE & boot_desparse==F){
     n_cores <- parallel::detectCores() - 1
     cl <- parallel::makeCluster(n_cores)
 
@@ -1942,9 +2513,6 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
                         lambda=lam_seq,nlambda= nlambda,family="gaussian",...)
       }
 
-      # Find the lambda value in fit_b$lambda closest to lambda_full
-     # closest_lambda <- fit_b$lambda[which.min(abs(fit_b$lambda - lambda_full))]
-
 
       if (alpha==1 & penalty=="lasso"){
         bb <- coef(fit_b, s=  lambda_full)
@@ -1953,53 +2521,43 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
         non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
         non_zero_terms  <-  gsub("`", "",non_zero_terms )
       }else{
-        beta <- coef(fit_b ,lambda =   lambda_full) # select coeff  from lambda full
-        non_zero_terms  <- names(beta[beta != 0])
+        bb <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
+        beta <- data.frame(term = names(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
         non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
         non_zero_terms  <-  gsub("`", "",non_zero_terms )
       }
 
-      if (alpha==1 & penalty=="lasso"){
-        xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta$estimate
-        res <- y_boot - xbeta
 
-      }else{
-        xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta
-        res <- y_boot - xbeta
-      }
-
+      xbeta<- as.matrix(cbind("(Intercept)"=1,x_boot)) %*% beta$estimate
+      res <- y_boot - xbeta
       selected_data <-  data.frame(y_boot = y_boot,
                                    data.frame(x_boot,check.names = FALSE),check.names = FALSE)
+
       if(length(non_zero_terms) !=0 ){
         selected_data <- selected_data[, c("y_boot", non_zero_terms)]
       }
       else{
         selected_data <- data.frame("y_boot"= y_boot)
-
       }
 
-      fit <- lm(y_boot ~ ., data = selected_data)
-      conf <- confint(fit)
-      coefs <- coef(summary(fit))
-      terms <- gsub("`", "", rownames(coefs))
+
       full_mod <- data.frame(
-        term = terms,
-        estimate = coefs[, "Estimate"],
-        std.error = coefs[,"Std. Error"],
-        p.value = coefs[, "Pr(>|t|)"],
-        conf.low = conf[, 1],
-        conf.high = conf[, 2],
+        term = beta$term[beta$estimate != 0],
+        estimate = beta$estimate[beta$estimate != 0],
+        std.error = NA,
+        p.value = NA,
+        conf.low = NA,
+        conf.high = NA,
         stringsAsFactors = FALSE
       )
-
       rownames(full_mod) <- NULL
       all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
       full_mod <-merge(all_terms, full_mod, by = "term", all.x = TRUE, sort = FALSE)
       matched_rows <- match(all_terms$term, full_mod$term)
       full_mod <- full_mod[matched_rows, ]
-      full_mod$is.select = ifelse(is.na(full_mod$estimate), 0, 1)
       full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
-
+      full_mod<- full_mod [, c("term", "estimate", "std.error", "p.value","conf.low", "conf.high")]
 
       un_results = get_uncertain_nulls (mod= full_mod, res=res,
                                         x= data.frame( x_boot, check.names = FALSE) )
@@ -2057,6 +2615,146 @@ boot_pen <- function(model, B = 250,family="gaussian",nonselection="ignored",
       return(final_results)
     }
   }
+  else if(nonselection=="uncertain_nulls" & parallel == TRUE & boot_desparse==T){
+    n_cores <- parallel::detectCores() - 1
+    cl <- parallel::makeCluster(n_cores)
+
+    # Export required variables to each worker
+    parallel::clusterExport(cl, varlist = c("x","y","alpha", "penalty", "lambda_full",
+                                            "lam_seq", "nlambda",  "all_terms"),
+                            envir = environment())
+
+    # Ensure required packages are loaded in each worker
+    parallel::clusterEvalQ(cl, {
+      library(dplyr)
+      library(ncvreg)
+      library(glmnet)
+    })
+
+    boot_fits <- pblapply(1:B, function(b) {
+      boot_idx <- sample(1:nrow(x), replace = TRUE)
+      x_boot <- x[boot_idx,]
+      y_boot<- y[boot_idx]
+
+      if (alpha==1 & penalty=="lasso"){
+        fit_b <- glmnet::glmnet(x = x_boot, y = y_boot, alpha = alpha, standardize = F,
+                                lambda=lam_seq,nlambda= nlambda,family = "gaussian", ...)
+      }else{
+        fit_b <- ncvreg(X = x_boot, y = y_boot,  alpha= alpha, penalty = penalty,
+                        lambda=lam_seq,nlambda= nlambda,family="gaussian",...)
+      }
+
+
+      if (alpha==1 & penalty=="lasso"){
+        bb <- coef(fit_b, s=  lambda_full)
+        beta <- data.frame(term = rownames(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+      }else{
+        bb <- coef(fit_b ,lambda =  lambda_full ) # select coeff  from lambda full
+        beta <- data.frame(term = names(bb), estimate = as.vector(bb))
+        non_zero_terms <-beta$term[beta$estimate != 0]
+        non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+        non_zero_terms  <-  gsub("`", "",non_zero_terms )
+      }
+
+      selected_data <-  data.frame(y_boot = y_boot,
+                                   data.frame(x_boot,check.names = FALSE),check.names = FALSE)
+
+      if(length(non_zero_terms) !=0 ){
+        selected_data <- selected_data[, c("y_boot", non_zero_terms)]
+      }
+      else{
+        selected_data <- data.frame("y_boot"= y_boot)
+      }
+
+
+      fit <- lm(y_boot ~ ., data = selected_data)
+      coefs <- coef(summary(fit))
+      terms <- gsub("`", "", rownames(coefs))
+      full_mod <- data.frame(
+        term = terms,
+        estimate = coefs[,1],
+        std.error = NA,
+        p.value = NA,
+        conf.low = NA,
+        conf.high = NA,
+        stringsAsFactors = FALSE
+      )
+      rownames(full_mod) <- NULL
+
+
+
+
+      all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
+      full_mod <-merge(all_terms, full_mod, by = "term", all.x = TRUE, sort = FALSE)
+      matched_rows <- match(all_terms$term, full_mod$term)
+      full_mod <- full_mod[matched_rows, ]
+      full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
+      full_mod<- full_mod [, c("term", "estimate", "std.error", "p.value","conf.low", "conf.high")]
+      estimates <- full_mod$estimate
+      estimates[is.na(estimates)] <- 0
+      xbeta<- as.matrix(cbind("(Intercept)"=1, x_boot)) %*% estimates
+      res <- y_boot - xbeta
+
+      un_results = get_uncertain_nulls (mod= full_mod, res=res,
+                                        x= data.frame( x_boot, check.names = FALSE) )
+      un_results$boot= b
+
+      # Return results aligned with the full model
+      return( un_results)
+    }, cl = cl)
+    # Stop the cluster after computation is done
+    parallel::stopCluster(cl)
+
+    boot_results_df <- do.call(rbind, boot_fits)
+
+    # Split by term
+    term_split <- split(boot_results_df, boot_results_df$term)
+
+    # Compute summary statistics
+    mean_estimate <- sapply(term_split, function(x) mean(x$estimate))
+    conf.low <- sapply(term_split, function(x) quantile(x$estimate, 0.025))
+    conf.high <- sapply(term_split, function(x) quantile(x$estimate, 0.975))
+    prop.select <- sapply(term_split, function(x) mean(x$selected))
+
+    # Combine into a data frame
+    boot_summary <- data.frame(
+      term = names(mean_estimate),
+      mean_estimate = mean_estimate,
+      conf.low = conf.low,
+      conf.high = conf.high,
+      prop.select = prop.select,
+      row.names = NULL
+    )
+
+
+    # Add CI width
+    boot_summary$ci_ln <- boot_summary$conf.high - boot_summary$conf.low
+    rownames(boot_summary)<- NULL
+
+    # Match terms and align boot_results to all_vars
+    match_idx <- match(all_terms$term, boot_summary$term)
+
+    # Create output with NA where terms weren't selected
+    final_results <- data.frame(
+      term = all_terms,
+      mean_estimate =  boot_summary$mean_estimate[match_idx],
+      conf.low =  boot_summary$conf.low[match_idx],
+      conf.high =  boot_summary$conf.high[match_idx],
+      ci_ln =  boot_summary$ci_ln[match_idx],
+      prop.select =  boot_summary$prop.select[match_idx],
+      stringsAsFactors = FALSE
+    )
+
+    if (save_beta== T){
+      return(list( beta= boot_results_df, results = final_results))
+    } else{
+      return(final_results)
+    }
+  }
+
 }
 
 
