@@ -163,8 +163,8 @@ With treating non-selection as uncertain nulls, we're interesting in making infe
 ```{r}
 set.seed(12)
 fit_lasso_boot <- infer(fit_lso, method = "boot", B = 100, 
-                        nonselection = "uncertain_nulls") # needs print method
-tidy(fit_lasso_boot) # needs tidy method
+                        nonselection = "uncertain_nulls") 
+tidy(fit_lasso_boot) 
 ```
 
 With the `unccertain_nulls` approach, we see that even though `cycl` and `wt` are selected 89% and 98% of the times, non of the variables are significant. 

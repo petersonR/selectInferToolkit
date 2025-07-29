@@ -11,6 +11,7 @@ boot_pen(
   nonselection = "ignored",
   parallel = FALSE,
   save_beta = F,
+  boot_desparse = F,
   ...
 )
 }
