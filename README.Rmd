@@ -33,12 +33,6 @@ You can install the development version of practicalPSI like so:
 devtools::install_github("petersonR/practicalPSI")
 ```
 
-## Pacakge overview
-
-The `practicalPSI` provides two broad classes of methods for model selection, stepwise regression methods, and penalized regression methods. The package implements stepwise regression (forward/backward/bidirectional) with the Akaike Information Criterion (AIC) and Bayesian Information Criterion (BIC) via `stepAIC` function from `MASS` package. It also performs penalized regression methods including lasso, ridge, elastic net using `ncvreg` or `glmnet` pacakges and easily returns models associated with choice of either $\lambda_{min}$ or $\lambda_{1se}$. $\lambda_{min}$ is the value of the regularization parameter $\lambda$ that minimizes the cross-validation error, offering the best predictive performance without accounting for model complexity. $\lambda_{1se}$ is a more conservative choice, selected as the largest $\lambda$  where the cross-validation error is within one standard error of  $\lambda_{min}$, resulting in a sparser/condensed model.
-
-Main contribution of the package is that it provides easy ways to implement three different post-selection inference methods after perfoming model selection using one of the methods above: 1) hybrid ordinary least squares (no adjustment) 2) bootstrap and, 3) selective inference (only available for lasso and forward stepwise selection via `selectiveInference` package). Finally, for each post-selection inference method, we provide three approaches to handling non-selections: ignoring them, treating them as confident (point-mass) nulls, and treating them as uncertain nulls. 
-
 ## Package Overview
 
 `practicalPSI` offers a comprehensive suite of tools, covering both model selection and the crucial post-selection inference steps.
