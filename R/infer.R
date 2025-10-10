@@ -1,6 +1,6 @@
 
 
-#' Inference for selector.ic class except bootstrap which is it's own function
+#' Inference for selector_ic class except bootstrap which is it's own function
 #'
 #'
 #' @param model model returned from selector_ic  class
@@ -17,9 +17,12 @@
 #' \item{infmethod}{Inference method chosen}
 #' \item{nonselection}{method chosen  to deal with non selection}
 #'
+#' @rdname infer
+#' @method infer selector_ic
 #'
+#' @export
 
-infer.selector.ic <- function(
+infer.selector_ic <- function(
     model,
     method = c("hybrid", "selectiveinf", "boot"),
     nonselection = c("ignored", "confident_nulls", "uncertain_nulls")
@@ -71,7 +74,7 @@ infer.selector.ic <- function(
     class(result) <- "infer_ic"
     result
   }
-   else if (method == "hybrid" && nonselection == "confident_nulls") {
+  else if (method == "hybrid" && nonselection == "confident_nulls") {
 
      coefs <- summary(model[["model_sum"]])$coefficients
      conf_int <- confint( model[["model_sum"]])
@@ -295,15 +298,21 @@ infer.selector.ic <- function(
 
 
   }
+  else if (method == "boot") {
+    result <- boot(model, B=B, nonselection=nonselection,
+                   n_cores= n_cores, save_beta=save_beta,
+                   ...)
+    return(result)
+  }
 }
 
 
 
 
-#' Inference for selector.pen class except bootstrap which is it's own function
+#' Inference for selector_pen class except bootstrap which is it's own function
 #'
 #' @param model model of selector_pen class returned from  pen_cv function
-#' @param method A character string specifying method of post-selection inference.Currently "hybrid", "selectiveinf" or
+#' @param method A character string specifying method of post-selection inference. Currently "hybrid", "selectiveinf" or
 #' "boot" supported
 #' @param nonselection A character string specifying how to handle variables not selected by model selection procedure. One of
 #' "ignored", "confident_nulls" or "uncertain_nulls" supported
@@ -311,8 +320,13 @@ infer.selector.ic <- function(
 #' @importFrom broom tidy
 #' @importFrom dplyr filter
 #' @importFrom dplyr select
-
-infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored"){
+#'
+#' @rdname infer
+#' @method infer selector_pen
+#' @export
+#'
+infer.selector_pen <- function(model, method = "hybrid", nonselection = "ignored",
+                               B = 250, n_cores = 1, save_beta=FALSE, boot_desparse=FALSE){
   x <-model[["x"]]
   y <- model[["y"]]
 
@@ -628,22 +642,43 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
                    selection_method=model[["penalty"]],lambda= model[["lambda"]],
                    alpha=model[["alpha"]],
                    infmethod = method, nonselection = nonselection)
-    class(result) <- "infer_ic"
+    class(result) <- "infer_pen"
     result
+  }
+  else if (method == "PIPE") {
+
+    stopifnot(class(model$model) %in% c("ncvreg", "cv.ncvreg"))
+    warning("PIPE method experimental")
+
+    pipe_results <- ncvreg::intervals(model$model)
+
+    result <- list(model=  pipe_results,
+                   # ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
+                   selection_method=model[["penalty"]],
+                   lambda= model[["lambda"]],
+                   alpha=model[["alpha"]],
+                   infmethod = method,
+                   nonselection = "N/A")
+    class(result) <- "infer_pen"
+    result
+  }
+  else if (method == "boot") {
+    result <- boot(model, B=B, nonselection=nonselection,
+                   n_cores= n_cores, save_beta=save_beta,
+             boot_desparse=boot_desparse)
+    class(result) <- "infer_boot_selector_pen"
+    return(result)
   }
 }
 
-
-
-
 #' Inference for selector_ic class based on bootstrap
-#' other methods are supposed in infer.selector.ic
+#' other methods are supposed in infer.selector_ic
 #'
 #' @param model model returned from selector_ic  class
 #' @param B  Number of bootstraps samples
 #' @param nonselection A character string specifying how to handle variables not selected by model selection procedure. One of
 #' "ignored", "confident_nulls" or "uncertain_nulls" supported
-#' @param parallel  Whether to run bootstrap in parallel or not
+#' @param n_cores  Whether to run bootstrap in parallel or not
 #' @param ... Additional arguments
 #' @return "boot_ic" class list with
 #'   \item{model}{A dataframe with model results including columns for term, mean_estimate,  conf.low, conf.high, median_p.value,ci_ln, prop.select, prop.reject}
@@ -656,181 +691,51 @@ infer.selector.pen <- function(model, method = "hybrid", nonselection = "ignored
 #'   \item{nonselection}{method chosen  to deal with non selection}
 #'   \item{B}{The number of bootstrap replicates used}
 #'
-
-
-boot.selector.ic  <- function(model, B=250,nonselection = "ignored",parallel=  FALSE,make_levels= FALSE,
-                              save_beta =F, ... ){
+#' @rdname infer
+#' @method infer boot_selector_ic
+#' @export
+#'
+infer.boot_selector_ic  <- function(model, B = 250,
+                                    nonselection=c("ignored", "uncertain", "confident_nulls"),
+                                    n_cores= 1,
+                                    make_levels=FALSE,
+                                    save_beta =FALSE,  ...){
   direction=model[["direction"]]
   x <-model[["x_model"]]
   y <- model[["y"]]
   make_levels=model[["make_levels"]]
-  #x_mat= model.matrix(y ~., model.frame(~ ., cbind(x,y=model[["y"]]), na.action=na.pass))
+  nonselection <- match.arg(nonselection)
+  penalty <- model$penalty
+  direction <- model$direction
+  family <- model$family
+
+  results <- boot(model, B=B, nonselection = nonselection, ic = penalty,
+                  n_cores = n_cores, make_levels = make_levels,
+                  save_beta = save_beta, ...)
 
 
-  if(model[["penalty"]]=="AIC"){
-    if(nonselection == "ignored"){
-      results=boot_stepwise_aic (x, y, B=B,family="gaussian",direction=direction, nonselector="ignored",
-                                 parallel=  parallel, model=model, make_levels=make_levels, save_beta =save_beta )
+  ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
+  ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
 
-      if (save_beta== T){
-        results_df <- results[["results"]]
-        ci_avg_ratio  <- mean(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        beta= results$beta
-      } else{
-        ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        beta<-NA
-      }
-
-      result <- list(model=  results,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                     selection_method="Stepwise",direction = direction,penalty= "AIC",
-                     infmethod = "bootstrap", nonselection = nonselection, B=B)
-      class(result) <- "boot_ic"
-      result
-
-
-
-    } else if (nonselection == "confident_nulls"){
-      results= boot_stepwise_aic (x, y, B=B,family="gaussian",direction=direction, nonselector="confident_nulls",
-                                 parallel=  parallel, model=model,save_beta =save_beta)
-
-      if (save_beta== T){
-        results_df <- results[["results"]]
-        ci_avg_ratio  <- mean(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        beta= results$beta
-      } else{
-        ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        beta<-NA
-      }
-
-      result <- list(model=  results,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                     selection_method="Stepwise",direction = direction,penalty= "AIC",
-                     infmethod = "bootstrap", nonselection = nonselection, B=B)
-      class(result) <- "boot_ic"
-      result
-
-    } else if (nonselection == "uncertain_nulls"){
-      results= boot_stepwise_aic (x, y, B=B,family="gaussian",direction=direction, nonselector="uncertain_nulls",
-                                  parallel=  parallel, model=model, save_beta =save_beta)
-
-
-      if (save_beta== T){
-        results_df <- results[["results"]]
-        ci_avg_ratio  <- mean(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        beta= results$beta
-      } else{
-        ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        beta<-NA
-      }
-
-
-      result <- list(model=  results,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                     selection_method="Stepwise",direction = direction,penalty= "AIC",
-                     infmethod = "bootstrap", nonselection = nonselection, B=B
-      )
-      class(result) <- "boot_ic"
-      result
-
-    }
-  }
-  else if (model[["penalty"]]=="BIC"){
-    if(nonselection == "ignored"){
-
-      results=boot_stepwise_bic (x, y, B=B,family="gaussian",direction=direction, nonselector="ignored",
-                                 parallel=  parallel, model=model,save_beta =save_beta)
-
-
-      if (save_beta== T){
-        results_df <- results[["results"]]
-        ci_avg_ratio  <- mean(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        beta= results$beta
-      } else{
-        ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        beta<-NA
-      }
-
-      result <- list(model=  results,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                     selection_method="Stepwise",direction = direction,penalty= "BIC",
-                     infmethod = "bootstrap", nonselection = nonselection, B=B )
-      class(result) <- "boot_ic"
-      result
-
-    } else if (nonselection == "confident_nulls"){
-      results= boot_stepwise_bic (x, y, B=B,family="gaussian",direction=direction, nonselector="confident_nulls",
-                                  parallel=  parallel, model=model,save_beta =save_beta)
-
-
-      if (save_beta== T){
-        results_df <- results[["results"]]
-        ci_avg_ratio  <- mean(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        beta= results$beta
-      } else{
-        ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        beta<-NA
-      }
-
-
-
-      result <- list(model=  results,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                     selection_method="Stepwise",direction = direction,penalty= "BIC",
-                     infmethod = "bootstrap", nonselection = nonselection, B=B
-      )
-      class(result) <- "boot_ic"
-      result
-
-    } else if (nonselection == "uncertain_nulls"){
-      results= boot_stepwise_bic (x, y, B=B,family="gaussian",direction=direction, nonselector="uncertain_nulls",
-                                  parallel=  parallel, model=model,save_beta =save_beta)
-
-
-      if (save_beta== T){
-        results_df <- results[["results"]]
-        ci_avg_ratio  <- mean(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-        beta= results$beta
-      } else{
-        ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-        beta<-NA
-      }
-
-
-
-      result <- list(model=  results,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                     selection_method="Stepwise",direction = direction,penalty= "BIC",
-                     infmethod = "bootstrap", nonselection = nonselection, B=B
-      )
-      class(result) <- "boot_ic"
-      result
-
-
-    }
-
-  }
-
+  result <- list(model =  results,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
+                     selection_method="stepwise", direction = direction, penalty= penalty,
+                     nonselection = nonselection, B=B)
+  class(result) <- "infer_boot_selector_ic"
+  result
 }
 
 
-#' Title Inference for selector_pen class based on bootstrap, other methods are supposed in infer.selector.pen
+#' Title Inference for selector_pen class based on bootstrap, other methods are supposed in infer.selector_pen
 
 #'
 #' @param model model of selector_pen class returned from  pen_cv function
 #' @param B  The number of bootstrap replicates.
 #' @param nonselection A character string specifying how to handle variables not selected by model selection procedure. One of
 #' "ignored", "confident_nulls" or "uncertain_nulls" supported
-#' @param parallel whether to run bootstrap in parallel for faster computation
+#' @param n_cores whether to run bootstrap in parallel for faster computation
 #' @param ...
 #'
-#' @return "boot_pen" class list with
+#' @return "infer_boot_selector_pen" class list with
 #' \item{model}{A dataframe with model results including columns for term, mean_estimate,  conf.low, conf.high,ci_ln, prop.select}
 #' \item{ci_avg_ratio}{Average CI length across all variables in model}
 #' \item{ci_median_ratio}{median CI length across all variables in model}
@@ -842,81 +747,23 @@ boot.selector.ic  <- function(model, B=250,nonselection = "ignored",parallel=  F
 #' \item{B}{The number of bootstrap replicates used}
 #' @export
 #'
-#'
+#' @rdname infer
+#' @method infer boot_selector_pen
+#' @export
 
-boot.selector.pen  <-function(model, B=250,nonselection = "ignored",parallel=  FALSE,save_beta =F, ... ){
+infer.boot_selector_pen <-function(model, B, nonselection, n_cores = 1, save_beta = FALSE, ...){
 
+  results <- boot(model, B=B, nonselection = nonselection,  n_cores= n_cores, save_beta =save_beta, ... )
 
-  if(nonselection == "ignored"){
-    results=boot_pen(model,B=B, nonselection = "ignored",  parallel= parallel,save_beta =save_beta, ... )
+  ci_avg_ratio  <- mean(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
+  ci_median_ratio <-  median(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
 
-    if (save_beta== T){
-      results_df <- results[["results"]]
-      ci_avg_ratio  <- mean(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-      ci_median_ratio <-  median(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-      beta= results$beta
-    } else{
-      ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-      ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-      beta<-NA
-    }
-
-    result <- list(model=  results,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                   selection_method=model[["penalty"]],lambda= model[["lambda"]],alpha=model[["alpha"]],
-                   infmethod = "bootstrap", nonselection = nonselection, B=B)
-    class(result) <- "boot_pen"
-    result
-
-  }else if (nonselection == "confident_nulls"){
-    results=boot_pen(model,B=B, nonselection = "confident_nulls", parallel= parallel,save_beta =save_beta, ... )
-
-    if (save_beta== T){
-      results_df <- results[["results"]]
-      ci_avg_ratio  <- mean(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-      ci_median_ratio <-  median(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-      beta= results$beta
-    } else{
-      ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-      ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-      beta<-NA
-    }
-
-
-    result <- list(model=  results,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                   selection_method=model[["penalty"]],lambda= model[["lambda"]],alpha=model[["alpha"]],
-                   infmethod = "bootstrap", nonselection = nonselection, B=B)
-    class(result) <- "boot_pen"
-    result
-
-  }else if (nonselection == "uncertain_nulls"){
-    results=boot_pen(model,B=B, nonselection = "uncertain_nulls",  parallel= parallel,save_beta =save_beta, ... )
-
-    if (save_beta== T){
-      results_df <- results[["results"]]
-      ci_avg_ratio  <- mean(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-      ci_median_ratio <-  median(results_df$ci_ln[results_df$term != "(Intercept)"] , na.rm=T)
-      beta= results$beta
-    } else{
-      ci_avg_ratio  <- mean(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-      ci_median_ratio <-  median(results$ci_ln[results$term != "(Intercept)"] , na.rm=T)
-      beta<-NA
-    }
-
-
-    result <- list(model=  results,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                   selection_method=model[["penalty"]],lambda= model[["lambda"]],alpha=model[["alpha"]],
-                   infmethod = "bootstrap", nonselection = nonselection, B=B)
-    class(result) <- "boot_pen"
-    result
-
-  }
-
-
-
-
+  result <- list(model=  results, B=B, ci_avg_ratio = ci_avg_ratio , ci_median_ratio =ci_median_ratio,
+                 selection_method=model[["penalty"]], lambda= model[["lambda"]], alpha=model[["alpha"]],
+                 nonselection = nonselection)
+  class(result) <- "infer_boot_selector_pen"
+  result
 }
-
-
 
 #' Post-selection inference
 #'
@@ -946,84 +793,13 @@ boot.selector.pen  <-function(model, B=250,nonselection = "ignored",parallel=  F
 #'
 
 
-infer <- function(model, method="hybrid", nonselection="ignored",...){
-  if(method =="hybrid"){
-    if (nonselection=="ignored"){
-      if (class(model)=="selector_ic"){
-        infer.selector.ic (model)
-      } else{
-        infer.selector.pen (model)
-      }
+infer <- function(model, method=c("hybrid", "boot", "selectiveinf", "PIPE"),
+                          nonselection=c("ignored", "uncertain_nulls", "confident_nulls"),...){
 
+  method <- match.arg(method)
+  nonselection <- match.arg(nonselection)
 
-    } else if (nonselection=="confident_nulls"){
-      if (class(model)=="selector_ic"){
-        infer.selector.ic (model,nonselection="confident_nulls" )
-      } else{
-        infer.selector.pen (model,nonselection="confident_nulls")
-      }
-
-    }
-    else{
-      if (class(model)=="selector_ic"){
-        infer.selector.ic (model,nonselection="uncertain_nulls" )
-      } else{
-        infer.selector.pen (model,nonselection="uncertain_nulls")
-      }
-
-    }
-  }else if (method =="selectiveinf"){
-    if (nonselection=="ignored"){
-
-      if (class(model)=="selector_ic"){
-        infer.selector.ic (model, method = "selectiveinf",nonselection="ignored")
-      } else{
-        infer.selector.pen (model, method ="selectiveinf",nonselection="ignored")
-      }
-
-
-    } else if (nonselection=="confident_nulls"){
-      if (class(model)=="selector_ic"){
-        infer.selector.ic (model,nonselection="confident_nulls",method ="selectiveinf" )
-      } else{
-        infer.selector.pen (model,nonselection="confident_nulls", method ="selectiveinf")
-      }
-
-    }
-    else{
-      if (class(model)=="selector_ic"){
-        infer.selector.ic (model,nonselection="uncertain_nulls",method ="selectiveinf")
-      } else{
-        infer.selector.pen (model,nonselection="uncertain_nulls",method ="selectiveinf")
-      }
-    }
-  }
-  else if (method =="boot"){
-    if (nonselection=="ignored"){
-      if (class(model)=="selector_ic"){
-        boot.selector.ic (model,nonselection="ignored",...)
-      } else{
-        boot.selector.pen (model,nonselection="ignored",...)
-      }
-
-    } else if (nonselection=="confident_nulls"){
-      if (class(model)=="selector_ic"){
-        boot.selector.ic (model,nonselection="confident_nulls",...)
-      } else{
-        boot.selector.pen (model,nonselection="confident_nulls",...)
-      }
-
-
-    }
-    else if (nonselection=="uncertain_nulls") {
-      if (class(model)=="selector_ic"){
-        boot.selector.ic (model,nonselection="uncertain_nulls",...)
-      } else{
-        boot.selector.pen (model,nonselection="uncertain_nulls",...)
-      }
-
-    }
-  }
+  UseMethod("infer")
 }
 
 
@@ -1036,18 +812,18 @@ infer <- function(model, method="hybrid", nonselection="ignored",...){
 print.infer_ic <- function(x, ...) {
 
     # Penalty used for selection
-    cat("Selection method: ", x[["selection_method"]], "  ",x[["penalty"]],".  Direction: " ,x[["direction"]], "\n")
+    cat("Selection method: ", x[["selection_method"]], "  ", x[["penalty"]],".  Direction: " ,x[["direction"]], "\n", sep = "")
 
     # lambda
-    cat("Inference methohd: ", x[["infmethod"]], "\n")
+    cat("Inference method: ", x[["infmethod"]], "\n", sep = "")
 
-    cat ("Method for handling null: ", x[["nonselection"]], "\n")
+    cat ("Method for handling null: ", x[["nonselection"]], "\n", sep = "")
 
     # Average CI length
-    cat ("Average confidence interval length ", x[["ci_avg_ratio"]], "\n")
+    cat ("Average confidence interval length ", x[["ci_avg_ratio"]], "\n", sep = "")
 
     # Median CI length
-    cat ("Median confidence interval length ", x[["ci_median_ratio"]], "\n")
+    cat ("Median confidence interval length ", x[["ci_median_ratio"]], "\n", sep = "")
 
     # coeff <-c(x[["model"]][["estimate"]])
     # names(coeff)<- x[["model"]][["term"]]
@@ -1067,21 +843,21 @@ print.infer_ic <- function(x, ...) {
 #' @param ... currently not used
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
-print.boot_ic <- function(x, ...) {
+print.infer_boot_selector_ic <- function(x, ...) {
 
  # Penalty used for selection
-    cat("Selection method: ", x[["selection_method"]], "  ",x[["penalty"]],".  Direction: " ,x[["direction"]], "\n")
+    cat("Selection method: ", x[["selection_method"]], "  ",x[["penalty"]],".  Direction: " ,x[["direction"]], "\n", sep = "")
 
     # lambda
-    cat("Inference methohd: ", x[["infmethod"]], "with ", x[["B"]],"bootstrap samples","\n")
+    cat("Inference method: ", x[["infmethod"]], "with ", x[["B"]],"bootstrap samples","\n", sep = "")
 
-    cat ("Method for handling null: ", x[["nonselection"]], "\n")
+    cat ("Method for handling null: ", x[["nonselection"]], "\n", sep = "")
 
     # Average CI length
-    cat ("Average confidence interval length: ", x[["ci_avg_ratio"]], "\n")
+    cat ("Average confidence interval length: ", x[["ci_avg_ratio"]], "\n", sep = "")
 
     # Median CI length
-    cat ("Median confidence interval length: ", x[["ci_median_ratio"]], "\n")
+    cat ("Median confidence interval length: ", x[["ci_median_ratio"]], "\n", sep = "")
 }
 
 #' Title
@@ -1098,18 +874,18 @@ print.infer_pen <- function(x, ...) {
   }
 
   # Penalty used for selection
-  cat("Selection method: ", var_method, ".  ","Choice of lambda: " ,x[["lambda"]], "\n")
+  cat("Selection method: ", var_method, ".  ","Choice of lambda: " ,x[["lambda"]], "\n", sep = "")
 
   # lambda
-  cat("Inference methohd: ", x[["infmethod"]], "\n")
+  cat("Inference method: ", x[["infmethod"]], "\n", sep = "")
 
-  cat ("Method for handling null: ", x[["nonselection"]], "\n")
+  cat ("Method for handling null: ", x[["nonselection"]], "\n", sep = "")
 
   # Average CI length
-  cat ("Average confidence intervals length ", x[["ci_avg_ratio"]],"\n")
+  cat ("Average confidence intervals length ", x[["ci_avg_ratio"]],"\n", sep = "")
 
   # Median CI length
-  cat ("Median confidence intervals length ", x[["ci_median_ratio"]],"\n")
+  cat ("Median confidence intervals length ", x[["ci_median_ratio"]],"\n", sep = "")
 
   # # Model coefficients
   # coeff <-c(x[["model"]][["estimate"]])
@@ -1122,10 +898,10 @@ print.infer_pen <- function(x, ...) {
 
 
 #' Title
-#' @param x x model of class `boot_pen`
+#' @param x x model of class `infer_boot_selector_pen`
 #' @return returns x invisibly
 #' @export
-print.boot_pen <- function(x, ...) {
+print.infer_boot_selector_ic <- function(x, ...) {
   if (x[["alpha"]] ==1) {
     var_method <- c("lasso")
   } else{
@@ -1133,18 +909,18 @@ print.boot_pen <- function(x, ...) {
   }
 
   # Penalty used for selection
-  cat("Selection method: ", var_method, ".  ","Choice of lambda: " ,x[["lambda"]], "\n")
+  cat("Selection method: ", var_method, ".  ","Choice of lambda: " ,x[["lambda"]], "\n", sep = "")
 
   # lambda
-  cat("Inference methohd: ", x[["infmethod"]], "with ", x[["B"]],"bootstrap samples","\n")
+  cat("Inference method: ", x[["infmethod"]], "with ", x[["B"]],"bootstrap samples","\n", sep = "")
 
-  cat ("Method for handling null: ", x[["nonselection"]], "\n")
+  cat ("Method for handling null: ", x[["nonselection"]], "\n", sep = "")
 
   # Average CI length
-  cat ("Average confidence intervals length ", x[["ci_avg_ratio"]],"\n")
+  cat ("Average confidence intervals length ", x[["ci_avg_ratio"]],"\n", sep = "")
 
   # Median CI length
-  cat ("Median confidence intervals length ", x[["ci_median_ratio"]],"\n")
+  cat ("Median confidence intervals length ", x[["ci_median_ratio"]],"\n", sep = "")
 
 }
 
@@ -1181,27 +957,19 @@ tidy.infer_pen <- function(x, ...) {
 }
 
 #' Title
-#' @param x model of class `boot_ic`
+#' @param x model of class `infer_boot_selector_ic`
 #' @importFrom tibble as_tibble
-#' @importFrom magrittr %>%
-#' @importFrom dplyr select
 #' @importFrom broom tidy
 #' @param ... currently not used
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
-tidy.boot_ic <- function(x, ...) {
-
-  if (length(x[["model"]])==2) {
-    ret<- as_tibble(x[["model"]][["results"]])
-  } else{
-    ret<- as_tibble(x[["model"]])
-  }
-  return(ret)
+tidy.infer_boot_selector_ic <- function(x, ...) {
+  return(as_tibble(x$results))
 }
 
-#' Title
+#' Tidy for bootstrapped post-regularized inference objects
 #'
-#' @param x model of class `boot_pen`
+#' @param x model of class `infer_boot_selector_pen`
 #' @importFrom tibble as_tibble
 #' @importFrom magrittr %>%
 #' @importFrom dplyr select
@@ -1209,11 +977,6 @@ tidy.boot_ic <- function(x, ...) {
 #' @param ... currently not used
 #' @return A tibble containing the tidied coefficients of the model.
 #' @export
-tidy.boot_pen <- function(x, ...) {
-  if (length(x[["model"]])==2) {
-    ret<- as_tibble(x[["model"]][["results"]])
-  } else{
-    ret<- as_tibble(x[["model"]])
-  }
-  return(ret)
+tidy.infer_boot_selector_pen<- function(x, ...) {
+  return(as_tibble(x$results))
 }

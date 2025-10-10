@@ -34,6 +34,16 @@ test_that("Stepwsie aic bi-dirctional works ", {
     obj6 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
 
   })
+
+  expect_silent({
+    tobj1 <- tidy(obj1)
+    tobj2 <- tidy(obj2)
+    tobj3 <- tidy(obj3)
+
+    tobj4 <- tidy(obj4)
+    tobj5 <- tidy(obj5)
+    tobj6 <- tidy(obj6)
+  })
 })
 
 test_that("Stepwsie bic bi-dirctional works ", {
@@ -49,6 +59,16 @@ test_that("Stepwsie bic bi-dirctional works ", {
     obj6 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
 
 
+  })
+
+  expect_silent({
+    tobj1 <- tidy(obj1)
+    tobj2 <- tidy(obj2)
+    tobj3 <- tidy(obj3)
+
+    tobj4 <- tidy(obj4)
+    tobj5 <- tidy(obj5)
+    tobj6 <- tidy(obj6)
   })
 })
 
@@ -72,6 +92,21 @@ test_that("Stepwsie aic forward selection works ", {
 
 
   })
+
+  expect_silent({
+    tobj1 <- tidy(obj1)
+    tobj2 <- tidy(obj2)
+    tobj3 <- tidy(obj3)
+    tobj4 <- tidy(obj4)
+    tobj5 <- tidy(obj5)
+    tobj6 <- tidy(obj6)
+    tobj7 <- tidy(obj7)
+    tobj8 <- tidy(obj8)
+    tobj9 <- tidy(obj9)
+    tobj10 <- tidy(obj10)
+    tobj11 <- tidy(obj11)
+    tobj12 <- tidy(obj12)
+  })
 })
 
 test_that("Stepwsie bic forward selection works ", {
@@ -94,6 +129,21 @@ test_that("Stepwsie bic forward selection works ", {
 
 
   })
+
+  expect_silent({
+    tobj1 <- tidy(obj1)
+    tobj2 <- tidy(obj2)
+    tobj3 <- tidy(obj3)
+    tobj4 <- tidy(obj4)
+    tobj5 <- tidy(obj5)
+    tobj6 <- tidy(obj6)
+    tobj7 <- tidy(obj7)
+    tobj8 <- tidy(obj8)
+    tobj9 <- tidy(obj9)
+    tobj10 <- tidy(obj10)
+    tobj11 <- tidy(obj11)
+    tobj12 <- tidy(obj12)
+  })
 })
 
 test_that("Stepwsie aic backward works ", {
@@ -109,6 +159,17 @@ test_that("Stepwsie aic backward works ", {
     obj9 <- infer(aic_mod, method = "hybrid", nonselection = "uncertain_nulls")
 
 
+  })
+  expect_silent({
+    tobj1 <- tidy(obj1)
+    tobj2 <- tidy(obj2)
+    tobj3 <- tidy(obj3)
+    tobj4 <- tidy(obj4)
+    tobj5 <- tidy(obj5)
+    tobj6 <- tidy(obj6)
+    tobj7 <- tidy(obj7)
+    tobj8 <- tidy(obj8)
+    tobj9 <- tidy(obj9)
   })
 })
 
@@ -126,6 +187,19 @@ test_that("Stepwsie bic backward works ", {
 
 
   })
+
+  expect_silent({
+    tobj1 <- tidy(obj1)
+    tobj2 <- tidy(obj2)
+    tobj3 <- tidy(obj3)
+    tobj4 <- tidy(obj4)
+    tobj5 <- tidy(obj5)
+    tobj6 <- tidy(obj6)
+    tobj7 <- tidy(obj7)
+    tobj8 <- tidy(obj8)
+    tobj9 <- tidy(obj9)
+  })
+
 })
 
 test_that("Full model lasso min works ", {
@@ -147,6 +221,21 @@ test_that("Full model lasso min works ", {
     obj12 <- infer(lasso_mod, method = "selectiveinf", nonselection = "uncertain_nulls")
 
 
+  })
+
+  expect_silent({
+    tobj1 <- tidy(obj1)
+    tobj2 <- tidy(obj2)
+    tobj3 <- tidy(obj3)
+    tobj4 <- tidy(obj4)
+    tobj5 <- tidy(obj5)
+    tobj6 <- tidy(obj6)
+    tobj7 <- tidy(obj7)
+    tobj8 <- tidy(obj8)
+    tobj9 <- tidy(obj9)
+    tobj10 <- tidy(obj10)
+    tobj11 <- tidy(obj11)
+    tobj12 <- tidy(obj12)
   })
 })
 
@@ -170,6 +259,21 @@ test_that("Full model lasso 1se works ", {
 
 
   })
+
+  expect_silent({
+    tobj1 <- tidy(obj1)
+    tobj2 <- tidy(obj2)
+    tobj3 <- tidy(obj3)
+    tobj4 <- tidy(obj4)
+    tobj5 <- tidy(obj5)
+    tobj6 <- tidy(obj6)
+    tobj7 <- tidy(obj7)
+    tobj8 <- tidy(obj8)
+    tobj9 <- tidy(obj9)
+    tobj10 <- tidy(obj10)
+    tobj11 <- tidy(obj11)
+    tobj12 <- tidy(obj12)
+  })
 })
 
 test_that("Full model MCP min works ", {
@@ -185,6 +289,20 @@ test_that("Full model MCP min works ", {
     obj6 <- infer(mcp_mod, method = "hybrid", nonselection = "uncertain_nulls")
 
 
+  })
+
+  expect_warning({
+    obj7 <- infer(mcp_mod, method = "PIPE")
+  })
+
+  expect_silent({
+    tobj1 <- tidy(obj1)
+    tobj2 <- tidy(obj2)
+    tobj3 <- tidy(obj3)
+    tobj4 <- tidy(obj4)
+    tobj5 <- tidy(obj5)
+    tobj6 <- tidy(obj6)
+    tobj7 <- tidy(obj7)
   })
 })
 

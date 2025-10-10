@@ -7,6 +7,7 @@
 step_ic(
   x,
   y,
+  family = "gaussian",
   std = FALSE,
   penalty = "AIC",
   direction = "forward",
@@ -18,6 +19,8 @@ step_ic(
 \item{x}{Dataframe/model matrix with predictors (without intercept)}
 
 \item{y}{outcome vector}
+
+\item{family}{currently gaussian supported}
 
 \item{std}{if TRUE (default), standardize design matrix}
 
@@ -40,6 +43,6 @@ A list of class \code{selector_ic} containing:#'
 \item{model_sum}{the stepwise-selected model  details is returned}
 }
 \description{
-This function implements forwad/backward/bidirectional stepwise regression,
-for use in the practicalPSI package
+This function implements forward/backward/bidirectional stepwise regression,
+for use in the selectInferToolkit package
 }

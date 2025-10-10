@@ -44,12 +44,13 @@ dummy_col_fn <- function(data, make_levels) {
 #' Stepwise forwad/backward/bidirectional selection with AIC/BIC
 #'
 #'
-#' @description This function implements forwad/backward/bidirectional stepwise regression,
-#' for use in the practicalPSI package
+#' @description This function implements forward/backward/bidirectional stepwise regression,
+#' for use in the selectInferToolkit package
 #'
 #'
 #' @param x Dataframe/model matrix with predictors (without intercept)
 #' @param y outcome vector
+#' @param family currently gaussian supported
 #' @param std if TRUE (default), standardize design matrix
 #' @param penalty AIC or BIC
 #' @param direction the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"
@@ -71,9 +72,9 @@ dummy_col_fn <- function(data, make_levels) {
 #' \item{model_sum}{the stepwise-selected model  details is returned}
 #' @export
 
-
-
-step_ic <- function(x, y, std = FALSE, penalty = "AIC", direction = "forward", make_levels = FALSE, ...) {
+step_ic <- function(x, y, family = "gaussian", std = FALSE,
+                    penalty = "AIC", direction = "forward",
+                    make_levels = FALSE, ...) {
   if (is.matrix(x)) {
     if (std == TRUE) {
       x_df <- as.data.frame(x, check.names = FALSE)
@@ -160,7 +161,8 @@ step_ic <- function(x, y, std = FALSE, penalty = "AIC", direction = "forward", m
     y = data[[1]],
     x_model = raw_data[, setdiff(names(raw_data), "y"), drop = FALSE],
     model_sum = model,
-    make_levels = make_levels
+    make_levels = make_levels,
+    family = family
   )
   class(val) <- "selector_ic"
   val

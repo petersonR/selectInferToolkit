@@ -6,6 +6,7 @@
 #'
 #' @param x Dataframe/model matrix with predictors (without intercept)
 #' @param y outcome vector
+#' @param family currently gaussian supported
 #' @param std if TRUE (default), standardize design matrix
 #' @param penalty lasso or MCP
 #' @param lambda  extra coefficients associated with "lambda.min" or "lambda.1se"
@@ -30,7 +31,9 @@
 #' \item{alpha}{selected alpha for model fitting}
 #' @export
 
-pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...){
+pen_cv <- function(x, y, family = "gaussian", std = TRUE,
+                   penalty = "lasso", lambda = "lambda.min",
+                   alpha = 1, quiet = TRUE, ...){
 
   if (is.matrix(x) || is.data.frame(x)) {
     if (std) {
@@ -54,6 +57,14 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...
         model.frame(~., data = data.frame(cbind(x, y), check.names = FALSE), na.action = na.pass)
       )[, -1]
     }
+  }
+
+  # drop zero variance columns of X
+  x_var <- apply(x_dup, 2, var)
+  if(any(x_var == 0))  {
+    x_dup <- x_dup[,x_var != 0]
+    if(!quiet)
+      message("Note: dropping", sum(x_var == 0, na.rm = TRUE), " predictor(s) with no variance")
   }
   # Note: ncvreg standardizes the data and includes an intercept by default.
 
@@ -111,7 +122,8 @@ pen_cv <- function(x,y,std=TRUE,penalty= "lasso",lambda="lambda.min",alpha=1,...
   val <- list( beta=beta, std=std,penalty=penalty, lambda_seq=  lambda_seq, lambda=lambda,
                lambda.select= lambda_mod,lmax=lmax,
               fold=foldid, x=x_dup, y= y,
-              alpha=alpha,    x_original=x, model=   fit)
+              alpha=alpha,    x_original=x, model=   fit,
+              family = family)
   class(val) <- "selector_pen"
   val
 

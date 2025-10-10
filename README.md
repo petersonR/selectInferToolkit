@@ -1,13 +1,14 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# practicalPSI
+# selectInferToolkit
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
-The `practicalPSI` package aims to addresses a critical challenge in
-modern statistical modeling: **conducting valid inference after
+The `selectInferToolkit` package aims to addresses a critical challenge
+in modern statistical modeling: **conducting valid inference after
 performing model selection.** In the era of big data and complex
 regression problems, researchers often employ model selection procedures
 like stepwise regression or penalized methods (e.g., lasso) to identify
@@ -15,21 +16,21 @@ important variables. However, classical statistical inference assumes
 the model was chosen *a priori*—independent of the data. When this
 assumption is violated, standard statistical tests and confidence
 intervals can become overly optimistic, leading to unreliable
-conclusions.`practicalPSI` provides a user-friendly framework in R to
-facilitate post-selection inferential methods.
+conclusions.`selectInferToolkit` provides a user-friendly framework in R
+to facilitate post-selection inferential methods.
 
 ## Installation
 
-You can install the development version of practicalPSI like so:
+You can install the development version of selectInferToolkit like so:
 
 ``` r
-devtools::install_github("petersonR/practicalPSI")
+devtools::install_github("petersonR/selectInferToolkit")
 ```
 
 ## Package Overview
 
-`practicalPSI` offers a comprehensive suite of tools, covering both
-model selection and the crucial post-selection inference steps.
+`selectInferToolkit` offers a comprehensive suite of tools, covering
+both model selection and the crucial post-selection inference steps.
 
 ### Model Selection Methods
 
@@ -43,8 +44,8 @@ techniques:
   the `MASS` package.
 - **Penalized Regression:** Easily perform lasso, ridge, and elastic net
   regressions using the powerful `ncvreg` or `glmnet` packages.
-  `practicalPSI` simplifies the process of obtaining models associated
-  with either $\lambda_{min}$ or $\lambda_{1se}$.
+  `selectInferToolkit` simplifies the process of obtaining models
+  associated with either $\lambda_{min}$ or $\lambda_{1se}$.
   - $\lambda_{min}$ represents the regularization parameter $\lambda$
     that minimizes the cross-validation error, aiming for the best
     predictive performance.
@@ -55,8 +56,8 @@ techniques:
 
 ### Post-Selection Inference Methods
 
-The core contribution of `practicalPSI` lies in its ability to provide
-straightforward implementations of three distinct post-selection
+The core contribution of `selectInferToolkit` lies in its ability to
+provide straightforward implementations of three distinct post-selection
 inference methods, applicable after you’ve performed model selection
 using one of the methods above:
 
@@ -70,10 +71,10 @@ using one of the methods above:
 
 ### Handling Non-Selected Variables
 
-A unique and important feature of `practicalPSI` is its flexibility in
-handling non-selected variables (those not included in the final model).
-For each post-selection inference method, we offer three distinct
-approaches:
+A unique and important feature of `selectInferToolkit` is its
+flexibility in handling non-selected variables (those not included in
+the final model). For each post-selection inference method, we offer
+three distinct approaches:
 
 - **Ignoring them:** Treating non-selected variables as irrelevant.
 - **Treating them as confident (point-mass) nulls:** Assuming these
@@ -88,7 +89,7 @@ Let’s say you are wanting to predict gas mileage based on all variables
 in the `mtcars` data set.
 
 ``` r
-library(practicalPSI)
+library(selectInferToolkit)
 #> Loading required package: broom
 
 data("mtcars")
@@ -125,9 +126,9 @@ summary(fit_full)
 ```
 
 Hmm, $R^2$ is high but nothing is “significant”. What is going on? The
-model is probably over-specified. Let’s use `practicalPSI` to narrow in
-on what we think the most important factors are. The `step_ic` function
-can do forwards and backwards selection via AIC by default.
+model is probably over-specified. Let’s use `selectInferToolkit` to
+narrow in on what we think the most important factors are. The `step_ic`
+function can do forwards and backwards selection via AIC by default.
 
 ### `step_ic`
 
@@ -168,11 +169,11 @@ least squares theory is used for inference.
 ``` r
 fit_aic_hybrid <- infer(fit_aic, method = "hybrid")
 fit_aic_hybrid
-#> Selection method:  Stepwise    AIC .  Direction:  forward 
-#> Inference methohd:  hybrid 
-#> Method for handling null:  ignored 
-#> Average confidence interval length  1.779886 
-#> Median confidence interval length  2.257002
+#> Selection method: Stepwise  AIC.  Direction: forward
+#> Inference method: hybrid
+#> Method for handling null: ignored
+#> Average confidence interval length 1.779886
+#> Median confidence interval length 2.257002
 tidy(fit_aic_hybrid)
 #> # A tibble: 11 × 7
 #>    term        estimate std.error   p.value conf.low conf.high   ci_ln
@@ -202,11 +203,11 @@ Here we can just change `method` option in `infer()` function to using
 ``` r
 fit_aic_SI <- infer(fit_aic, method = "selectiveinf")
 fit_aic_SI 
-#> Selection method:  Stepwise    AIC .  Direction:  forward 
-#> Inference methohd:  selectiveinf 
-#> Method for handling null:  ignored 
-#> Average confidence interval length  Inf 
-#> Median confidence interval length  Inf
+#> Selection method: Stepwise  AIC.  Direction: forward
+#> Inference method: selectiveinf
+#> Method for handling null: ignored
+#> Average confidence interval length Inf
+#> Median confidence interval length Inf
 tidy(fit_aic_SI) 
 #> # A tibble: 11 × 6
 #>    term        estimate conf.low conf.high p.value ci_ln

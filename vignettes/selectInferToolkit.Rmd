@@ -1,26 +1,26 @@
 ---
-title: "Using the practicalPSI Package"
+title: "Using the selectInferToolkit Package"
 author: "Jinal Shah & Ryan A Peterson"
 date: "`r Sys.Date()`"
 output:   
   rmarkdown::html_vignette:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{Using the practicalPSI Package}
+  %\VignetteIndexEntry{Using the selectInferToolkit Package}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,fig.height = 5, fig.width = 7)
-library(practicalPSI)
+library(selectInferToolkit)
 library(tidyverse)
 
 ```
 
 # 1 Introduction
 
-The `practicalPSI` package stands for "practical post-selection inference". It makes it easier to implement post-selection inference after model selection using stepwsie and penalized regression in linear regression setting. 
+The `selectInferToolkit` package stands for "practical post-selection inference". It makes it easier to implement post-selection inference after model selection using stepwsie and penalized regression in linear regression setting. 
 
 The following model selection methods are supported, with help from ncvreg, glmnet and MASS on the backed:
 
