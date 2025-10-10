@@ -11,7 +11,6 @@ boot_pen(
   family,
   std,
   nonselection,
-  parallel,
   lambda_selected,
   lmax,
   all_terms,

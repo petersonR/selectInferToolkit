@@ -8,16 +8,28 @@
 #' @importFrom parallel detectCores clusterExport clusterEvalQ makeCluster
 #' @importFrom pbapply pblapply
 #' @importFrom forcats fct_inorder
-boot_stepwise <- function(x,y,family, penalty, std, B, nonselector, direction, make_levels, save_beta,  ...) {
+boot_stepwise <- function(x,y,family, penalty, std, B, nonselection, direction, make_levels,
+                          save_beta, selected_terms, data, all_terms, ...) {
 
-  if ( nonselector=="ignored"){
+  # Object to eventually return
+  val <-   list(std = std,
+                penalty = penalty,
+                direction = direction,
+                selected_terms = selected_terms,
+                make_levels = make_levels,
+                save_beta= save_beta,
+                family = family,
+                nonselection = nonselection,
+                B=B)
+
+  if ( nonselection=="ignored"){
     boot_fits <- list(numeric(B))
     for(b in 1:B) {
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      boot_ic = step_ic(x= data_boot[, colnames(data_boot) != "y"],
-                        y=data_boot[, "y", drop = FALSE],std=std,
+      boot_ic = stepwise_ic(x= data_boot[, colnames(data_boot) != "y"],
+                        y=data_boot[, "y", drop = TRUE],std=std,
                         direction=direction, penalty = penalty,
                         make_levels = make_levels, ...)
       fit <- boot_ic[["beta"]]
@@ -77,18 +89,18 @@ boot_stepwise <- function(x,y,family, penalty, std, B, nonselector, direction, m
       stringsAsFactors = FALSE
     )
 
-    if (save_beta== T){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else{
-      results <- list(B=B, results = final_results)
+    val$model <- final_results
+
+    if (save_beta){
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_ic"
-    return(results)
+    class(val) <- "boot_selector_stepwise_ic"
+    return(val)
 
   }
 
-  if(nonselector=="confident_nulls"){
+  if(nonselection=="confident_nulls"){
 
 
     boot_fits <- list(numeric(B))
@@ -96,7 +108,7 @@ boot_stepwise <- function(x,y,family, penalty, std, B, nonselector, direction, m
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      boot_ic = step_ic(x= data_boot[, colnames(data_boot) != "y"],
+      boot_ic = stepwise_ic(x= data_boot[, colnames(data_boot) != "y"],
                         y=data_boot[, "y", drop = FALSE],std = std,
                         direction=direction, penalty = penalty,
                         make_levels = make_levels, ...)
@@ -147,24 +159,24 @@ boot_stepwise <- function(x,y,family, penalty, std, B, nonselector, direction, m
       stringsAsFactors = FALSE
     )
 
-    if (save_beta== T){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else{
-      results <- list(B=B, results = final_results)
+    val$model <- final_results
+
+    if (save_beta){
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_ic"
-    return(results)
+    class(val) <- "boot_selector_stepwise_ic"
+    return(val)
 
   }
-  if(nonselector=="uncertain_nulls"){
+  if(nonselection=="uncertain_nulls"){
 
     boot_fits <- list(numeric(B))
     for(b in 1:B) {
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      boot_ic = step_ic(x= data_boot[, colnames(data_boot) != "y"],
+      boot_ic = stepwise_ic(x= data_boot[, colnames(data_boot) != "y"],
                         y=data_boot[, "y", drop = FALSE],std = std,
                         direction=direction, penalty = penalty,
                         make_levels = make_levels, ...)
@@ -240,14 +252,14 @@ boot_stepwise <- function(x,y,family, penalty, std, B, nonselector, direction, m
       stringsAsFactors = FALSE
     )
 
-    if (save_beta== T){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else{
-      results <- list(B=B, results = final_results)
+    val$model <- final_results
+
+    if (save_beta){
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_ic"
-    return(results)
+    class(val) <- "boot_selector_stepwise_ic"
+    return(val)
 
   }
 
@@ -262,7 +274,20 @@ boot_stepwise <- function(x,y,family, penalty, std, B, nonselector, direction, m
 #' @importFrom parallel detectCores clusterExport clusterEvalQ makeCluster
 #' @importFrom pbapply pblapply
 #' @importFrom forcats fct_inorder
-boot_stepwise_parallel <- function(x, y, penalty, B, family, n_cores, nonselector, direction, make_levels, save_beta, ...) {
+boot_stepwise_parallel <- function(x, y, penalty, std, selected_terms, B, family,
+                                   n_cores, nonselection, direction,
+                                   make_levels, save_beta,  data, all_terms, ...) {
+
+  # Object to eventually return
+  val <-   list(std = std,
+                penalty = penalty,
+                direction = direction,
+                selected_terms = selected_terms,
+                make_levels = make_levels,
+                save_beta= save_beta,
+                family = family,
+                nonselection = nonselection,
+                B=B)
 
   # do with parallel computing, Number of cores to use
   cl <- parallel::makeCluster(n_cores)
@@ -277,14 +302,14 @@ boot_stepwise_parallel <- function(x, y, penalty, B, family, n_cores, nonselecto
     library(selectInferToolkit)
   })
 
-  if(nonselector=="ignored"){
+  if(nonselection=="ignored"){
 
     # Parallel bootstrap operation
     boot_fits <- pbapply::pblapply(1:B, function(b) {
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      boot_ic = step_ic(x= data_boot[, colnames(data_boot) != "y"],
+      boot_ic = stepwise_ic(x= data_boot[, colnames(data_boot) != "y"],
                         y=data_boot[, "y", drop = FALSE],std = std,
                         direction=direction, penalty = penalty,
                         make_levels = make_levels, ...)
@@ -353,25 +378,25 @@ boot_stepwise_parallel <- function(x, y, penalty, B, family, n_cores, nonselecto
       stringsAsFactors = FALSE
     )
 
-    if (save_beta== T){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    } else{
-      results <- list(B=B, results = final_results)
+    val$model <- final_results
+
+    if (save_beta){
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_ic"
-    return(results)
+    class(val) <- "boot_selector_stepwise_ic"
+    return(val)
 
   }
 
-  if(nonselector=="confident_nulls"){
+  if(nonselection=="confident_nulls"){
 
     # Parallel bootstrap operation
     boot_fits <- pbapply::pblapply(1:B, function(b) {
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      boot_ic = step_ic(x= data_boot[, colnames(data_boot) != "y"],
+      boot_ic = stepwise_ic(x= data_boot[, colnames(data_boot) != "y"],
                         y=data_boot[, "y", drop = FALSE],std = std,
                         direction=direction, penalty = penalty,
                         make_levels = make_levels, ...)
@@ -428,23 +453,24 @@ boot_stepwise_parallel <- function(x, y, penalty, B, family, n_cores, nonselecto
       stringsAsFactors = FALSE
     )
 
-    if (save_beta== T){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else{
-      results <- list(B=B, results = final_results)
+    val$model <- final_results
+
+    if (save_beta){
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_ic"
-    return(results)
+    class(val) <- "boot_selector_stepwise_ic"
+    return(val)
+
   }
 
-  if(nonselector=="uncertain_nulls"){
+  if(nonselection=="uncertain_nulls"){
 
     boot_fits <- pbapply::pblapply(1:B, function(b) {
       boot_idx <- sample(1:nrow(data), replace = TRUE)
       data_boot <- data[boot_idx,]
 
-      boot_ic = step_ic(x= data_boot[, colnames(data_boot) != "y"],
+      boot_ic = stepwise_ic(x= data_boot[, colnames(data_boot) != "y"],
                         y=data_boot[, "y", drop = FALSE],std = std,
                         direction=direction, penalty = penalty,
                         make_levels = make_levels, ...)
@@ -521,14 +547,15 @@ boot_stepwise_parallel <- function(x, y, penalty, B, family, n_cores, nonselecto
       prop.select =  boot_summary$prop.select[match_idx],
       stringsAsFactors = FALSE
     )
-    if (save_beta== T){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else{
-      results <- list(B=B, results = final_results)
+    val$model <- final_results
+
+    if (save_beta){
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_ic"
-    return(results)
+    class(val) <- "boot_selector_stepwise_ic"
+    return(val)
+
   }
 }
 
@@ -541,12 +568,22 @@ boot_stepwise_parallel <- function(x, y, penalty, B, family, n_cores, nonselecto
 #' @importFrom parallel detectCores clusterExport clusterEvalQ makeCluster
 #' @importFrom pbapply pblapply
 #' @importFrom forcats fct_inorder
-boot_pen <- function(x, y, B, family, std, nonselection, parallel,
+boot_pen <- function(x, y, B, family, std, nonselection,
                      lambda_selected,  lmax, all_terms, penalty, alpha,
                      selected_terms, lambda_seq, nlambda, boot_desparse,
                      save_beta) {
 
   boot_fits <- list(numeric(B))
+  val <-   list(std = std,
+                lambda_selected = lambda_selected,
+                lmax = lmax,
+                penalty = penalty,
+                alpha = alpha,
+                selected_terms = selected_terms,
+                lambda_seq = lambda_seq,
+                family = family,
+                nonselection = nonselection,
+                B=B)
 
   if (nonselection=="ignored"){
     if(!boot_desparse) { # If you want to keep sparse coefficients within bootstrap
@@ -660,13 +697,13 @@ boot_pen <- function(x, y, B, family, std, nonselection, parallel,
       full_mod <- full_mod[matched_rows, ]
       full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
 
+      val$model <- full_mod
+
       if (save_beta){
-        results <- list(B=B, beta= boot_results_df, results = full_mod)
-      } else {
-        results <- list(B=B, results = full_mod)
+        val$beta <- boot_results_df
       }
 
-      class(results) <- "boot_selector_pen"
+      class(val) <- "boot_selector_pen"
     } else { # If you want to desparsify coefficients within bootstrap
 
       # Get boot_fits using bootstrapping
@@ -795,15 +832,15 @@ boot_pen <- function(x, y, B, family, std, nonselection, parallel,
       full_mod <- full_mod[matched_rows, ]
       full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
 
+      val$model <- full_mod
+
       if (save_beta){
-        results <- list(B=B, beta= boot_results_df, results = full_mod)
-      }else {
-        results <- list(B=B, results = full_mod)
+        val$beta <- boot_results_df
       }
 
-      class(results) <- "boot_selector_pen"
+      class(val) <- "boot_selector_pen"
     }
-    return(results)
+    return(val)
   }
 
   if(nonselection=="confident_nulls" & !boot_desparse){
@@ -895,14 +932,14 @@ boot_pen <- function(x, y, B, family, std, nonselection, parallel,
     )
 
 
+    val$model <- final_results
+
     if (save_beta){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else {
-      results <- list(B=B, results = final_results)
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_pen"
-    return(results)
+    class(val) <- "boot_selector_pen"
+    return(val)
   }
   if(nonselection=="confident_nulls" & boot_desparse){
     if (alpha==1 & penalty=="lasso"){
@@ -1030,14 +1067,14 @@ boot_pen <- function(x, y, B, family, std, nonselection, parallel,
     boot_summary <-  boot_summary[match_idx,]
 
 
+    val$model <- boot_summary
+
     if (save_beta){
-      results <- list(B=B, beta= boot_results_df, results = boot_summary)
-    }else {
-      results <- list(B=B, results = boot_summary)
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_pen"
-    return(results)
+    class(val) <- "boot_selector_pen"
+    return(val)
 
 
   }
@@ -1181,14 +1218,14 @@ boot_pen <- function(x, y, B, family, std, nonselection, parallel,
       stringsAsFactors = FALSE
     )
 
+    val$model <- final_results
+
     if (save_beta){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else {
-      results <- list(B=B, results = final_results)
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_pen"
-    return(results)
+    class(val) <- "boot_selector_pen"
+    return(val)
   }
   if(nonselection=="uncertain_nulls" & boot_desparse){
     if (alpha==1 & penalty=="lasso"){
@@ -1342,14 +1379,14 @@ boot_pen <- function(x, y, B, family, std, nonselection, parallel,
       stringsAsFactors = FALSE
     )
 
+    val$model <- final_results
+
     if (save_beta){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else {
-      results <- list(B=B, results = final_results)
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_pen"
-    return(results)
+    class(val) <- "boot_selector_pen"
+    return(val)
 
   }
 }
@@ -1369,6 +1406,16 @@ boot_pen_parallel <- function(x, y, B, family, std, nonselection, n_cores, paral
                               selected_terms, lambda_seq, boot_desparse,
                               save_beta) {
   cl <- parallel::makeCluster(n_cores)
+  val <-   list(std = std,
+                lambda_selected = lambda_selected,
+                lmax = lmax,
+                penalty = penalty,
+                alpha = alpha,
+                selected_terms = selected_terms,
+                lambda_seq = lambda_seq,
+                family = family,
+                nonselection = nonselection,
+                B=B)
 
   # Export required variables to each worker
   parallel::clusterExport(cl, varlist = c("x","y","alpha", "penalty", "lambda_selected",
@@ -1472,14 +1519,14 @@ boot_pen_parallel <- function(x, y, B, family, std, nonselection, n_cores, paral
     full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
 
 
-    if (save_beta== T){
-      results <- list(B=B, beta= boot_results_df, results = full_mod)
-    }else {
-      results <- list(B=B, results = full_mod)
+    val$model <- full_mod
+
+    if (save_beta){
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_pen"
-    return(results)
+    class(val) <- "boot_selector_pen"
+    return(val)
 
 
   }
@@ -1580,14 +1627,14 @@ boot_pen_parallel <- function(x, y, B, family, std, nonselection, n_cores, paral
     full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
 
 
-    if (save_beta== T){
-      results <- list(B=B, beta= boot_results_df, results = full_mod)
-    }else {
-      results <- list(B=B, results = full_mod)
+    val$model <- full_mod
+
+    if (save_beta){
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_pen"
-    return(results)
+    class(val) <- "boot_selector_pen"
+    return(val)
 
   }
   if(nonselection=="confident_nulls" & !boot_desparse){
@@ -1673,14 +1720,14 @@ boot_pen_parallel <- function(x, y, B, family, std, nonselection, n_cores, paral
       stringsAsFactors = FALSE
     )
 
+    val$model <- final_results
+
     if (save_beta){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else {
-      results <- list(B=B, results = final_results)
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_pen"
-    return(results)
+    class(val) <- "boot_selector_pen"
+    return(val)
 
   }
   if(nonselection=="confident_nulls" & boot_desparse){
@@ -1781,14 +1828,14 @@ boot_pen_parallel <- function(x, y, B, family, std, nonselection, n_cores, paral
     boot_summary <-  boot_summary[match_idx,]
 
 
+    val$model <- boot_summary
+
     if (save_beta){
-      results <- list(B=B, beta= boot_results_df, results = boot_summary)
-    }else {
-      results <- list(B=B, results = boot_summary)
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_pen"
-    return(results)
+    class(val) <- "boot_selector_pen"
+    return(val)
   }
   if(nonselection=="uncertain_nulls" & !boot_desparse){
     boot_fits <- pblapply(1:B, function(b) {
@@ -1900,14 +1947,14 @@ boot_pen_parallel <- function(x, y, B, family, std, nonselection, n_cores, paral
       stringsAsFactors = FALSE
     )
 
+    val$model <- final_results
+
     if (save_beta){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else {
-      results <- list(B=B, results = final_results)
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_pen"
-    return(results)
+    class(val) <- "boot_selector_pen"
+    return(val)
   }
   if(nonselection=="uncertain_nulls" & boot_desparse){
     boot_fits <- pblapply(1:B, function(b) {
@@ -2023,14 +2070,14 @@ boot_pen_parallel <- function(x, y, B, family, std, nonselection, n_cores, paral
       stringsAsFactors = FALSE
     )
 
+    val$model <- final_results
+
     if (save_beta){
-      results <- list(B=B, beta= boot_results_df, results = final_results)
-    }else {
-      results <- list(B=B, results = final_results)
+      val$beta <- boot_results_df
     }
 
-    class(results) <- "boot_selector_pen"
-    return(results)
+    class(val) <- "boot_selector_pen"
+    return(val)
   }
 
 }

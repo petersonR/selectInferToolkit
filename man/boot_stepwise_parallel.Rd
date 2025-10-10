@@ -8,13 +8,17 @@ boot_stepwise_parallel(
   x,
   y,
   penalty,
+  std,
+  selected_terms,
   B,
   family,
   n_cores,
-  nonselector,
+  nonselection,
   direction,
   make_levels,
   save_beta,
+  data,
+  all_terms,
   ...
 )
 }

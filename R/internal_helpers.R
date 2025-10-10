@@ -1,4 +1,38 @@
+# Internal helper: clean colnames to avoid special characters
 #' Title
+#'
+#' @param nms a vector with column names to be cleaned
+#'
+#' @return a vector with clean columns
+#'
+#'
+
+clean_colnames_fn <- function(nms) {
+  ifelse(grepl("[^a-zA-Z0-9._]", nms), paste0("`", nms, "`"), nms)
+}
+
+# Transform factor variables to dummies if needed
+#' Title
+#'
+#' @param data  data to be processed
+#' @param make_levels whether to make dummy variables for each factor level
+#'
+#' @return model matrix with clean dataset
+
+dummy_col_fn <- function(data, make_levels) {
+  if (!make_levels) return(data)
+
+  # Identify factor and numeric variables
+  fact_vars <- names(data)[sapply(data, is.factor)]
+  if (length(fact_vars) == 0) return(data)
+
+  dummy_data <- model.matrix(~ . - 1, data = data[, fact_vars, drop = FALSE])[,-1]
+  numeric_data <- data[, !names(data) %in% fact_vars, drop = FALSE]
+
+  cbind(numeric_data, dummy_data)
+}
+
+#' An (internal) function to obtain uncertain null effects
 #'
 #' @param mod model results in data frame with NA for estimates for variables that are
 #' not seelcted
@@ -7,9 +41,6 @@
 #'
 #' @return tidy data frame with coefficients for all variables
 #'
-#'
-
-
 get_uncertain_nulls <- function(mod, res, x) { # val will be residuals
   selections <- mod$term[!is.na(mod$estimate)]
   nulls <- mod$term[is.na(mod$estimate)]
@@ -48,6 +79,7 @@ get_uncertain_nulls <- function(mod, res, x) { # val will be residuals
     }
   }
 
-    return(mod)
+  return(mod)
 }
+
 

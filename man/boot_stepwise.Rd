@@ -11,10 +11,13 @@ boot_stepwise(
   penalty,
   std,
   B,
-  nonselector,
+  nonselection,
   direction,
   make_levels,
   save_beta,
+  selected_terms,
+  data,
+  all_terms,
   ...
 )
 }

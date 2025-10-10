@@ -1,18 +1,13 @@
-# Selective inference for stepwise
-#' Title
+#' Selective inference for stepwise selection(internal helper)
 #'
 #' @param x  design matrix
 #' @param y  outcome variable
 #' @param mult
 #'
-#' @return  returns a data frame with results from forward stepwise selective inference
 #' @importFrom selectiveInference fs
 #' @importFrom selectiveInference fsInf
-#' @export
 #'
-#'
-#'
-
+#' @return  returns a data frame with results from forward stepwise selective inference
 sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, std= F, ...) {
   variable_names <- colnames(x)
 
@@ -42,23 +37,20 @@ sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, std= F, ...) {
   results
 }
 
-
-# Selective inference for lasso
-#' Title
+#' Selective inference for lasso (internal helper)
 #'
 #' @param x  design matrix
 #' @param y outcome variable
 #' @param lam lambda.1se or lambda.min
 #' @param std whether to standaddize design matrix
 #' @param ... addtional arguments that can be passed to  cv.glmnet
+#'
 #' @importFrom glmnet cv.glmnet
 #' @importFrom selectiveInference fixedLassoInf
 #' @importFrom magrittr %>%
 #' @importFrom tibble rownames_to_column
+#'
 #' @return returns a data frame with results from lasso selective inference
-#'
-#'
-#'
 
 sel_inf <- function(x,y, model, lam = "lambda.min", intercept= TRUE,alpha = 1, ...) {
   n<- nrow(x)
