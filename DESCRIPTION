@@ -1,7 +1,7 @@
-Package: practicalPSI
+Package: selectInferToolkit
 Type: Package
-Title: Practical Post-Selection Inference
-Version: 0.1.0
+Title: Tools for Inference & Variable Selection
+Version: 0.2.0
 Author: Jinal Shah, Ryan Peterson
 Maintainer: Ryan Peterson <ryan.a.peterson@cuanschutz.edu>
 Description: This is a package designed to make the process of post-selection

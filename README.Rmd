@@ -16,39 +16,39 @@ knitr::opts_chunk$set(
 )
 ```
 
-# practicalPSI
+# selectInferToolkit
 
 <!-- badges: start -->
 <!-- badges: end -->
 
 
-The `practicalPSI` package aims to addresses a critical challenge in modern statistical modeling: **conducting valid inference after performing model selection.** In the era of big data and complex regression problems, researchers often employ model selection procedures like stepwise regression or penalized methods (e.g., lasso) to identify important variables. However, classical statistical inference assumes the model was chosen *a priori*—independent of the data. When this assumption is violated, standard statistical tests and confidence intervals can become overly optimistic, leading to unreliable conclusions.`practicalPSI` provides a user-friendly framework in R to facilitate  post-selection inferential methods.
+The `selectInferToolkit` package aims to addresses a critical challenge in modern statistical modeling: **conducting valid inference after performing model selection.** In the era of big data and complex regression problems, researchers often employ model selection procedures like stepwise regression or penalized methods (e.g., lasso) to identify important variables. However, classical statistical inference assumes the model was chosen *a priori*—independent of the data. When this assumption is violated, standard statistical tests and confidence intervals can become overly optimistic, leading to unreliable conclusions.`selectInferToolkit` provides a user-friendly framework in R to facilitate  post-selection inferential methods.
 
 
 ## Installation
 
-You can install the development version of practicalPSI like so:
+You can install the development version of selectInferToolkit like so:
 
 ```{r, eval = FALSE}
-devtools::install_github("petersonR/practicalPSI")
+devtools::install_github("petersonR/selectInferToolkit")
 ```
 
 ## Package Overview
 
-`practicalPSI` offers a comprehensive suite of tools, covering both model selection and the crucial post-selection inference steps.
+`selectInferToolkit` offers a comprehensive suite of tools, covering both model selection and the crucial post-selection inference steps.
 
 ### Model Selection Methods
 
 The package supports two broad classes of popular model selection techniques:
 
 * **Stepwise Regression:** Implement forward, backward, and bidirectional stepwise regression. User can use either the **Akaike Information Criterion (AIC)** or the **Bayesian Information Criterion (BIC)** as selection criteria, leveraging the `stepAIC` function from the `MASS` package.
-* **Penalized Regression:** Easily perform lasso, ridge, and elastic net regressions using the powerful `ncvreg` or `glmnet` packages. `practicalPSI` simplifies the process of obtaining models associated with either $\lambda_{min}$ or $\lambda_{1se}$.
+* **Penalized Regression:** Easily perform lasso, ridge, and elastic net regressions using the powerful `ncvreg` or `glmnet` packages. `selectInferToolkit` simplifies the process of obtaining models associated with either $\lambda_{min}$ or $\lambda_{1se}$.
     * $\lambda_{min}$ represents the regularization parameter $\lambda$ that minimizes the cross-validation error, aiming for the best predictive performance.
     * $\lambda_{1se}$ is a more conservative choice, selecting the largest $\lambda$ where the cross-validation error is within one standard error of $\lambda_{min}$. This often results in a sparser, more parsimonious model.
 
 ### Post-Selection Inference Methods
 
-The core contribution of `practicalPSI` lies in its ability to provide straightforward implementations of three distinct post-selection inference methods, applicable after you've performed model selection using one of the methods above:
+The core contribution of `selectInferToolkit` lies in its ability to provide straightforward implementations of three distinct post-selection inference methods, applicable after you've performed model selection using one of the methods above:
 
 1.  **Hybrid Ordinary Least Squares:** A baseline approach that performs no adjustment for the selection process.
 2.  **Bootstrap:** A non-parametric bootstrap method that resamples data to account for selection uncertainty.
@@ -56,7 +56,7 @@ The core contribution of `practicalPSI` lies in its ability to provide straightf
 
 ### Handling Non-Selected Variables
 
-A unique and important feature of `practicalPSI` is its flexibility in handling non-selected variables (those not included in the final model). For each post-selection inference method, we offer three distinct approaches:
+A unique and important feature of `selectInferToolkit` is its flexibility in handling non-selected variables (those not included in the final model). For each post-selection inference method, we offer three distinct approaches:
 
 * **Ignoring them:** Treating non-selected variables as irrelevant.
 * **Treating them as confident (point-mass) nulls:** Assuming these variables have exactly zero effect.
@@ -69,7 +69,7 @@ A unique and important feature of `practicalPSI` is its flexibility in handling 
 Let's say you are wanting to predict gas mileage based on all variables in the `mtcars` data set. 
 
 ```{r example}
-library(practicalPSI)
+library(selectInferToolkit)
 
 data("mtcars")
 
@@ -77,7 +77,7 @@ fit_full <- lm(mpg ~ ., data = mtcars)
 summary(fit_full)
 ```
 
-Hmm, $R^2$ is high but nothing is "significant". What is going on? The model is probably over-specified. Let's use `practicalPSI` to narrow in on what we think the most important factors are. The `step_ic` function can do forwards and backwards selection via AIC by default. 
+Hmm, $R^2$ is high but nothing is "significant". What is going on? The model is probably over-specified. Let's use `selectInferToolkit` to narrow in on what we think the most important factors are. The `step_ic` function can do forwards and backwards selection via AIC by default. 
 
 ### `step_ic`
 

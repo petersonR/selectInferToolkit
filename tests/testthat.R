@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(practicalPSI)
+library(selectInferToolkit)
 
-test_check("practicalPSI")
+test_check("selectInferToolkit")

@@ -1,19 +1,19 @@
 ---
-title: "Using the practicalPSI Package"
+title: "Using the selectInferToolkit Package"
 author: "Jinal Shah & Ryan A Peterson"
 date: "`r Sys.Date()`"
 output:   
   rmarkdown::html_vignette:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{Using the practicalPSI Package}
+  %\VignetteIndexEntry{Using the selectInferToolkit Package}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,fig.height = 5, fig.width = 7)
-library(practicalPSI)
+library(selectInferToolkit)
 library(tidyverse)
 library(knitr)
 
@@ -21,10 +21,14 @@ library(knitr)
 
 # Introduction
 
+<<<<<<< HEAD:vignettes/practicalPSI.Rmd
 The `practicalPSI` package stands for "practical post-selection inference". In the era of big data and complex regression problems, researchers often employ model selection procedures like step wise regression or penalized methods (e.g., lasso) to identify important variables. However, classical statistical inference assumes the model was chosen a prior—independent of the data. When this assumption is violated, standard statistical tests and confidence intervals can become overly optimistic, leading to unreliable conclusions.`practicalPSI` provides a user-friendly framework in R to facilitate post-selection inferential methods.
  
  
 There are many things researchers may want to  consider when trying to make inference after variable/model selection:
+=======
+The `selectInferToolkit` package stands for "practical post-selection inference". It makes it easier to implement post-selection inference after model selection using stepwsie and penalized regression in linear regression setting. 
+>>>>>>> 9ebe14d904a3c798120c14308b538505ccfbc353:vignettes/selectInferToolkit.Rmd
 
 
 1) Should inference be made only on the variables selected by these methods? What if we are uncertain about the selected variables, and we want to make inferences on all variables? 

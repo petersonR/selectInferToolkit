@@ -7,10 +7,12 @@
 pen_cv(
   x,
   y,
+  family = "gaussian",
   std = TRUE,
   penalty = "lasso",
   lambda = "lambda.min",
   alpha = 1,
+  quiet = TRUE,
   ...
 )
 }
@@ -18,6 +20,8 @@ pen_cv(
 \item{x}{Dataframe/model matrix with predictors (without intercept)}
 
 \item{y}{outcome vector}
+
+\item{family}{currently gaussian supported}
 
 \item{std}{if TRUE (default), standardize design matrix}
 
