@@ -1,196 +1,23 @@
-#' Fit an MCP- or SCAD-penalized regression
-#' @description
-#' Performs k-fold cross validation for MCP- or SCAD-penalized regression
-#' models over a grid of values for the regularization parameter lambda and returns the
-#' coefficeints associated with either value of lambda that gives minimum cvm or largest value of lambda such that error is within 1 standard error of the minimum.
+#' Inference for selector_pen_cv class except bootstrap which is it's own function
 #'
-#' @param x Dataframe/model matrix with predictors (without intercept)
-#' @param y outcome vector
-#' @param family currently gaussian supported
-#' @param std if TRUE (default), standardize design matrix
-#' @param penalty lasso or MCP
-#' @param lambda  extra coefficients associated with "lambda.min" or "lambda.1se"
-#' @param alpha Tuning parameter  small, but not exactly 0.
-#' @param ... Additional arguments that can be passed with cv.ncvreg function in cv.ncvreg package
-#' @importFrom magrittr %>%
-#' @importFrom dplyr mutate_if select
-#' @importFrom broom tidy
-#' @importFrom stats lm model.frame model.matrix
-#' @importFrom stats na.pass
-#' @importFrom MASS stepAIC
-#' @importFrom ncvreg cv.ncvreg
-#' @return A list of class `selector_pen` containing:
-#' \item{beta}{a tibble containing term names and coefficients}
-#' \item{std}{Was desing matrix standadrized}
-#' \item{penalty}{penalty used (lasso or MCP)}
-#' \item{lambda}{are the coefficeint associated with "lambda.min" or "lambda.1se"}
-#' \item{lambda.select}{numeric value of selected lambda}
-#' \item{fold}{Which fold each observation belongs to. By default the observations are randomly assigned.}
-#' \item{x}{ the model dataframe used}
-#' \item{y}{repsonse used}
-#' \item{alpha}{selected alpha for model fitting}
-#' @export
-
-pen_cv <- function(x, y, family = "gaussian", std = TRUE,
-                   penalty = "lasso", lambda = "lambda.min",
-                   alpha = 1, quiet = TRUE, ...){
-
-  if (is.matrix(x) || is.data.frame(x)) {
-    if (std) {
-      # Standardize numeric columns
-      x_std <- as.data.frame(x, check.names = FALSE)
-      num_cols <- sapply(x_std, is.numeric)
-      x_std[num_cols] <- lapply(x_std[num_cols], scale)
-
-      # Preserve original column names
-      colnames(x_std) <- colnames(x)
-
-      # Create model matrix
-      x_dup <- model.matrix(
-        y ~ .,
-        model.frame(~., data = data.frame(cbind(x_std, y), check.names = FALSE), na.action = na.pass)
-      )[, -1]
-    } else {
-      # No standardization, directly build model matrix
-      x_dup <- model.matrix(
-        y ~ .,
-        model.frame(~., data = data.frame(cbind(x, y), check.names = FALSE), na.action = na.pass)
-      )[, -1]
-    }
-  }
-
-  # drop zero variance columns of X
-  x_var <- apply(x_dup, 2, var)
-  if(any(x_var == 0))  {
-    x_dup <- x_dup[,x_var != 0]
-    if(!quiet)
-      message("Note: dropping", sum(x_var == 0, na.rm = TRUE), " predictor(s) with no variance")
-  }
-  # Note: ncvreg standardizes the data and includes an intercept by default.
-
-  raw_data = as.data.frame(cbind(x_dup,y))
-  rownames(raw_data) <- NULL
-
-  full_model <- lm(y ~ ., data= raw_data)
-  coef_est <- coef(full_model)
-  full_model_df <- data.frame(term = names(coef_est))
-  full_model$term <- gsub("`", "", full_model$term)
-
-
-  if (alpha==1 & penalty=="lasso"){
-    #for glmnet alpha=1 is the lasso penalty, and alpha=0 the ridge penalty.
-    fit <- cv.glmnet(x = x_dup, y = y, alpha = alpha, standardize = F, family = "gaussian", ...)
-    foldid <-fit[["foldid"]]
-    lmax <- max(fit$lambda)
-    lambda_seq= fit[["lambda"]]
-
-  }else{
-    #alpha=1 is equivalent to MCP/SCAD penalty,
-    fit <- cv.ncvreg(X = x_dup, y = y,  penalty = penalty, family="gaussian",alpha=alpha,...)
-    foldid <-fit[["fold"]]
-    lmax <- max(fit$lambda)
-    lambda_seq=  fit[["lambda"]]
-
-  }
-
-
-  # Calculate correct lambda
-  if(lambda=="lambda.min"){
-    lambda_mod =  fit[["lambda.min"]]
-  } else if (lambda=="lambda.1se"){
-    if(alpha==1 & penalty=="lasso"){
-      lambda_mod =  fit[["lambda.1se"]]
-    }
-    else{
-      lambda_mod <- fit$lambda[which(fit$cve < min(fit$cve + fit$cvse))[1]]
-
-    }
-  }
-
-  if (alpha==1 & penalty=="lasso"){
-      b <- coef(fit, s=  lambda_mod, exact = TRUE)
-      beta <- data.frame(term = rownames(b), estimate = as.vector(b))
-
-  }else{
-    tolerance <- 1e-6 # Define a small tolerance
-    lambda_index <- which.min(abs(fit$lambda - lambda_mod)) # Find the closest lambda
-    beta <- data.frame(term=names(coef(fit, which = lambda_index)) ,
-                       estimate=unname(coef(fit, which = lambda_index)))
-
-  }
-
-  val <- list( beta=beta, std=std,penalty=penalty, lambda_seq=  lambda_seq, lambda=lambda,
-               lambda.select= lambda_mod,lmax=lmax,
-              fold=foldid, x=x_dup, y= y,
-              alpha=alpha,    x_original=x, model=   fit,
-              family = family)
-  class(val) <- "selector_pen"
-  val
-
-}
-
-
-#' Title
-#'
-#' @param x  model of class `selector_pen`
-#' @importFrom tibble as_tibble
-#' @method print `selector_pen`
-#' @return returns x invisibly
-#' @export
-print.selector_pen <- function(x, ...) {
-  cat("Penalized regression  Model Summary:\n")
-
-  # Standard errors used in the model
-  if(x$std) {
-    cat("Design Matrix standardized: TRUE\n")
-  } else {
-    cat("Design Matrix standardized: FALSE\n")
-  }
-
-  # Penalty used for selection
-  cat("Penalty used: ", x$penalty, " and alpha:",x$alpha, "\n")
-
-  # lambda
-  cat("Coefficient associated with : ", x$lambda, "\n")
-
-  beta = x[["beta"]][x[["beta"]][["estimate"]]!=0,][,2]
-  names(beta) =x[["beta"]][x[["beta"]][["estimate"]]!=0,][,1]
-
-  # Model coefficients (first few)
-  cat("\nFinal Model Non-Zero Coefficients:\n")
-  print(beta)
-
-}
-
-#' Title
-#' @param x   model of class `selector_pen`
-#' @param ... currently not used
-#' @return A tibble containing the tidied coefficients of the model.
-#' @export
-tidy.selector_pen <- function(x, ...) {
-
-  ret<- as_tibble(x[["beta"]])
-  return(ret)
-}
-
-#' Inference for selector_pen class except bootstrap which is it's own function
-#'
-#' @param model model of selector_pen class returned from  pen_cv function
+#' @param model model of selector_pen_cv class returned from  selector_pen_cv function
 #' @param method A character string specifying method of post-selection inference. Currently "hybrid", "selectiveinf" or
 #' "boot" supported
 #' @param nonselection A character string specifying how to handle variables not selected by model selection procedure. One of
 #' "ignored", "confident_nulls" or "uncertain_nulls" supported
-#' @return "infer_pen" class list with
+#' @return "infer_pen_cv " class list with
 #' @importFrom broom tidy
 #' @importFrom dplyr filter
 #' @importFrom dplyr select
 #'
 #' @rdname infer
-#' @method infer selector_pen
 #' @export
 #'
-infer.selector_pen <- function(model, method = "hybrid", nonselection = "ignored",
-                               B = 250, n_cores = 1, save_beta=FALSE, boot_desparse=FALSE){
+#'
+
+# NEEDS WORK - this is a placeholder
+infer_selective <- function(model, method = "hybrid", nonselection = "ignored",
+                                  B = 250, n_cores = 1, save_beta=FALSE, boot_desparse=FALSE){
   x <-model[["x"]]
   y <- model[["y"]]
 
@@ -241,7 +68,7 @@ infer.selector_pen <- function(model, method = "hybrid", nonselection = "ignored
                    alpha=model[["alpha"]],
                    infmethod = method, nonselection = nonselection
     )
-    class(result) <- "infer_pen"
+    class(result) <- "infer_pen_cv "
     result
 
 
@@ -297,7 +124,7 @@ infer.selector_pen <- function(model, method = "hybrid", nonselection = "ignored
                    selection_method=model[["penalty"]],lambda= model[["lambda"]],
                    alpha=model[["alpha"]],
                    infmethod = method, nonselection = nonselection)
-    class(result) <- "infer_pen"
+    class(result) <- "infer_pen_cv "
     result
   }
   else if (method == "hybrid" && nonselection == "uncertain_nulls") {
@@ -352,7 +179,7 @@ infer.selector_pen <- function(model, method = "hybrid", nonselection = "ignored
                    selection_method=model[["penalty"]],lambda= model[["lambda"]],
                    alpha=model[["alpha"]],
                    infmethod = method, nonselection = nonselection)
-    class(result) <- "infer_pen"
+    class(result) <- "infer_pen_cv "
     return(result)
   }
   else if (method == "selectiveinf" && nonselection == "ignored"){
@@ -388,7 +215,7 @@ infer.selector_pen <- function(model, method = "hybrid", nonselection = "ignored
                    alpha=model[["alpha"]]
     )
 
-    class(result) <- "infer_pen"
+    class(result) <- "infer_pen_cv "
     return(result )
   }
   else if (method == "selectiveinf" && nonselection == "confident_nulls") {
@@ -424,7 +251,7 @@ infer.selector_pen <- function(model, method = "hybrid", nonselection = "ignored
                    selection_method=model[["penalty"]],lambda= model[["lambda"]],
                    alpha=model[["alpha"]],
                    infmethod = method, nonselection = nonselection)
-    class(result) <- "infer_pen"
+    class(result) <- "infer_pen_cv "
     return(result )
 
 
@@ -506,7 +333,7 @@ infer.selector_pen <- function(model, method = "hybrid", nonselection = "ignored
                    selection_method=model[["penalty"]],lambda= model[["lambda"]],
                    alpha=model[["alpha"]],
                    infmethod = method, nonselection = nonselection)
-    class(result) <- "infer_pen"
+    class(result) <- "infer_pen_cv "
     result
   }
   else if (method == "PIPE") {
@@ -526,157 +353,8 @@ infer.selector_pen <- function(model, method = "hybrid", nonselection = "ignored
                    alpha=model[["alpha"]],
                    infmethod = method,
                    nonselection = "N/A")
-    class(result) <- "infer_pen"
+    class(result) <- "infer_pen_cv "
     result
   }
-  else if (method == "boot") {
-    result <- boot(model, B=B, nonselection=nonselection,
-                   n_cores= n_cores, save_beta=save_beta,
-                   boot_desparse=boot_desparse,
-                   infmethod = method)
-
-
-    result$ci_avg_ratio  <- mean(result$model$ci_ln[result$model$term != "(Intercept)"] , na.rm=T)
-    result$ci_median_ratio <-  median(result$model$ci_ln[result$model$term != "(Intercept)"] , na.rm=T)
-
-    class(result) <- "infer_pen"
-    return(result)
-  }
-}
-
-#' Bootstrapping for penalized CV-based model
-#'
-#'
-#' @param model model of class selector_pen
-#' @param B The number of bootstrap replicates.
-#' @param family Currently only "gaussian" supported
-#' @param nonselection A character string specifying how to handle variables not selected by model selection procedure. One of
-#' "ignored", "confident_nulls" or "uncertain_nulls" supported
-#' @param boot_desparse TBD
-#' @param n_cores should a cluster with detectCores()-1 be made and used
-#' @param ... any additional arguments to that can be passed to ncvreg
-#' @importFrom magrittr %>%
-#' @importFrom dplyr mutate_if select mutate summarize group_by
-#' @importFrom broom tidy
-#' @importFrom stats lm model.frame model.matrix
-#' @importFrom stats na.pass
-#' @importFrom forcats fct_inorder
-#' @importFrom ncvreg ncvreg
-#' @importFrom glmnet glmnet
-#' @return A tidy dataframe with bootstrap dataset
-#' \item{term}{variable name}
-#' \item{mean_estimate}{mean of regression coefficients across bootstrap samples}
-#' \item{conf.low}{lower 2.5 percentile bootstrap interval}
-#' \item{conf.high}{upper 97.5 percentile bootstrap interval}
-#' \item{median_p.value}{median p value of regression coefficients  across bootstrap samples}
-#' \item{ci_ln}{confidence interval length}
-#' \item{prop.select}{proportion of times a given variable is selected by model selection method}
-#' \item{prop.rej}{proportion of time coefficient was found significant at 0.05 alpha level}
-#
-#' @export
-#'
-#'
-boot.selector_pen <- function(model, B = 250, nonselection="ignored",
-                              n_cores = 1, boot_desparse=FALSE,
-                              save_beta = FALSE, ...) {
-
-  x <-model[["x"]]
-  y <- model[["y"]]
-  family <- model$family
-
-  std=model[["std"]]
-  lambda_selected= model[["lambda.select"]]
-  lmax= model[["lmax"]]
-  penalty = model[["penalty"]]
-  alpha=model[["alpha"]]
-  selected_terms <- model[["beta"]][["term"]][model[["beta"]][["estimate"]] !=0]
-  lambda_seq= model[["lambda_seq"]]
-
-  #non_zero_terms <-  non_zero_terms [  non_zero_terms != "(Intercept)"]
-  #selected_vars <- data.frame(term =   non_zero_terms)
-
-  all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
-  if (lmax==lambda_selected) {
-    lambda_seq <- exp(seq(log(lmax), min( lambda_seq), len=10))
-    nlambda <-10
-  } else {
-    lambda_seq <- exp(seq(log(lmax), log(lambda_selected), len=10))
-    nlambda<-10
-  }
-
-  if(n_cores > 1) {
-    results <- boot_pen_parallel(x=x, y=y, family = family, std=std, B = B,
-                                 lambda_selected = lambda_selected,  lmax = lmax,
-                                 penalty = penalty, alpha = alpha,
-                                 selected_terms = selected_terms,
-                                 n_cores = n_cores,
-                                 lambda_seq = lambda_seq, nlambda = nlambda,
-                                 all_terms = all_terms,
-                                 boot_desparse = boot_desparse,
-                                 save_beta = save_beta,
-                                 nonselection = nonselection)
-  } else {
-    results <- boot_pen(x=x, y=y, family = family, std=std, B = B,
-                        lambda_selected = lambda_selected,  lmax = lmax,
-                        penalty = penalty, alpha = alpha,
-                        selected_terms = selected_terms,
-                        lambda_seq = lambda_seq, nlambda = nlambda,
-                        all_terms = all_terms,
-                        boot_desparse = boot_desparse,
-                        save_beta = save_beta,
-                        nonselection = nonselection)
-  }
-
-  results$lambda <- model$lambda
-  results$infmethod <- "boot"
-  results
-}
-
-#' Title
-#'
-#' @param x x model of class `infer_pen`
-#' @return returns x invisibly
-#' @export
-
-print.infer_pen <- function(x, ...) {
-  if (x[["alpha"]] ==1) {
-    var_method <- c("lasso")
-  } else{
-    var_method <- c("elastic Net")
-  }
-
-  # Penalty used for selection
-  cat("Selection method: ", var_method, ".  ","Choice of lambda: " ,x[["lambda"]], "\n", sep = "")
-
-  if(x$infmethod == "boot")
-    x$infmethod <- paste0("Bootstrap (B=", x$B,")")
-  cat("Inference method: ", x[["infmethod"]], "\n", sep = "")
-
-  cat ("Method for handling null: ", x[["nonselection"]], "\n", sep = "")
-
-  # Average CI length
-  cat ("Average confidence intervals length: ", x[["ci_avg_ratio"]],"\n", sep = "")
-
-  # Median CI length
-  cat ("Median confidence intervals length: ", x[["ci_median_ratio"]],"\n", sep = "")
-
-  invisible(x)
-}
-
-
-#' Title
-#' @param x model of class `infer_pen`
-#' @importFrom tibble as_tibble
-#' @importFrom magrittr %>%
-#' @importFrom dplyr select
-#' @importFrom broom tidy
-#' @param ... currently not used
-#' @return A tibble containing the tidied coefficients of the model.
-#' @export
-
-tidy.infer_pen <- function(x, ...) {
-
-  ret<- as_tibble(x[["model"]])
-  return(ret)
 }
 

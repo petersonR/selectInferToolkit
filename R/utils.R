@@ -1,13 +1,50 @@
-#' Selective inference for stepwise selection(internal helper)
+#' @importFrom broom tidy
+#' @importFrom magrittr %>%
+NULL
+
+format_meta <- function(meta, digits = 3) {
+  if (is.null(meta) || !length(meta)) return("none")
+
+  fmt <- vapply(names(meta), function(nm) {
+    val <- meta[[nm]]
+
+    if (is.null(val)) return(paste0(nm, "=NULL"))
+
+    # atomic numerics -> rounded
+    if (is.numeric(val) && length(val) == 1)
+      return(paste0(nm, "=", signif(val, digits)))
+
+    # short character vectors
+    if (is.character(val) && length(val) == 1)
+      return(paste0(nm, "=", val))
+    if (is.character(val))
+      return(paste0(nm, "=[", paste(val, collapse = ","), "]"))
+
+    # short logicals
+    if (is.logical(val) && length(val) == 1)
+      return(paste0(nm, "=", if (val) "TRUE" else "FALSE"))
+
+    # short numeric vectors
+    if (is.numeric(val) && length(val) <= 3)
+      return(paste0(nm, "=[", paste(signif(val, digits), collapse = ","), "]"))
+
+    # otherwise, abbreviate as list(...)
+    paste0(nm, "=list(...)")
+  }, character(1))
+
+  paste(fmt, collapse = ", ")
+}
+
+# Selective inference for stepwise
+#' Title
 #'
 #' @param x  design matrix
 #' @param y  outcome variable
 #' @param mult
 #'
+#' @return  returns a data frame with results from forward stepwise selective inference
 #' @importFrom selectiveInference fs
 #' @importFrom selectiveInference fsInf
-#'
-#' @return  returns a data frame with results from forward stepwise selective inference
 sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, std= F, ...) {
   variable_names <- colnames(x)
 
@@ -60,8 +97,8 @@ sel_inf <- function(x,y, model, lam = "lambda.min", intercept= TRUE,alpha = 1, .
   b <- coef(fit_lso, s=lam, exact = TRUE,  x = x, y = y)[-1]
 
   # # re-compute with smaller lambda if none selected (other)
-   # while(all(b == 0))
-   #  b <- coef(fit_lso, s=lam*.99, exact =T,  x = x, y = y, alpha=alpha)[-1]
+  # while(all(b == 0))
+  #  b <- coef(fit_lso, s=lam*.99, exact =T,  x = x, y = y, alpha=alpha)[-1]
 
   # fixed lasso function requires no intercept in beta vector
   res <- fixedLassoInf(x=x, y= y, b, lam*n, alpha = .05, sigma = sig, intercept =TRUE)

@@ -1,11 +1,15 @@
 #' Post-selection inference
 #'
-#' @param model model of S3 class returned from stepwise_ic, pen_cv, or similar
-#' @param method A character string specifying method of post-selection inference.Currently "hybrid", "selectiveinf" or
-#' "boot" supported
+#' This function performs a `selector`'s default inference method. Alternative
+#' inference methods may be available via `infer_*`, which you should use
+#' instead if you want to do specific tuning.
+#'
+#' @param object model of class `selector`
+#' @param data data used to fit model
 #' @param nonselection A character string specifying how to handle variables not selected by model selection procedure. One of
 #' "ignored", "confident_nulls" or "uncertain_nulls" supported
-#'
+#' @param ... additional arguments passed to downstream `infer_*`
+
 #' @return A list of class `infer_*` containing:'
 #' \item{model}{A data frame with post-selection inference results}
 #' \item{ci_avg_ratio}{Average CI length across all variables in model}
@@ -20,12 +24,15 @@
 #' \item{B}{The number of bootstrap replicates used (only for bootstrap selection method)}
 #'
 #' @importFrom broom tidy
+#'
 #' @export
-infer <- function(model, method=c("hybrid", "boot", "selectiveinf", "PIPE"),
-                          nonselection=c("ignored", "uncertain_nulls", "confident_nulls"),...){
+infer <- function(object, data, nonselection=c("ignored", "uncertain_nulls", "confident_nulls"), ...){
 
-  method <- match.arg(method)
+  method <- attr(object, "default_infer")
   nonselection <- match.arg(nonselection)
 
-  UseMethod("infer")
+  # this probably doesn't work
+  infer_fn <- paste0("infer_", method)
+
+  do.call(infer_fn, args = list(object = object, nonselection = nonselection, data = data, ...))
 }

@@ -1,7 +1,7 @@
 Package: selectInferToolkit
 Type: Package
-Title: Tools for Inference & Variable Selection
-Version: 0.2.0
+Title: Tools for Variable Selection & Inference
+Version: 0.3.0
 Author: Jinal Shah, Ryan Peterson
 Maintainer: Ryan Peterson <ryan.a.peterson@cuanschutz.edu>
 Description: This is a package designed to make the process of post-selection
@@ -10,6 +10,7 @@ License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Imports:
+  methods,
   tibble,
   magrittr,
   dplyr,
@@ -22,7 +23,8 @@ Imports:
   parallel,
   pbapply,
   forcats,
-  tidyverse
+  tidyverse,
+  recipes
 Suggests: 
     testthat (>= 3.0.0),  knitr (>= 1.49), rmarkdown (>= 2.29)
 Config/testthat/edition: 3

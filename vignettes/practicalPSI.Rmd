@@ -1,0 +1,274 @@
+---
+title: "Using the practicalPSI Package"
+author: "Jinal Shah & Ryan A Peterson"
+date: "`r Sys.Date()`"
+output:   
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Using the practicalPSI Package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.height = 5, fig.width = 7)
+library(practicalPSI)
+library(tidyverse)
+
+```
+
+# 1 Introduction
+
+The `practicalPSI` package stands for "practical post-selection inference". It makes it easier to implement post-selection inference after model selection using stepwsie and penalized regression in linear regression setting. 
+
+The following model selection methods are supported, with help from ncvreg, glmnet and MASS on the backed:
+
+1) Stepwise regression methods using AIC/BIC (performs step wise search in "backward", "forward" or "both" direction)
+2) Penalized regression methods (Lasso, MCP and  elastic net)
+
+In this package, we support following three post-selection inference approaches, with help from selectiveInference package: 
+
+(1) Hybrid-OLS,
+(2) Bootstrap, and 
+(3) Selective inference (Currently only implemented for lasso and forward selection)
+
+Additionally, within each of theses inference method, there are three ways to handle the non-selections:
+
+(1) Ignoring non-selections
+(2) Treating non-selections as confident null, and
+(3) Treating non-selections as uncertain null
+
+This document goes through several use cases of the package on different data sets. 
+
+# 2 General workflow for using pacakge 
+
+In order to first use the model selection procedure, user can use either `step_ic()` function or `pen_cv()` function to fit either the stepwise or penalized models respectively. Specifically, there are three option to choose for direction ("backward", "forward" or "both" (default)) and they have two option for penalty (either "AIC" or "BIC"), Similarly, for penalized models, one needs to use the pen_cv function with either "lasso" or "MCP" option for penalty. Users can also choose to extract the coefficients associated with either "lambda.min" or "lambda.1se". 
+
+Both `step_ic()` and  `pen_cv()` will produce `selector` class object which can then be passed to `infer()` function to make post-selection inference. User can choose one of three `method` options:  "hybrid", "selectiveinf" or "boot" for performing post-selection inference using either "Hybrid", "selective inference" or "boostrap" methods respectively. 
+
+# 3 Use case: HERS data
+
+
+## 3.1 Dataset description
+
+
+To illustrate a realistic example, we use the data from the Heart and Estrogen/Progestin Replacement Study (HERS). HERS was a randomized, double-blind, placebo-controlled secondary prevention trial conducted between January 1993 and September 1994 in outpatient and community settings at 20 U.S. clinical centers. In this trial, 2,763 postmenopausal women with established coronary heart disease (CHD) were randomized to receive either a placebo or estrogen plus progestin therapy to assess whether treatment influenced the risk of future CHD events. In our guiding application, we aim to model the continuous outcome of High-Density Lipoprotein (HDL) one year after treatment, based on baseline covariates. A total of 25 baseline characteristics are available to predict HDL levels one-year post-treatment for 2,571 observations with complete covariate data. Covariates of interest include treatment group, demographic variables, lifestyle factors, health status/activity levels, comorbidities, medications, baseline physical measurements, and baseline lab values.
+
+First let's look at the data a litte:
+
+```{r}
+data("raw_data")
+summary(raw_data)
+```
+
+Next we create our doutcome varaible and dataframe with all predictors. 
+
+
+```{r}
+y= raw_data$hdl1
+x <- raw_data %>% dplyr::select(-hdl1)
+```
+
+
+# 3.2 Performing model selection
+
+
+## 3.2.1 Perfoming Stepwsie AIC model selection 
+
+```{r}
+aic_model=step_ic (x=x,y=y,std = TRUE, penalty = "AIC", direction = "both")
+```
+
+## 3.2.1 Perfoming penalized model selection 
+
+```{r}
+lassomin_model =pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=TRUE)
+```
+
+
+# 3.3  Perfoming post-seelction inference 
+
+
+## 3.3.1 Hybrid method 
+
+```{r}
+aic_hybrid =infer(aic_model,  method = "hybrid", nonselection = "ignored")
+```
+
+
+```{r}
+aic_model_fw= step_ic (x=x,y=y,std = T, penalty = "AIC", direction = "forward")
+#View(aic_model_fw[["beta"]])
+    
+fit_aic__fwd_hybrid <- infer(aic_model_fw , method = "hybrid")
+tidy(fit_aic__fwd_hybrid )
+
+fit_aic_SI_wfd <- infer(aic_model_fw, method = "selectiveinf")
+tidy(fit_aic_SI_wfd )
+```
+
+```{r}
+## 3.2.1 Performing Stepwsie AIC model selection 
+lassomin_model =pen_cv (x=x,y=y,penalty= "lasso",lambda="lambda.min",std=TRUE)
+lassomin_hybrid =infer(lassomin_model,  method = "hybrid", nonselection = "ignored")
+lassomin_selc=infer(lassomin_model,  method = "selectiveinf", nonselection = "ignored")
+lassomin_boot=infer(lassomin_model,  method = "boot", nonselection = "ignored", B=5)
+
+tidy(lassomin_hybrid)
+tidy(lassomin_selc)
+tidy(lassomin_boot)
+```
+
+
+
+
+
+# 3.4 Full model bootstrap without any model selection 
+
+```{r}
+model<- lm(y~., data=cbind(y,x), x= TRUE, y=TRUE)
+full_model_linear <- full_boot(model, B=5, family="gaussian",parallel = TRUE)
+
+full_model_linear
+```
+
+
+
+#### Bootstrapping 
+
+Another option often considered in for quantifying uncertainty of post-selection estimators is bootstrapping. When bootstrapping the data and performing model selection, we have to decide how to handle the case when, for a particular bootstrap sample, some of the variables are not selected. We consider three possible decisions: ignoring non-selections, treating them as confident nulls, or treating them as uncertain nulls. We describe each approach in the following subsections. 
+
+##### Ignored non-selections
+
+In this case, we first perform the variable selection using whole data set and prefer model selection method using either `step_ic()` or `pen_cv()` functions. Then for inference, we only focus on variables that are selected on whole data when bootstrapping. 
+
+To obtain the bootstrap distribution of each $\hat{\beta}_j$ selected by our initial model selection procedure, (which we dub our "prime" model), we proceed as follows:  For each B iterations, we resample the data with replacement, apply the same model selection method to the resampled data, and save the coefficients *for variables that were selected in first step*. If a variable in the prime model is not selected in the current bootstrap model, we set its coefficient to zero. This process provides a bootstrap distribution for each variable that was selected in full dataset, allowing us to calculate confidence intervals based on the quantiles of these distributions. 
+
+```{r AIC bootstrap}
+set.seed(1)
+fit_aic_boot <- infer(fit_aic, method = "boot", B = 100) 
+fit_aic_boot
+tidy(fit_aic_boot) 
+```
+
+Similar to the selective inference result, none of our 3 effects remain significant after adjusting for uncertainty in the model selection process. However, our intervals are finite, which is an improvement. 
+
+##### Confident null non-selections
+
+In this setting, we are interested in making inferences for all variables, including those not selected by the prime model using full data (i.e., using `step_ic()` or `pen_cv()` on full dataset). Compared to the previous approach, the primary difference here is that, for each bootstrap iteration, after applying the same model selection method to a bootstrap sample, we retain the coefficients for *all variables, regardless of whether they were included in the prime model or not*. For any variable not selected in a given bootstrap sample, its coefficient is set to zero. This process produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
+
+```{r AIC bootstrap 2}
+set.seed(1)
+fit_aic_boot <- infer(fit_aic, method = "boot", B = 100, nonselection = "confident_nulls") 
+fit_aic_boot
+tidy(fit_aic_boot) 
+```
+
+
+Here again we notice that among all the variables, only `wt` and `cycl` variable is selected in more than 50% of the bootstrap samples. However,  here again none of our effects remain significant after adjusting for uncertainty in the model selection process. 
+
+##### Uncertain null non-selections
+
+In this setting, we are also interested in making inferences for all variables, including those not selected by the prime model using full data (i.e., using step_ic() or pen_cv() on full data set). Compared to the previous approach of treating non-selections as `confident null`, the primary difference here is that, for each bootstrap iteration, in order to get coefficient for all variables, we also get the coefficient for non-selections instead of setting them to zero. That is after applying the same selection method to a bootstrap sample, we retain the coefficients for all variables, regardless of whether they were included in the prime model or not. But for any variable not selected in a given bootstrap sample, we regress the model residuals on the each non-selected variables separately to get the beta estimates for non-selections. By doing so, we're trying to explain the residual variance by variables that were not selected by model selection method. This process will again produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
+
+
+### BIC vs AIC
+
+No matter how we look, we find our selections are no longer significant after adjusting for the selective inference process. What gives? It may be that AIC is not as conducive to post-selection inference as a more conservative criterion such as BIC. Let's investigate. 
+
+```{r}
+fit_bic <- step_ic(y = mtcars$mpg, x=X, penalty = "BIC")
+fit_bic 
+tidy(infer(fit_bic, method = "hybrid"))
+```
+
+As expected with BIC, we get fewer variables, specifically BIC does not select `hp`. And as before, a hybrid method ignoring non-selections finds that both `cyl` and `wt` are significant as shown above. 
+
+*Selective inference*
+
+```{r}
+fit_bic_SI <- infer(fit_bic, method = "selectiveinf")
+fit_bic_SI
+
+tidy(fit_bic_SI)
+```
+
+Selective inference gives wider confidence interval and once selection procedure is taken into account, both selected variables are no longer significant. 
+
+*Bootstrapping*
+
+```{r}
+set.seed(1)
+fit_bic_boot <- infer(fit_bic, method = "boot", B = 100) 
+
+tidy(fit_bic_boot)
+```
+
+Again, with bootstrap with see that while `cyl` is only selected 42% of the times compared to `wt` which is selected 87% of the time. However based on bootstrapped CI, neither of them are significant. 
+
+We find that AIC nor BIC are able to recover any significant effects on their own, regardless of the method used for post-selection inference.  
+
+
+### collating methods 
+
+Lastly, one way to compare the precision of our model selection/inference method is by looking at the length of confidence intervals. That can be done with `ciratio` function which returns a list with three cross tables. One for average CI length across all variables, second one for median CI length across all variables and lastly number of significant discoveries across all models. 
+
+```{r}
+set.seed(1234)
+precision= ciratio(X, y = mtcars$mpg,B=50, nonselection="ignored")
+precision[["avg_ci_ln"]]
+```
+
+We see that in general, the selective inference method gives wider CI compared to hybrid or bootstrap for given model selection procedure. Boostrap gives wider CI compared to hybrid method for full model and stepwise methods but it is more precise on average compared to hybrid for penalized methods. We can also look at average of medianc CI for each variable as follow:
+
+```{r}
+precision[["med_ci_ln"]]
+```
+
+While, we see that medican CI lenght for given model is slightly lower comapred to mean CI length, we see similar trend when comparing different methods as above. 
+
+
+```{r}
+precision[["no_sign_disc"]]
+```
+
+
+We see that in general with bootstrap approach, we have more discovires compared to hybrid and selective inference. 
+
+
+### BIC vs AIC
+
+No matter how we look, we find our selections are no longer significant after adjusting for the selective inference process. What gives? It may be that AIC is not as conducive to post-selection inference as a more conservative criterion such as BIC. Let's investigate. 
+
+```{r}
+fit_bic <- step_ic(y = mtcars$mpg, x=X, penalty = "BIC")
+fit_bic 
+tidy(infer(fit_bic, method = "hybrid"))
+```
+
+As expected with BIC, we get fewer variables, specifically BIC does not select `hp`. And as before, a hybrid method ignoring non-selections finds that both `cyl` and `wt` are significant as shown above. 
+
+*Selective inference*
+
+```{r}
+fit_bic_SI <- infer(fit_bic, method = "selectiveinf")
+fit_bic_SI
+
+tidy(fit_bic_SI)
+```
+
+Selective inference gives wider confidence interval and once selection procedure is taken into account, both selected variables are no longer significant. 
+
+*Bootstrapping*
+
+```{r}
+set.seed(1)
+fit_bic_boot <- infer(fit_bic, method = "boot", B = 100) 
+
+tidy(fit_bic_boot)
+```
+
+Again, with bootstrap with see that while `cyl` is only selected 42% of the times compared to `wt` which is selected 87% of the time. However based on bootstrapped CI, neither of them are significant. 
+
+We find that AIC nor BIC are able to recover any significant effects on their own, regardless of the method used for post-selection inference.  
