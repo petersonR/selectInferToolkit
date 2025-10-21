@@ -60,9 +60,9 @@ ciratio <- function(x,y,nonselection="ignored",std=TRUE, B=250,direction="forwar
 
 
   ##  Full model bootstrap no model selection bootstrap
-  nosel_boot <- full_boot(full_mod , B=B, family="gaussian",parallel = TRUE)
-  nosel_boot_ci_avg <- mean(nosel_boot$ci_avg_ratio)
-  nosel_boot_ci_median <- mean(nosel_boot$ci_median_ratio)
+  nosel_boot <- full_boot(full_mod , B=B, family="gaussian",parallel = FALSE)
+  nosel_boot_ci_avg <- mean(nosel_boot$ci_ln)
+  nosel_boot_ci_median <- median(nosel_boot$ci_ln)
   nosel_boot_disc<- nrow(nosel_boot)
   nosel_boot_sdisc<- sum(!(nosel_boot$conf.low[nosel_boot$term != "(Intercept)"] < 0 & nosel_boot$conf.high [nosel_boot$term != "(Intercept)"]>0 ))
 
