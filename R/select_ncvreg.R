@@ -33,6 +33,7 @@ select_ncvreg <- function(
     meta <- attr(fitted_selector, "meta")
     family <- meta$family
     lambda <- meta$lambda_used
+    lambda_seq <- meta$lambda_seq
     if(missing(formula))
       formula <- attr(fitted_selector, "recipe_obj")
   }
@@ -79,18 +80,23 @@ select_ncvreg <- function(
   df <- bake(rec_obj, new_data = data)
 
   if(is.character(lambda)) {
-    fit <- cv.ncvreg(X = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]), family = family, ...)
-    lambda_used <- if(lambda == "best") fit[["lambda.min"]] else fit$lambda[which(fit$cve < min(fit$cve + fit$cvse))[1]]
+    fit <- cv.ncvreg(X = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
+                     family = family, ...)
+    lambda_used <- if(lambda == "best") fit[["lambda.min"]] else
+      fit$lambda[which(fit$cve < min(fit$cve + fit$cvse))[1]]
     cv_used <- TRUE
     ll <- ifelse(lambda == "best", "lambda.min", "lambda.1se")
     b <- as.matrix(coef(fit, lambda = lambda_used))
+    lambda_seq <- fit$lambda
+    penalty <- fit$fit$penalty
 
   } else {
     fit <- ncvreg(X = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
-                  family = family, lambda = lambda, ...)
+                  family = family, lambda = lambda_seq, ...)
     lambda_used <- lambda
     cv_used <- FALSE
     b <- as.matrix(coef(fit, lambda = lambda))
+    penalty <- fit$penalty
   }
 
   selected_coefs <- b[b!=0]
@@ -98,9 +104,10 @@ select_ncvreg <- function(
 
   meta_information <- list(
     family = family,
-    penalty = fit$penalty,
+    penalty = penalty,
     lambda = lambda,
     lambda_used = lambda_used,
+    lambda_seq = lambda_seq,
     cv_info = list(cv_used = cv_used, foldid = fit$foldid),
     ellipses = list(...)
   )

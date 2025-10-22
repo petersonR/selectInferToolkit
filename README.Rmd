@@ -50,7 +50,7 @@ The package supports two broad classes of popular model selection techniques:
 
 The core contribution of `selectInferToolkit` lies in its ability to provide straightforward implementations of three distinct post-selection inference methods, applicable after you've performed model selection using one of the methods above:
 
-1.  **Hybrid Ordinary Least Squares:** A baseline approach that performs no adjustment for the selection process.
+1.  **Hybrid Ordinary Least Squares:** A baseline approach that performs no adjustment for the selection process. We refer to this as "unadjusted post-selection inference", or "UPSI" for short. 
 2.  **Bootstrap:** A non-parametric bootstrap method that resamples data to account for selection uncertainty.
 3.  **Selective Inference:** A theoretically grounded approach, currently available for lasso and forward stepwise selection through integration with the `selectiveInference` package.
 
@@ -70,6 +70,7 @@ Let's say you are wanting to predict gas mileage based on all variables in the `
 
 ```{r example}
 library(selectInferToolkit)
+library(dplyr)
 
 data("mtcars")
 
@@ -79,88 +80,145 @@ summary(fit_full)
 
 Hmm, $R^2$ is high but nothing is "significant". What is going on? The model is probably over-specified. Let's use `selectInferToolkit` to narrow in on what we think the most important factors are. The `step_ic` function can do forwards and backwards selection via AIC by default. 
 
-### `step_ic`
+### Stepwise selection
 
 
 ```{r AIC}
-X <- model.matrix(fit_full)[,-1]
-fit_aic <- step_ic(y = mtcars$mpg, x = X, direction = "forward") 
+fit_aic <- select_stepwise_ic(mpg ~ ., data = mtcars, penalty = "AIC") 
 fit_aic
 ```
 
-`step_ic()` function creates a `selector_ic` class which we can pass to `tidy()` function to get results in `tibble`:
+Functions prefixed with `select_` create a `selector` class object. We can pass
+`selector` objects to `coef`, `predict`, and `tidy()` functions:
 
 
 ```{r AIC tidy}
+coef(fit_aic)
 tidy(fit_aic)
 ```
 
-AIC selects `wt`, `cyl`, and `hp`. But where are the p-values?! This is where post-selection inference comes in; p-values that do not adjust for the selective process are not valid (they will be too small!). We refer to this as a "hybrid" method where selection is performed and ordinary least squares theory is used for inference. 
+So we find that AIC selects `wt`, `cyl`, and `hp`. But where are the p-values?! 
 
-```{r AIC hybrid}
-fit_aic_hybrid <- infer(fit_aic, method = "hybrid")
-fit_aic_hybrid
-tidy(fit_aic_hybrid)
+This is where post-selection inference comes in; p-values that do not adjust for the selective process will be too small. Again, we call this "unadjusted post-selection inference" (or UPSI, for short). 
+
+```{r AIC upsi}
+fit_aic_infer_upsi <- infer_upsi(fit_aic, data = mtcars)
+fit_aic_infer_upsi
+tidy(fit_aic_infer_upsi) %>% dplyr::filter(selected == 1)
 ```
 
-Thus, `cyl` and `wt` are highly significant while `hp` has a p-value of 0.14. We know these are not valid, as we've used the data both to select the model and now are using the same data to perform inference. What if we wanted to adjust our uncertainty quantification for the selective process? 
+Thus, `wt` is significant! We know this confidence interval may be biased and too precise, as we've used the data both to select the model and now are using the same data to perform inference (UPSI!). What if we wanted to adjust our uncertainty quantification for the selective process? 
 
-Here we can just change `method` option in `infer()` function to using `selectiveinf` to use  `selectiveInference` method. 
+Each selection process has a default `infer` method that is, for the most part, not an UPSI method. The default for stepwise selection via information criteria is bootstrapping. The code below is equivalent to calling `infer_boot`. 
 
-```{r AIC selectiveinference}
-fit_aic_SI <- infer(fit_aic, method = "selectiveinf")
+```{r AIC boot}
+set.seed(1)
+fit_aic_infer_boot <- infer(fit_aic, data = mtcars, B = 100)
+fit_aic_infer_boot
+tidy(fit_aic_infer_boot) %>% dplyr::filter(selected == 1)
+```
+
+These results are less promising. Here we can also use a wrapper for  `selectiveInference` method: 
+
+```{r AIC selectiveinference, eval = FALSE}
+fit_aic_SI <- infer_selective(fit_aic)
 fit_aic_SI 
 tidy(fit_aic_SI) 
 ```
 
 Here we see that after adjusting for the selective process, we are unable to claim significance of any of these effects (and have quite large CIs). 
 
-With the step wise methods, another option available in package when making inference post-selections is bootstrap `r{eval =F, echo=T} infer (fit_aic, method="boot", B=100)`. Lastly, as stated above for each post-selection inference method, we provide three approaches to handling non-selections: `ignored`(ignoring them), `confident_nulls`- treating them as confident (point-mass) nulls, and `uncertain_nulls` treating them as uncertain nulls. For details about each of theses methods see package vignette.
+Lastly, as stated above for each post-selection inference method, we provide three approaches to handling non-selections: `ignored` (ignoring them), `confident_nulls` (treating them as confident (point-mass) degenerate nulls at zero), and `uncertain_nulls` (treating them as uncertain). For details about each of theses methods, see the package vignette.
 
+### Penalized regression 
 
-### `step_ic` vs `pen_cv`
+#### Lasso via glmnet 
 
-We can also try selecting the most important factors are by penalized models. We can fit the lasso with cross validation and selects coefficients associated with `lambda_min` (default) or `lambda.1se`.
+We can also try selecting the most important factors are by penalized models. We can fit the lasso with cross validation and selects coefficients associated with the `best` predicting model (default, i.e. `lambda.min`) or the most `compact` model that predicts about as well as the best model, i.e. `lambda.1se`.
 
 ```{r}
 set.seed(12)
-fit_lso <- pen_cv(y = mtcars$mpg, x = X,penalty= "lasso",lambda="lambda.min") 
+fit_lso <- select_glmnet(mpg ~ ., data = mtcars) 
 fit_lso 
 tidy(fit_lso)
 
 ```
 
-The lasso also selects the same 3 variables.  The lasso alone does not provide any p-value or CI to do inference, but we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.
+The lasso also selects the same 3 variables.  The lasso alone does not provide any p-value or CI to do inference, but UPSIs aside we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.
 
 ```{r}
-fit_lasso_hybrid <-infer(fit_lso, method = "hybrid") 
-tidy(fit_lasso_hybrid)
+fit_lasso_infer_upsi <-infer_upsi(fit_lso, data = mtcars) 
+tidy(fit_lasso_infer_upsi)
 ```
 
-These results indicate that for the model selected by lasso, while `cycl` and `hp` are significant, `wt` is still not significant. Let's see if we can confirm this sentiment after adjusting for the selective process.
+These results should look familiar: since the model selected by lasso is the same as that selected by stepwise AIC, the UPSI inference method is identical; `wt` is still seemingly significant. 
 
 *Selective inference* 
 
-```{r}
-fit_lasso_SI <- infer(fit_lso, method = "selectiveinf")
-tidy(fit_lasso_SI)
+```{r, eval = FALSE}
+fit_lasso_infer_SI <- infer_selective(fit_lso)
+tidy(fit_lasso_infer_SI)
 ```
 
-Here again we see that after adjusting for the selective process, we are only able to claim significance of `wt` but we have larger CIs compared to hybrid approach. 
-
+Here we see that after adjusting for the selective process with selective inference, [interpret]
 
 *Bootstrapping, uncertain null non-selections*
 
-With treating non-selection as uncertain nulls, we're interesting in making inferences for all variables, including those not selected by the prime model using full data (i.e., using `step_ic()` or `pen_cv()` on full data set). To obtain the bootstrap distribution of each $\hat{\beta}_j$ we proceed as follows: For each B iterations, we re sample the data with replacement, apply the same model selection method to the re sampled data, and save the coefficients of selected variables. For any variable not selected in a given bootstrap sample, we regress the model residuals on the each non-selected variables separately to get the beta estimates for non-selections. By doing so, we're trying to explain the residual variance by variables that were not selected by model selection method. This process will produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
+If we treat non-selections as uncertain nulls, we're interesting in making inferences for all variables, including those not selected by the prime model using full data. To obtain the bootstrap distribution of each $\hat{\beta}_j$ we proceed as follows: For each B iterations, we re sample the data with replacement, apply the same model selection method to the re sampled data, and save the coefficients of selected variables. For any variable not selected in a given bootstrap sample, we regress the model residuals on the each non-selected variables separately to get the beta estimates for non-selections. By doing so, we're trying to explain the residual variance by variables that were not selected by model selection method. This process will produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
 
 
 ```{r}
 set.seed(12)
-fit_lasso_boot <- infer(fit_lso, method = "boot", B = 100, 
-                        nonselection = "uncertain_nulls") 
-tidy(fit_lasso_boot) 
+fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, 
+                                   nonselection = "uncertain_nulls") 
+tidy(fit_lasso_infer_boot) 
 ```
 
-With the `unccertain_nulls` approach, we see that even though `cycl` and `wt` are selected 89% and 98% of the times, non of the variables are significant. 
+With the `uncertain_nulls` approach, we see that the `cyl` and `wt` both have CIs which do not intersect zero, indicating significant effects.
 
 For a more in depth tutorial and examples for different methods, please consult the package vignette.
+
+
+#### MCP via ncvreg 
+
+```{r}
+set.seed(12)
+fit_mcp <- select_ncvreg(mpg ~ ., data = mtcars) 
+fit_mcp 
+tidy(fit_mcp)
+
+```
+
+```{r}
+fit_mcp_infer_upsi <- infer_upsi(fit_mcp, data = mtcars) 
+tidy(fit_mcp_infer_upsi)
+```
+
+*Bootstrapping*
+
+```{r}
+set.seed(12)
+fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, 
+                                   nonselection = "uncertain_nulls") 
+tidy(fit_mcp_infer_boot) 
+```
+
+```{r}
+fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, 
+                                   nonselection = "ignore") 
+tidy(fit_mcp_infer_boot) 
+```
+
+```{r}
+fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, 
+                                   nonselection = "confident") 
+tidy(fit_mcp_infer_boot) 
+```
+
+*PIPE*: available for `ncvreg` only
+
+```{r, eval = FALSE}
+fit_mcp_infer_pipe <- infer_pipe(fit_mcp, data = mtcars)
+tidy(fit_mcp_infer_pipe)
+```
+

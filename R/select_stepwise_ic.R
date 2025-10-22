@@ -1,4 +1,4 @@
-#' Stepwise forwad/backward/bidirectional selection with AIC/BIC
+#' Stepwise forward/backward/bidirectional selection with AIC/BIC
 #'
 #'
 #' @description This function implements forward/backward/bidirectional stepwise regression,
@@ -19,14 +19,7 @@
 #' @importFrom stats lm  model.frame model.matrix na.pass
 #' @importFrom MASS stepAIC
 #' @import recipes
-#' @return A list of class `selector_stepwise_ic` containing:#'
-#' \item{beta}{a tibble containing term names and coefficients}
-#' \item{std}{Was desing matrix standadrized}
-#' \item{penalty}{penalty used (AIC or BIC)}
-#' \item{direction}{the mode of step wise search}
-#' \item{x}{the model dataframe used}
-#' \item{y}{repsonse used in vector}
-#' \item{model_sum}{the stepwise-selected model  details is returned}
+#' @return A  `selector` object
 #' @export
 
 select_stepwise_ic <- function(

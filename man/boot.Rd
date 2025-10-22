@@ -8,9 +8,9 @@
 infer_boot(
   object,
   data,
-  type = c("paired", "residual"),
   nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
   conf.level = 0.95,
+  type = c("paired", "residual"),
   B = 250,
   n_cores = 4,
   ...
@@ -30,10 +30,14 @@ boot(
 \arguments{
 \item{object}{a \code{selector} object}
 
+\item{data}{data must be passed to infer}
+
 \item{nonselection}{A character string specifying how to handle variables not selected by model selection procedure. One of
 "ignored", "confident_nulls" or "uncertain_nulls" supported}
 
 \item{conf.level}{.95 by default}
+
+\item{type}{what type of bootstrap (currently only \code{paired} supported)}
 
 \item{B}{The number of bootstrap replicates.}
 
@@ -43,18 +47,9 @@ boot(
 
 \item{uncertain_insample}{within a bootstrap, should in-sample or
 out-of-sample residuals be used for estimation (defaults to FALSE)}
-
-\item{model}{model returned from selector_stepwise_ic  class}
-
-\item{method}{A character string specifying method of post-selection inference.Currently "hybrid"or  "selectiveinf"}
 }
 \value{
-infer s3 class with things like...
-\item{selector}{the selector used to fit the model}
-\item{ci_avg_ratio}{Average CI length across all variables in model}
-\item{ci_median_ratio}{medain CI length across all variables in model}
-\item{infmethod}{Inference method}
-\item{nonselection}{method chosen  to deal with non selection}
+\code{inferrer} s3 class with things like...
 
 Ddataframe with bootstrap result and CIs
 \item{term}{variable name}
@@ -69,5 +64,5 @@ Ddataframe with bootstrap result and CIs
 \description{
 Inference for \code{selector} via bootstrapping
 
-Bootstrapping for selection process with stepwise AIC/BIC
+Bootstrapping selection process
 }

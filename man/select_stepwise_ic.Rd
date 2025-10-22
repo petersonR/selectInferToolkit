@@ -2,7 +2,7 @@
 % Please edit documentation in R/select_stepwise_ic.R
 \name{select_stepwise_ic}
 \alias{select_stepwise_ic}
-\title{Stepwise forwad/backward/bidirectional selection with AIC/BIC}
+\title{Stepwise forward/backward/bidirectional selection with AIC/BIC}
 \usage{
 select_stepwise_ic(
   formula,
@@ -36,14 +36,7 @@ select_stepwise_ic(
 \item{...}{Additional arguments}
 }
 \value{
-A list of class \code{selector_stepwise_ic} containing:#'
-\item{beta}{a tibble containing term names and coefficients}
-\item{std}{Was desing matrix standadrized}
-\item{penalty}{penalty used (AIC or BIC)}
-\item{direction}{the mode of step wise search}
-\item{x}{the model dataframe used}
-\item{y}{repsonse used in vector}
-\item{model_sum}{the stepwise-selected model  details is returned}
+A  \code{selector} object
 }
 \description{
 This function implements forward/backward/bidirectional stepwise regression,

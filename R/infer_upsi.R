@@ -1,0 +1,89 @@
+#' Unadjusted post-selection inference (UPSI)
+#'
+#' UPSI is sometimes referred to as "hybrid-OLS", but essentially we
+#' re-fit the selected model to the data as though we never used that
+#' same data to fit the model. It is common, easy, and ill-advised.
+#'
+#' @param object a `selector` object
+#' @param data data must be passed to `infer` methods
+#' @param nonselection  A character string specifying how to handle variables
+#'   not selected by model selection procedure. One of "ignored",
+#'   "confident_nulls" or "uncertain_nulls" supported
+#' @param conf.level .95 by default
+#'
+#' @return `inferrer` object
+#'
+#' @importFrom dplyr right_join group_by summarize bind_rows pull
+#'
+#' @rdname infer
+#' @export
+#'
+infer_upsi <- function(
+    object,
+    data,
+    nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
+    conf.level = .95){
+
+  nonselection <- match.arg(nonselection)
+
+  selected_vars <- names(coef(object)[-1])
+  rec_obj <- attr(object, "recipe_obj")
+  meta <- attr(object, "meta")
+  outcome_name <- rec_obj$var_info %>%
+    filter(role == "outcome") %>%
+    pull(variable)
+  all_terms <- attr(object, "all_terms")
+
+  df <- bake(rec_obj, new_data = data)
+
+  selected_formula <- formula(paste0(outcome_name, "~", paste0(c(1, selected_vars), collapse = "+")))
+  fit_selected <- glm(selected_formula, data = df, family = meta$family)
+
+  cis <- as.data.frame(matrix(confint(fit_selected, level = conf.level), ncol = 2))
+  names(cis) <- c("ci_low", "ci_high")
+  rownames(cis) <- names(coef(fit_selected))
+  cis <- rownames_to_column(cis, "term")
+
+
+  results <- tidy(object, scale_coef = TRUE) %>%
+    left_join(cis, by = "term")
+
+
+  if(nonselection == "confident_nulls") {
+    results <- results %>%
+      mutate(estimate = ifelse(is.na(estimate), 0, estimate),
+             ci_low = ifelse(is.na(ci_low), 0, ci_low),
+             ci_high = ifelse(is.na(ci_high), 0, ci_high)
+      )
+  }
+  if(nonselection == "uncertain_nulls") {
+
+    nulls <- which(is.na(results$estimate))
+
+    if(length(nulls) > 0) {
+
+      r <- residuals(fit_selected)
+
+      for(j in 1:length(nulls)) {
+        x_j <- df[,results$term[nulls[j]]][[1]]
+        model_j <- lm(r ~ x_j)
+        ci_j <- confint(model_j, level = conf.level, parm = 2)
+        results$estimate[nulls[j]] <- model_j$coef[2]
+        results$ci_low[nulls[j]] <- ci_j[1]
+        results$ci_high[nulls[j]] <- ci_j[2]
+      }
+    }
+  }
+
+  as_inferrer(
+    fit_selected,
+    name = "upsi",
+    label = "Unadjusted Post-Selection Inference (UPSI)",
+    nonselection = nonselection,
+    inferences = results,
+    conf.level = conf.level,
+    selector = object,
+    meta = list()
+  )
+}
+

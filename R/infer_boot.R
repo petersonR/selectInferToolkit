@@ -1,17 +1,17 @@
 #' Inference for `selector` via bootstrapping
 #'
-#' @param model model returned from selector_stepwise_ic  class
-#' @param method A character string specifying method of post-selection inference.Currently "hybrid"or  "selectiveinf"
-#' @param nonselection  A character string specifying how to handle variables not selected by model selection procedure. One of
-#' "ignored", "confident_nulls" or "uncertain_nulls" supported
+#' @param object a `selector` object
+#' @param data data must be passed to infer
+#' @param nonselection  A character string specifying how to handle variables
+#'   not selected by model selection procedure. One of "ignored",
+#'   "confident_nulls" or "uncertain_nulls" supported
 #' @param conf.level .95 by default
-#' @return infer s3 class with things like...
-#' \item{selector}{the selector used to fit the model}
-#' \item{ci_avg_ratio}{Average CI length across all variables in model}
-#' \item{ci_median_ratio}{medain CI length across all variables in model}
-#' \item{infmethod}{Inference method}
-#' \item{nonselection}{method chosen  to deal with non selection}
+#' @param type what type of bootstrap (currently only `paired` supported)
+#' @param B number of bootstrap resamples
+#' @param n_cores number of cores to use
+#' @return `inferrer` s3 class with things like...
 #' @importFrom dplyr right_join group_by summarize bind_rows
+#'
 #' @rdname boot
 #'
 #' @export
@@ -19,28 +19,26 @@
 infer_boot <- function(
   object,
   data,
-  type = c("paired", "residual"),
   nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
   conf.level = .95,
+  type = c("paired", "residual"),
   B = 250,
   n_cores = 4,
   ...) {
 
   # A bit of argument checking
+  nonselection <- match.arg(nonselection)
   type <- match.arg(type)
   stopifnot(type == "paired")
-  nonselection <- match.arg(nonselection)
   n_cores <- min(n_cores, parallel::detectCores() - 2)
 
   result <- boot(object, data=data, B=B, nonselection=nonselection,
                  n_cores= n_cores, conf.level = conf.level, ...)
-
-  class(result) <- "infer"
   result
 }
 
 
-#' Bootstrapping for selection process with stepwise AIC/BIC
+#' Bootstrapping selection process
 #'
 #' @param object a `selector` object
 #' @param B The number of bootstrap replicates.
@@ -53,7 +51,7 @@ infer_boot <- function(
 #' @param ... 	any additional arguments to that can be passed to fitting engine
 #'
 #' @importFrom magrittr %>%
-#' @importFrom dplyr mutate_if select mutate summarize bind_rows
+#' @importFrom dplyr mutate_if select mutate summarize bind_rows rename
 #' @importFrom broom tidy
 #' @importFrom stats lm model.frame model.matrix na.pass
 #' @importFrom MASS stepAIC
@@ -115,7 +113,7 @@ boot <- function(object, data, B, nonselection, uncertain_insample = FALSE,
       X_boot <- bake(attr(object, "recipe_obj"), new_data = new_data, all_predictors())
       y_boot <- bake(attr(object, "recipe_obj"), new_data = new_data, all_outcomes())
 
-      r <- ((y_boot[[1]] - p_hat) ^ 2)
+      r <- (y_boot[[1]] - p_hat)
       coefs_boot$estimate_uncertain <- coefs_boot$estimate
 
       for(j in 1:length(nulls)) {
@@ -142,15 +140,16 @@ boot <- function(object, data, B, nonselection, uncertain_insample = FALSE,
       mutate(estimate = ifelse(is.na(estimate), 0, estimate)) %>%
       group_by(term) %>%
       summarize(
-        mean = mean(estimate),
-        ci.low = quantile(estimate, (1 - conf.level) / 2),
-        ci.high = quantile(estimate, 1 - (1 - conf.level) / 2),
+        estimate_m = mean(estimate),
+        ci_low = quantile(estimate, (1 - conf.level) / 2),
+        ci_high = quantile(estimate, 1 - (1 - conf.level) / 2),
         prop_selected = mean(estimate != 0)
       ) %>%
-      dplyr::right_join(tidy(sel_boot)[,1], by = "term")
+      rename(estimate = estimate_m) %>%
+      dplyr::right_join(tidy(object)[,1], by = "term")
   }
 
-  if(nonselection=="confident") {
+  if(nonselection=="confident_nulls") {
     # replace all NAs with 0's
     # calculate estimates for all coefs
     results <- boot_results_df %>%
@@ -158,38 +157,41 @@ boot <- function(object, data, B, nonselection, uncertain_insample = FALSE,
       mutate(estimate = ifelse(is.na(estimate), 0, estimate)) %>%
       group_by(term) %>%
       summarize(
-        mean = mean(estimate),
-        ci.low = quantile(estimate, (1 - conf.level) / 2),
-        ci.high = quantile(estimate, 1 - (1 - conf.level) / 2),
+        estimate_m = mean(estimate),
+        ci_low = quantile(estimate, (1 - conf.level) / 2),
+        ci_high = quantile(estimate, 1 - (1 - conf.level) / 2),
         prop_selected = mean(estimate != 0)
-      )
+      ) %>%
+      rename(estimate = estimate_m)
   }
 
-  if(nonselection=="uncertain") {
+  if(nonselection=="uncertain_nulls") {
     # replace all NAs with uncertain betas (within bootstrap)
     # calculate estimates for all coefs
     results <- boot_results_df %>%
       select(term, estimate_uncertain, estimate) %>%
       group_by(term) %>%
       summarize(
-        mean = mean(estimate_uncertain),
-        ci.low = quantile(estimate_uncertain, (1 - conf.level) / 2),
-        ci.high = quantile(estimate_uncertain, 1 - (1 - conf.level) / 2),
+        estimate = mean(estimate_uncertain),
+        ci_low = quantile(estimate_uncertain, (1 - conf.level) / 2),
+        ci_high = quantile(estimate_uncertain, 1 - (1 - conf.level) / 2),
         prop_selected = mean(!is.na(estimate))
       )
   }
 
-
-  val <-   list(
-    selector = object,
-    nonselection = nonselection,
-    B=B,
-    uncertain_insample = uncertain_insample,
-    results = results,
-    bootstraps = boot_results_df,
-    conf.level=conf.level
+  meta_information <- list(
+    B = B,
+    uncertain_insample = uncertain_insample
   )
 
-  class(val) <- "infer_boot"
-  return(val)
+  as_inferrer(
+    boot_results_df,
+    name = "boot",
+    label = "Bootstrap",
+    nonselection = nonselection,
+    inferences = results,
+    conf.level = conf.level,
+    selector = object,
+    meta = meta_information
+  )
 }

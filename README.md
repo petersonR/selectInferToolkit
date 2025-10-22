@@ -62,7 +62,8 @@ inference methods, applicable after you’ve performed model selection
 using one of the methods above:
 
 1.  **Hybrid Ordinary Least Squares:** A baseline approach that performs
-    no adjustment for the selection process.
+    no adjustment for the selection process. We refer to this as
+    “unadjusted post-selection inference”, or “UPSI” for short.
 2.  **Bootstrap:** A non-parametric bootstrap method that resamples data
     to account for selection uncertainty.
 3.  **Selective Inference:** A theoretically grounded approach,
@@ -91,6 +92,15 @@ in the `mtcars` data set.
 ``` r
 library(selectInferToolkit)
 #> Loading required package: broom
+library(dplyr)
+#> 
+#> Attaching package: 'dplyr'
+#> The following objects are masked from 'package:stats':
+#> 
+#>     filter, lag
+#> The following objects are masked from 'package:base':
+#> 
+#>     intersect, setdiff, setequal, union
 
 data("mtcars")
 
@@ -130,211 +140,199 @@ model is probably over-specified. Let’s use `selectInferToolkit` to
 narrow in on what we think the most important factors are. The `step_ic`
 function can do forwards and backwards selection via AIC by default.
 
-### `step_ic`
+### Stepwise selection
 
 ``` r
-X <- model.matrix(fit_full)[,-1]
-fit_aic <- step_ic(y = mtcars$mpg, x = X, direction = "forward") 
+fit_aic <- select_stepwise_ic(mpg ~ ., data = mtcars, penalty = "AIC") 
 fit_aic
-#> Stepwise Model Selection Summary:
-#> Direction of Selection:  forward 
-#> Penalty used:  AIC 
-#> Design Matrix standardized: FALSE
-#> 
-#> Final Model Coefficients:
+#> Stepwise IC-based selector
+#> 3 of 10 variables selected: hp, cyl, wt 
+#> Meta information: family=gaussian, select_factors_together=TRUE, penalty=AIC, direction=forward 
+#> Default `infer()` method: boot
+```
+
+Functions prefixed with `select_` create a `selector` class object. We
+can pass `selector` objects to `coef`, `predict`, and `tidy()`
+functions:
+
+``` r
+coef(fit_aic)
 #> (Intercept)          wt         cyl          hp 
-#>  38.7517874  -3.1669731  -0.9416168  -0.0180381
-```
-
-`step_ic()` function creates a `selector_ic` class which we can pass to
-`tidy()` function to get results in `tibble`:
-
-``` r
+#>   20.090625   -3.098748   -1.681654   -1.236744
 tidy(fit_aic)
-#> # A tibble: 4 × 2
-#>   term        estimate
-#>   <chr>          <dbl>
-#> 1 (Intercept)  38.8   
-#> 2 wt           -3.17  
-#> 3 cyl          -0.942 
-#> 4 hp           -0.0180
+#> # A tibble: 11 × 3
+#>    term        selected estimate
+#>    <chr>          <dbl>    <dbl>
+#>  1 (Intercept)        1    20.1 
+#>  2 cyl                1    -1.68
+#>  3 disp               0    NA   
+#>  4 hp                 1    -1.24
+#>  5 drat               0    NA   
+#>  6 wt                 1    -3.10
+#>  7 qsec               0    NA   
+#>  8 vs                 0    NA   
+#>  9 am                 0    NA   
+#> 10 gear               0    NA   
+#> 11 carb               0    NA
 ```
 
-AIC selects `wt`, `cyl`, and `hp`. But where are the p-values?! This is
-where post-selection inference comes in; p-values that do not adjust for
-the selective process are not valid (they will be too small!). We refer
-to this as a “hybrid” method where selection is performed and ordinary
-least squares theory is used for inference.
+So we find that AIC selects `wt`, `cyl`, and `hp`. But where are the
+p-values?!
+
+This is where post-selection inference comes in; p-values that do not
+adjust for the selective process will be too small. Again, we call this
+“unadjusted post-selection inference” (or UPSI, for short).
 
 ``` r
-fit_aic_hybrid <- infer(fit_aic, method = "hybrid")
-fit_aic_hybrid
-#> Selection method: Stepwise  AIC.  Direction: forward
-#> Inference method: hybrid
-#> Method for handling null: ignored
-#> Average confidence interval length 1.779886
-#> Median confidence interval length 2.257002
-tidy(fit_aic_hybrid)
-#> # A tibble: 11 × 7
-#>    term        estimate std.error   p.value conf.low conf.high   ci_ln
-#>    <chr>          <dbl>     <dbl>     <dbl>    <dbl>     <dbl>   <dbl>
-#>  1 (Intercept)  38.8       1.79    4.80e-19  35.1     42.4      7.32  
-#>  2 cyl          -0.942     0.551   9.85e- 2  -2.07     0.187    2.26  
-#>  3 disp         NA        NA      NA         NA       NA       NA     
-#>  4 hp           -0.0180    0.0119  1.40e- 1  -0.0424   0.00629  0.0487
-#>  5 drat         NA        NA      NA         NA       NA       NA     
-#>  6 wt           -3.17      0.741   1.99e- 4  -4.68    -1.65     3.03  
-#>  7 qsec         NA        NA      NA         NA       NA       NA     
-#>  8 vs           NA        NA      NA         NA       NA       NA     
-#>  9 am           NA        NA      NA         NA       NA       NA     
-#> 10 gear         NA        NA      NA         NA       NA       NA     
-#> 11 carb         NA        NA      NA         NA       NA       NA
+fit_aic_infer_upsi <- infer_upsi(fit_aic, data = mtcars)
+#> Waiting for profiling to be done...
+fit_aic_infer_upsi
+#> Unadjusted Post-Selection Inference (UPSI) inference applied post Stepwise IC-based Selection 
+#> 3 of 10 variables selected. 
+#> Nonselections were considered ignored 
+#> Meta information: none 
+#> Median CI length = 3; mean = 2.9; max = 3.9
+tidy(fit_aic_infer_upsi) %>% dplyr::filter(selected == 1)
+#> # A tibble: 4 × 5
+#>   term        selected estimate ci_low ci_high
+#>   <chr>          <dbl>    <dbl>  <dbl>   <dbl>
+#> 1 (Intercept)        1    20.1   19.2   21.0  
+#> 2 cyl                1    -1.68  -3.61   0.247
+#> 3 hp                 1    -1.24  -2.83   0.359
+#> 4 wt                 1    -3.10  -4.52  -1.68
 ```
 
-Thus, `cyl` and `wt` are highly significant while `hp` has a p-value of
-0.14. We know these are not valid, as we’ve used the data both to select
-the model and now are using the same data to perform inference. What if
-we wanted to adjust our uncertainty quantification for the selective
+Thus, `wt` is significant! We know this confidence interval may be
+biased and too precise, as we’ve used the data both to select the model
+and now are using the same data to perform inference (UPSI!). What if we
+wanted to adjust our uncertainty quantification for the selective
 process?
 
-Here we can just change `method` option in `infer()` function to using
-`selectiveinf` to use `selectiveInference` method.
+Each selection process has a default `infer` method that is, for the
+most part, not an UPSI method. The default for stepwise selection via
+information criteria is bootstrapping. The code below is equivalent to
+calling `infer_boot`.
 
 ``` r
-fit_aic_SI <- infer(fit_aic, method = "selectiveinf")
+set.seed(1)
+fit_aic_infer_boot <- infer(fit_aic, data = mtcars, B = 100)
+fit_aic_infer_boot
+#> Bootstrap inference applied post Stepwise IC-based Selection 
+#> 3 of 10 variables selected. 
+#> Nonselections were considered ignored 
+#> Meta information: B=100, uncertain_insample=FALSE 
+#> Median CI length = 7.8; mean = 7.1; max = 9.7
+tidy(fit_aic_infer_boot) %>% dplyr::filter(selected == 1)
+#> # A tibble: 4 × 5
+#>   term        selected estimate ci_low ci_high
+#>   <chr>          <dbl>    <dbl>  <dbl>   <dbl>
+#> 1 (Intercept)        1   20.1    18.7    21.7 
+#> 2 cyl                1   -0.397  -4.19    3.99
+#> 3 hp                 1   -1.22   -5.70    1.61
+#> 4 wt                 1   -3.12   -8.05    1.64
+```
+
+These results are less promising. Here we can also use a wrapper for
+`selectiveInference` method:
+
+``` r
+fit_aic_SI <- infer_selective(fit_aic)
 fit_aic_SI 
-#> Selection method: Stepwise  AIC.  Direction: forward
-#> Inference method: selectiveinf
-#> Method for handling null: ignored
-#> Average confidence interval length Inf
-#> Median confidence interval length Inf
 tidy(fit_aic_SI) 
-#> # A tibble: 11 × 6
-#>    term        estimate conf.low conf.high p.value ci_ln
-#>    <chr>          <dbl>    <dbl>     <dbl>   <dbl> <dbl>
-#>  1 (Intercept)  NA        NA         NA     NA      NA  
-#>  2 cyl          -0.942  -Inf         17.0    0.235 Inf  
-#>  3 disp         NA        NA         NA     NA      NA  
-#>  4 hp           -0.0180   -0.372    Inf      0.795 Inf  
-#>  5 drat         NA        NA         NA     NA      NA  
-#>  6 wt           -3.17    -11.8        6.00   0.224  17.8
-#>  7 qsec         NA        NA         NA     NA      NA  
-#>  8 vs           NA        NA         NA     NA      NA  
-#>  9 am           NA        NA         NA     NA      NA  
-#> 10 gear         NA        NA         NA     NA      NA  
-#> 11 carb         NA        NA         NA     NA      NA
 ```
 
 Here we see that after adjusting for the selective process, we are
 unable to claim significance of any of these effects (and have quite
 large CIs).
 
-With the step wise methods, another option available in package when
-making inference post-selections is bootstrap
-`r{eval =F, echo=T} infer (fit_aic, method="boot", B=100)`. Lastly, as
-stated above for each post-selection inference method, we provide three
-approaches to handling non-selections: `ignored`(ignoring them),
-`confident_nulls`- treating them as confident (point-mass) nulls, and
-`uncertain_nulls` treating them as uncertain nulls. For details about
-each of theses methods see package vignette.
+Lastly, as stated above for each post-selection inference method, we
+provide three approaches to handling non-selections: `ignored` (ignoring
+them), `confident_nulls` (treating them as confident (point-mass)
+degenerate nulls at zero), and `uncertain_nulls` (treating them as
+uncertain). For details about each of theses methods, see the package
+vignette.
 
-### `step_ic` vs `pen_cv`
+### Penalized regression
+
+#### Lasso via glmnet
 
 We can also try selecting the most important factors are by penalized
 models. We can fit the lasso with cross validation and selects
-coefficients associated with `lambda_min` (default) or `lambda.1se`.
+coefficients associated with the `best` predicting model (default,
+i.e. `lambda.min`) or the most `compact` model that predicts about as
+well as the best model, i.e. `lambda.1se`.
 
 ``` r
 set.seed(12)
-fit_lso <- pen_cv(y = mtcars$mpg, x = X,penalty= "lasso",lambda="lambda.min") 
+fit_lso <- select_glmnet(mpg ~ ., data = mtcars) 
 fit_lso 
-#> Penalized regression  Model Summary:
-#> Design Matrix standardized: TRUE
-#> Penalty used:  lasso  and alpha: 1 
-#> Coefficient associated with :  lambda.min 
-#> 
-#> Final Model Non-Zero Coefficients:
-#> (Intercept)         cyl          hp          wt 
-#>  20.0906250  -1.5824791  -0.8011145  -2.6498066
+#> Penalized `glmnet`-based selector
+#> 3 of 10 variables selected: hp, cyl, wt 
+#> Meta information: family=gaussian, lambda=best, lambda_used=0.801, cv_info=list(...), ellipses=list(...) 
+#> Default `infer()` method: selective_inference
 tidy(fit_lso)
-#> # A tibble: 11 × 2
-#>    term        estimate
-#>    <chr>          <dbl>
-#>  1 (Intercept)   20.1  
-#>  2 cyl           -1.58 
-#>  3 disp           0    
-#>  4 hp            -0.801
-#>  5 drat           0    
-#>  6 wt            -2.65 
-#>  7 qsec           0    
-#>  8 vs             0    
-#>  9 am             0    
-#> 10 gear           0    
-#> 11 carb           0
+#> # A tibble: 11 × 3
+#>    term        selected estimate
+#>    <chr>          <dbl>    <dbl>
+#>  1 (Intercept)        1   20.1  
+#>  2 cyl                1   -1.58 
+#>  3 disp               0   NA    
+#>  4 hp                 1   -0.801
+#>  5 drat               0   NA    
+#>  6 wt                 1   -2.65 
+#>  7 qsec               0   NA    
+#>  8 vs                 0   NA    
+#>  9 am                 0   NA    
+#> 10 gear               0   NA    
+#> 11 carb               0   NA
 ```
 
 The lasso also selects the same 3 variables. The lasso alone does not
-provide any p-value or CI to do inference, but we can again perform a
-(questionable) hybrid inferential process where ordinary least squares
-theory is used for inference as though we never used the data for
-selection.
+provide any p-value or CI to do inference, but UPSIs aside we can again
+perform a (questionable) hybrid inferential process where ordinary least
+squares theory is used for inference as though we never used the data
+for selection.
 
 ``` r
-fit_lasso_hybrid <-infer(fit_lso, method = "hybrid") 
-tidy(fit_lasso_hybrid)
-#> # A tibble: 11 × 7
-#>    term        estimate std.error   p.value conf.low conf.high ci_ln
-#>    <chr>          <dbl>     <dbl>     <dbl>    <dbl>     <dbl> <dbl>
-#>  1 (Intercept)    20.1      0.444  9.94e-28    19.2     21.0    1.82
-#>  2 cyl            -1.68     0.984  9.85e- 2    -3.70     0.334  4.03
-#>  3 disp           NA       NA     NA           NA       NA     NA   
-#>  4 hp             -1.24     0.814  1.40e- 1    -2.90     0.431  3.34
-#>  5 drat           NA       NA     NA           NA       NA     NA   
-#>  6 wt             -3.10     0.725  1.99e- 4    -4.58    -1.61   2.97
-#>  7 qsec           NA       NA     NA           NA       NA     NA   
-#>  8 vs             NA       NA     NA           NA       NA     NA   
-#>  9 am             NA       NA     NA           NA       NA     NA   
-#> 10 gear           NA       NA     NA           NA       NA     NA   
-#> 11 carb           NA       NA     NA           NA       NA     NA
+fit_lasso_infer_upsi <-infer_upsi(fit_lso, data = mtcars) 
+#> Waiting for profiling to be done...
+tidy(fit_lasso_infer_upsi)
+#> # A tibble: 11 × 5
+#>    term        selected estimate ci_low ci_high
+#>    <chr>          <dbl>    <dbl>  <dbl>   <dbl>
+#>  1 (Intercept)        1   20.1    19.2   21.0  
+#>  2 cyl                1   -1.58   -3.61   0.247
+#>  3 disp               0   NA      NA     NA    
+#>  4 hp                 1   -0.801  -2.83   0.359
+#>  5 drat               0   NA      NA     NA    
+#>  6 wt                 1   -2.65   -4.52  -1.68 
+#>  7 qsec               0   NA      NA     NA    
+#>  8 vs                 0   NA      NA     NA    
+#>  9 am                 0   NA      NA     NA    
+#> 10 gear               0   NA      NA     NA    
+#> 11 carb               0   NA      NA     NA
 ```
 
-These results indicate that for the model selected by lasso, while
-`cycl` and `hp` are significant, `wt` is still not significant. Let’s
-see if we can confirm this sentiment after adjusting for the selective
-process.
+These results should look familiar: since the model selected by lasso is
+the same as that selected by stepwise AIC, the UPSI inference method is
+identical; `wt` is still seemingly significant.
 
 *Selective inference*
 
 ``` r
-fit_lasso_SI <- infer(fit_lso, method = "selectiveinf")
-tidy(fit_lasso_SI)
-#> # A tibble: 11 × 6
-#>    term        estimate conf.low conf.high   p.value ci_ln
-#>    <chr>          <dbl>    <dbl>     <dbl>     <dbl> <dbl>
-#>  1 (Intercept)    NA       NA        NA    NA        NA   
-#>  2 cyl            -1.68    -5.24      1.63  0.137     6.87
-#>  3 disp           NA       NA        NA    NA        NA   
-#>  4 hp             -1.24    -3.34      2.87  0.281     6.21
-#>  5 drat           NA       NA        NA    NA        NA   
-#>  6 wt             -3.10    -4.87     -1.45  0.000273  3.42
-#>  7 qsec           NA       NA        NA    NA        NA   
-#>  8 vs             NA       NA        NA    NA        NA   
-#>  9 am             NA       NA        NA    NA        NA   
-#> 10 gear           NA       NA        NA    NA        NA   
-#> 11 carb           NA       NA        NA    NA        NA
+fit_lasso_infer_SI <- infer_selective(fit_lso)
+tidy(fit_lasso_infer_SI)
 ```
 
-Here again we see that after adjusting for the selective process, we are
-only able to claim significance of `wt` but we have larger CIs compared
-to hybrid approach.
+Here we see that after adjusting for the selective process with
+selective inference, \[interpret\]
 
 *Bootstrapping, uncertain null non-selections*
 
-With treating non-selection as uncertain nulls, we’re interesting in
+If we treat non-selections as uncertain nulls, we’re interesting in
 making inferences for all variables, including those not selected by the
-prime model using full data (i.e., using `step_ic()` or `pen_cv()` on
-full data set). To obtain the bootstrap distribution of each
-$\hat{\beta}_j$ we proceed as follows: For each B iterations, we re
+prime model using full data. To obtain the bootstrap distribution of
+each $\hat{\beta}_j$ we proceed as follows: For each B iterations, we re
 sample the data with replacement, apply the same model selection method
 to the re sampled data, and save the coefficients of selected variables.
 For any variable not selected in a given bootstrap sample, we regress
@@ -347,28 +345,144 @@ using the quantiles of these distributions.
 
 ``` r
 set.seed(12)
-fit_lasso_boot <- infer(fit_lso, method = "boot", B = 100, 
-                        nonselection = "uncertain_nulls") 
-tidy(fit_lasso_boot) 
-#> # A tibble: 11 × 6
-#>    term        mean_estimate conf.low conf.high ci_ln prop.select
-#>    <chr>               <dbl>    <dbl>     <dbl> <dbl>       <dbl>
-#>  1 (Intercept)        20.1   19.3       21.1    1.83       1     
-#>  2 cyl                -1.36  -2.77      -0.192  2.58       0.89  
-#>  3 disp               -0.734 -1.12      -0.231  0.888      0.1   
-#>  4 hp                 -0.989 -2.13      -0.141  1.99       0.75  
-#>  5 drat                0.660  0.0921     1.26   1.16       0.32  
-#>  6 wt                 -2.41  -3.47      -0.994  2.48       0.98  
-#>  7 qsec                0.610  0.196      1.24   1.05       0.04  
-#>  8 vs                  0.591  0.0451     0.865  0.820      0.19  
-#>  9 am                  0.563  0.0534     0.949  0.896      0.3   
-#> 10 gear                0.448 -0.00420    0.938  0.942      0.0200
-#> 11 carb               -0.673 -1.37      -0.0343 1.34       0.36
+fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, 
+                                   nonselection = "uncertain_nulls") 
+tidy(fit_lasso_infer_boot) 
+#> # A tibble: 11 × 5
+#>    term        selected estimate ci_low ci_high
+#>    <chr>          <dbl>    <dbl>  <dbl>   <dbl>
+#>  1 (Intercept)        1   20.0   19.2   21.0   
+#>  2 cyl                1   -1.42  -3.14  -0.0351
+#>  3 disp               0   -0.706 -2.76   1.67  
+#>  4 hp                 1   -1.07  -2.75   0.431 
+#>  5 drat               0    0.667 -1.29   2.29  
+#>  6 wt                 1   -2.43  -3.76  -0.851 
+#>  7 qsec               0    0.592 -1.49   2.69  
+#>  8 vs                 0    0.767 -0.893  2.43  
+#>  9 am                 0    0.939 -0.755  2.84  
+#> 10 gear               0    0.703 -1.04   2.78  
+#> 11 carb               0   -0.941 -3.81   0.760
 ```
 
-With the `unccertain_nulls` approach, we see that even though `cycl` and
-`wt` are selected 89% and 98% of the times, non of the variables are
-significant.
+With the `uncertain_nulls` approach, we see that the `cyl` and `wt` both
+have CIs which do not intersect zero, indicating significant effects.
 
 For a more in depth tutorial and examples for different methods, please
 consult the package vignette.
+
+#### MCP via ncvreg
+
+``` r
+set.seed(12)
+fit_mcp <- select_ncvreg(mpg ~ ., data = mtcars) 
+fit_mcp 
+#> Penalized `ncvreg`-based selector
+#> 2 of 10 variables selected: qsec, wt 
+#> Meta information: family=gaussian, penalty=MCP, lambda=best, lambda_used=0.73, lambda_seq=list(...), cv_info=list(...), ellipses=list(...) 
+#> Default `infer()` method: selective_inference
+tidy(fit_mcp)
+#> # A tibble: 11 × 3
+#>    term        selected estimate
+#>    <chr>          <dbl>    <dbl>
+#>  1 (Intercept)        1    20.1 
+#>  2 cyl                0    NA   
+#>  3 disp               0    NA   
+#>  4 hp                 0    NA   
+#>  5 drat               0    NA   
+#>  6 wt                 1    -4.99
+#>  7 qsec               1     1.37
+#>  8 vs                 0    NA   
+#>  9 am                 0    NA   
+#> 10 gear               0    NA   
+#> 11 carb               0    NA
+```
+
+``` r
+fit_mcp_infer_upsi <- infer_upsi(fit_mcp, data = mtcars) 
+#> Waiting for profiling to be done...
+tidy(fit_mcp_infer_upsi)
+#> # A tibble: 11 × 5
+#>    term        selected estimate ci_low ci_high
+#>    <chr>          <dbl>    <dbl>  <dbl>   <dbl>
+#>  1 (Intercept)        1    20.1  19.2     21.0 
+#>  2 cyl                0    NA    NA       NA   
+#>  3 disp               0    NA    NA       NA   
+#>  4 hp                 0    NA    NA       NA   
+#>  5 drat               0    NA    NA       NA   
+#>  6 wt                 1    -4.99 -5.87    -4.01
+#>  7 qsec               1     1.37  0.732    2.59
+#>  8 vs                 0    NA    NA       NA   
+#>  9 am                 0    NA    NA       NA   
+#> 10 gear               0    NA    NA       NA   
+#> 11 carb               0    NA    NA       NA
+```
+
+*Bootstrapping*
+
+``` r
+set.seed(12)
+fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, 
+                                   nonselection = "uncertain_nulls") 
+tidy(fit_mcp_infer_boot) 
+#> # A tibble: 11 × 5
+#>    term        selected estimate ci_low ci_high
+#>    <chr>          <dbl>    <dbl>  <dbl>   <dbl>
+#>  1 (Intercept)        1  20.1     19.1   21.0  
+#>  2 cyl                0  -1.56    -5.54   2.36 
+#>  3 disp               0  -0.339   -4.85   2.91 
+#>  4 hp                 0  -0.578   -4.74   2.83 
+#>  5 drat               0   0.300   -2.52   2.19 
+#>  6 wt                 1  -3.51    -6.32   0.208
+#>  7 qsec               1   0.568   -2.16   2.47 
+#>  8 vs                 0   0.0724  -2.38   2.26 
+#>  9 am                 0   0.566   -1.55   2.77 
+#> 10 gear               0   0.293   -1.57   2.69 
+#> 11 carb               0  -0.561   -3.14   1.99
+```
+
+``` r
+fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, 
+                                   nonselection = "ignore") 
+tidy(fit_mcp_infer_boot) 
+#> # A tibble: 11 × 5
+#>    term        selected estimate ci_low ci_high
+#>    <chr>          <dbl>    <dbl>  <dbl>   <dbl>
+#>  1 (Intercept)        1   20.0    19.0    21.1 
+#>  2 cyl                0   NA      NA      NA   
+#>  3 disp               0   NA      NA      NA   
+#>  4 hp                 0   NA      NA      NA   
+#>  5 drat               0   NA      NA      NA   
+#>  6 wt                 1   -3.28   -6.01    0   
+#>  7 qsec               1    0.577   0       2.43
+#>  8 vs                 0   NA      NA      NA   
+#>  9 am                 0   NA      NA      NA   
+#> 10 gear               0   NA      NA      NA   
+#> 11 carb               0   NA      NA      NA
+```
+
+``` r
+fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, 
+                                   nonselection = "confident") 
+tidy(fit_mcp_infer_boot) 
+#> # A tibble: 11 × 5
+#>    term        selected estimate ci_low ci_high
+#>    <chr>          <dbl>    <dbl>  <dbl>   <dbl>
+#>  1 (Intercept)        1  20.1     19.0    21.0 
+#>  2 cyl                0  -1.11    -4.67    0   
+#>  3 disp               0  -0.437   -4.90    0   
+#>  4 hp                 0  -0.151   -2.21    0   
+#>  5 drat               0   0.0224   0       0   
+#>  6 wt                 1  -3.54    -6.24    0   
+#>  7 qsec               1   0.594    0       2.17
+#>  8 vs                 0   0        0       0   
+#>  9 am                 0   0.190    0       2.23
+#> 10 gear               0   0        0       0   
+#> 11 carb               0  -0.212   -1.99    0
+```
+
+*PIPE*: available for `ncvreg` only
+
+``` r
+fit_mcp_infer_pipe <- infer_pipe(fit_mcp, data = mtcars)
+tidy(fit_mcp_infer_pipe)
+```

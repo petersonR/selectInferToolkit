@@ -1,7 +1,8 @@
 #' Constructor for `selector`s
 #'
 #' Create a `selector` wrapper around selection algorithms so they
-#' can be used with the `selectInferToolkit` package.
+#' can be used with the `selectInferToolkit` package. This is not a user-facing
+#' function.
 #'
 #' @param x an object from a selection algorithm
 #' @param all_terms a slot containing names of all terms
@@ -59,6 +60,10 @@ predict.selector <- function(object, newdata = NULL, ...) {
 #' tidy method for `selector` object
 #'
 #' Returns a tibble with all candidate variables, estimates (scaled & unscaled)
+#' @param x a `selector`
+#' @param scale_coef should scaled betas be returned, or unscaled?
+#' @param ... additional parameters (not yet used)
+#'
 #' @importFrom tibble rownames_to_column
 #' @importFrom broom tidy
 #' @importFrom dplyr left_join
@@ -67,11 +72,10 @@ predict.selector <- function(object, newdata = NULL, ...) {
 #' @rdname selector
 #'
 #' @export
-tidy.selector <- function(x, ...) {
+tidy.selector <- function(x, scale_coef = TRUE, ...) {
 
   selected_coefs <- tibble::rownames_to_column(
-    data.frame(estimate = attr(x, "selected_coefs")),
-    "term")
+    data.frame(estimate = coef(x), selected = 1), "term")
 
   all_terms <- attr(x, "all_terms")
   rec_obj <- attr(x, "recipe_obj")
@@ -85,12 +89,23 @@ tidy.selector <- function(x, ...) {
   }
 
 
-  tibble(term = all_terms) %>%
+  results <- tibble(term = all_terms) %>%
     left_join(selected_coefs, by = "term") %>%
+    mutate(selected = ifelse(is.na(selected), 0, selected)) %>%
     left_join(sds, by = "term") %>%
-    mutate(coef_scaled = ifelse(term != "(Intercept)", estimate, NA),
-           coef_unscaled = coef_scaled/sd) %>%
-    select(term, estimate, coef_scaled, coef_unscaled)
+    mutate(coef_scaled = estimate,
+           coef_unscaled = ifelse(term != "(Intercept)", coef_scaled/sd, estimate) ) %>%
+    select(term, selected, estimate, coef_scaled, coef_unscaled)
+
+  if(scale_coef) {
+    results <- results %>%
+      select(term, selected, estimate = coef_scaled)
+  }  else {
+    results <- results %>%
+      select(term, selected, estimate = coef_unscaled)
+  }
+
+  results
 }
 
 #'

@@ -90,7 +90,8 @@ select_glmnet <- function(
   df <- bake(rec_obj, new_data = data)
 
   if(is.character(lambda)) {
-    fit <- cv.glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]), family = family, ...)
+    fit <- cv.glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
+                     family = family, keep = TRUE, ...)
     lambda_used <- if(lambda == "best") fit[["lambda.min"]] else fit$lambda[which(fit$cve < min(fit$cve + fit$cvse))[1]]
     cv_used <- TRUE
     ll <- ifelse(lambda == "best", "lambda.min", "lambda.1se")
