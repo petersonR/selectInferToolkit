@@ -60,11 +60,11 @@ select_stepwise_ic <- function(
   if(!inherits(rec_obj, "recipe")) {
 
     rec_obj <- recipe(formula, data = data) %>%
-      step_center(all_numeric_predictors()) %>%
-      step_scale(all_numeric_predictors()) %>%
       step_dummy(all_factor_predictors(), skip = select_factors_together,
                  naming = function(...) dummy_names(..., sep = "")) %>%
-    prep()
+      step_center(all_numeric_predictors()) %>%
+      step_scale(all_numeric_predictors()) %>%
+      prep()
 
     # bake first observation for names
     y1 <- bake(rec_obj, new_data = data[1,,drop = FALSE], all_outcomes())

@@ -55,11 +55,11 @@ select_glmnet <- function(
   if(!inherits(rec_obj, "recipe")) {
 
     rec_obj <- recipe(formula, data = data) %>%
-      step_center(all_numeric_predictors()) %>%
-      step_scale(all_numeric_predictors()) %>%
       step_dummy(all_factor_predictors(),
                  naming = function(...) dummy_names(..., sep = "")) %>%
-      prep()
+      step_center(all_numeric_predictors()) %>%
+      step_scale(all_numeric_predictors()) %>%
+       prep()
 
       # bake first observation for names
       y1 <- bake(rec_obj, new_data = data[1,,drop = FALSE], all_outcomes())
