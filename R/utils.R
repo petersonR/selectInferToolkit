@@ -59,11 +59,11 @@ fill_in_nonselections <- function(inferences, selector_obj, nonselection, X, y, 
 
     if(length(nonselected_vars)) {
       f_selected_fo <- as.formula(f_selected)
-      fit_selected <- glm(f_selected_fo, data = X)
+      fit_selected <- glm(f_selected_fo, data = X, family = family)
 
       for(j in 1:length(nonselected_vars)) {
         f_j <- paste0(f_selected, " + ", nonselected_vars[j])
-        fit_j <- glm(as.formula(f_j), data = X)
+        fit_j <- glm(as.formula(f_j), data = X, family = family)
         val_j <- tail(tidy(fit_j, conf.int = TRUE), 1)
         val$estimate[val$term == nonselected_vars[j]] <- val_j$estimate
         val$ci_low[val$term == nonselected_vars[j]] <- val_j$conf.low
