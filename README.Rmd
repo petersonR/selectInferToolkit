@@ -42,7 +42,7 @@ devtools::install_github("petersonR/selectInferToolkit")
 The package supports two broad classes of popular model selection techniques:
 
 * **Stepwise Regression:** Implement forward, backward, and bidirectional stepwise regression. User can use either the **Akaike Information Criterion (AIC)** or the **Bayesian Information Criterion (BIC)** as selection criteria, leveraging the `stepAIC` function from the `MASS` package.
-* **Penalized Regression:** Easily perform lasso, ridge, and elastic net regressions using the powerful `ncvreg` or `glmnet` packages. `selectInferToolkit` simplifies the process of obtaining models associated with either $\lambda_{min}$ or $\lambda_{1se}$.
+* **Penalized Regression:** Perform lasso, ridge, and elastic net regressions using the powerful `ncvreg` or `glmnet` packages. `selectInferToolkit` simplifies the process of obtaining models associated with either $\lambda_{min}$ or $\lambda_{1se}$.
     * $\lambda_{min}$ represents the regularization parameter $\lambda$ that minimizes the cross-validation error, aiming for the best predictive performance.
     * $\lambda_{1se}$ is a more conservative choice, selecting the largest $\lambda$ where the cross-validation error is within one standard error of $\lambda_{min}$. This often results in a sparser, more parsimonious model.
 
@@ -50,19 +50,26 @@ The package supports two broad classes of popular model selection techniques:
 
 The core contribution of `selectInferToolkit` lies in its ability to provide straightforward implementations of three distinct post-selection inference methods, applicable after you've performed model selection using one of the methods above:
 
-1.  **Hybrid Ordinary Least Squares:** A baseline approach that performs no adjustment for the selection process. We refer to this as "unadjusted post-selection inference", or "UPSI" for short. 
+1.  **UPSI**: A baseline approach that performs no adjustment for the selection process. We refer to this as "unadjusted post-selection inference", or "UPSI" for short. Others refer to this as "hybrid-OLS" (in the Gaussian outcome case). 
 2.  **Bootstrap:** A non-parametric bootstrap method that resamples data to account for selection uncertainty.
 3.  **Selective Inference:** A theoretically grounded approach, currently available for lasso and forward stepwise selection through integration with the `selectiveInference` package.
+4. **PIPE**: [currently experimental]
 
 ### Handling Non-Selected Variables
 
-A unique and important feature of `selectInferToolkit` is its flexibility in handling non-selected variables (those not included in the final model). For each post-selection inference method, we offer three distinct approaches:
+`selectInferToolkit` is explicity in its handling of non-selections, which can be set to be:  
 
-* **Ignoring them:** Treating non-selected variables as irrelevant.
-* **Treating them as confident (point-mass) nulls:** Assuming these variables have exactly zero effect.
-* **Treating them as uncertain nulls:** Aim to make inference on all variables but without the assumption that non-selections certainly have a null effect 
+* **Ignored:** Treating non-selected variables as irrelevant.
+* **Confident (point-mass) nulls:** Assuming these variables have exactly zero effect.
+* **Uncertain nulls:** Aim to make inference on all variables but without the assumption that non-selections certainly have a null effect 
 
+### Bootstrapping considerations
 
+In bootstrapping, the above methods of handling nonselections are similar but slightly altered. 
+
+We allow the user to specify their `inference_target` as either `"selections"` or `"all"`, `debias` varies whether the coefficients are re-fit after selection prior to bootstrapped aggregation, and `estimation_data` as either `"in-sample"` or `"out-of-sample"` which facilitates the estimation of the coefficients on the 'left-out' data after the model has been fit within a bootstrapped sample (similar to sample spliting). 
+
+More details on the bootstrapping approach are forthcoming. 
 
 ## Example
 
@@ -115,13 +122,13 @@ Each selection process has a default `infer` method that is, for the most part, 
 set.seed(1)
 fit_aic_infer_boot <- infer(fit_aic, data = mtcars, B = 100)
 fit_aic_infer_boot
-tidy(fit_aic_infer_boot) %>% dplyr::filter(selected == 1)
+tidy(fit_aic_infer_boot) 
 ```
 
 These results are less promising. Here we can also use a wrapper for  `selectiveInference` method: 
 
-```{r AIC selectiveinference, eval = FALSE}
-fit_aic_SI <- infer_selective(fit_aic)
+```{r AIC selectiveinference}
+fit_aic_SI <- infer_selective(fit_aic, data = mtcars)
 fit_aic_SI 
 tidy(fit_aic_SI) 
 ```
@@ -155,26 +162,34 @@ These results should look familiar: since the model selected by lasso is the sam
 
 *Selective inference* 
 
-```{r, eval = FALSE}
-fit_lasso_infer_SI <- infer_selective(fit_lso)
+```{r}
+fit_lasso_infer_SI <- infer_selective(fit_lso, data = mtcars)
 tidy(fit_lasso_infer_SI)
 ```
 
-Here we see that after adjusting for the selective process with selective inference, [interpret]
+Here we see that after adjusting for the selective process with selective inference, we are able to assert a significant effect of `wt` even after the selective process. The CI for this term is only slightly wide than in the full model. 
 
-*Bootstrapping, uncertain null non-selections*
+*Bootstrapping + debiasing*
 
-If we treat non-selections as uncertain nulls, we're interesting in making inferences for all variables, including those not selected by the prime model using full data. To obtain the bootstrap distribution of each $\hat{\beta}_j$ we proceed as follows: For each B iterations, we re sample the data with replacement, apply the same model selection method to the re sampled data, and save the coefficients of selected variables. For any variable not selected in a given bootstrap sample, we regress the model residuals on the each non-selected variables separately to get the beta estimates for non-selections. By doing so, we're trying to explain the residual variance by variables that were not selected by model selection method. This process will produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
+If we debias our bootrapped estimates, we no longer are "confident" that a non-selection is akin to a coefficient of zero, thereby treating non-selections as "uncertain nulls". 
+
+This may be the case if we're interesting in making inferences for all variables, including those not selected by the prime model using full data. To obtain the bootstrap distribution of each $\hat{\beta}_j$ we proceed as follows: For each B iterations, we re sample the data with replacement, apply the same model selection method to the re sampled data, and save the coefficients of selected variables. For any variable not selected in a given bootstrap sample, we regress the model residuals on the each non-selected variables separately to get the beta estimates for non-selections. By doing so, we're trying to explain the residual variance by variables that were not selected by model selection method. This process will produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
 
 
 ```{r}
-set.seed(12)
-fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, 
-                                   nonselection = "uncertain_nulls") 
+set.seed(1)
+fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", debias = TRUE) 
 tidy(fit_lasso_infer_boot) 
 ```
 
-With the `uncertain_nulls` approach, we see that the `cyl` and `wt` both have CIs which do not intersect zero, indicating significant effects.
+With this approach, we see that the `wt` has a CI which does not intersect zero, indicating a significant effect.
+
+Compare these to the results if `debias = FALSE`: 
+```{r}
+set.seed(1)
+fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", debias = FALSE) 
+tidy(fit_lasso_infer_boot) 
+```
 
 For a more in depth tutorial and examples for different methods, please consult the package vignette.
 
@@ -198,26 +213,19 @@ tidy(fit_mcp_infer_upsi)
 
 ```{r}
 set.seed(12)
-fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, 
-                                   nonselection = "uncertain_nulls") 
+fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, inference_target = "all", debias = FALSE) 
 tidy(fit_mcp_infer_boot) 
 ```
 
 ```{r}
-fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, 
-                                   nonselection = "ignore") 
-tidy(fit_mcp_infer_boot) 
-```
-
-```{r}
-fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, 
-                                   nonselection = "confident") 
+set.seed(12)
+fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, inference_target = "all", debias = TRUE) 
 tidy(fit_mcp_infer_boot) 
 ```
 
 *PIPE*: available for `ncvreg` only
 
-```{r, eval = FALSE}
+```{r}
 fit_mcp_infer_pipe <- infer_pipe(fit_mcp, data = mtcars)
 tidy(fit_mcp_infer_pipe)
 ```

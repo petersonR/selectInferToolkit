@@ -29,7 +29,6 @@ test_that("basic selector operations (null model, no selection)", {
 
 })
 
-
 test_that("basic selector operations (stepwise IC)", {
   sel <- select_stepwise_ic(mpg ~ ., mtcars)
 
@@ -404,7 +403,6 @@ test_that("basic inferrer UPSI, uncertain null approach", {
   })
 
 })
-
 
 test_that("selective inference + glmnet", {
   sel1 <- select_glmnet(mpg ~ ., data = mtcars)

@@ -38,23 +38,19 @@ infer_upsi <- function(
 
   selected_formula <- formula(paste0(outcome_name, "~", paste0(c(1, selected_vars), collapse = "+")))
   fit_selected <- glm(selected_formula, data = df, family = meta$family)
-
-  cis <- suppressMessages(as.data.frame(matrix(confint(fit_selected, level = conf.level), ncol = 2)))
-  names(cis) <- c("ci_low", "ci_high")
-  rownames(cis) <- names(coef(fit_selected))
-  cis <- rownames_to_column(cis, "term")
-
+  results_selected <- tidy(fit_selected, conf.int = TRUE, conf.level = conf.level) %>%
+    select(term, estimate, ci_low = conf.low, ci_high = conf.high, p_value = p.value)
 
   results <- tidy(object, scale_coef = TRUE) %>%
-    left_join(cis, by = "term") %>%
-    rename(estimate = coef)
+    left_join(results_selected, by = "term")
 
 
   if(nonselection == "confident_nulls") {
     results <- results %>%
       mutate(estimate = ifelse(is.na(estimate), 0, estimate),
              ci_low = ifelse(is.na(ci_low), 0, ci_low),
-             ci_high = ifelse(is.na(ci_high), 0, ci_high)
+             ci_high = ifelse(is.na(ci_high), 0, ci_high),
+             p_value = ifelse(is.na(p_value, 1, p_value))
       )
   }
   if(nonselection == "uncertain_nulls") {

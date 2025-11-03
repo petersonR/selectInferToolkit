@@ -29,7 +29,7 @@ infer_pipe <- function(object, data, conf.level = .95, ...) {
 
   as_inferrer(
     pipe_results, "pipe", label = "PIPE",
-    nonselection = "N/A",
+    nonselection = "uncertain",
     conf.level = conf.level,
     selector = object,
     meta = list(...),

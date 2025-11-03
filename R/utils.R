@@ -45,8 +45,8 @@ fill_in_nonselections <- function(inferences, selector_obj, nonselection, X, y, 
     val <- val %>%
       mutate(estimate = ifelse(selected, estimate, 0),
              ci_low = ifelse(selected, ci_low, 0),
-             ci_high = ifelse(selected, ci_high, 0)
-             # , p_value = ifelse(selected, p_value, 1)
+             ci_high = ifelse(selected, ci_high, 0),
+             p_value = ifelse(selected, p_value, 1)
       )
   }
 
@@ -68,7 +68,7 @@ fill_in_nonselections <- function(inferences, selector_obj, nonselection, X, y, 
         val$estimate[val$term == nonselected_vars[j]] <- val_j$estimate
         val$ci_low[val$term == nonselected_vars[j]] <- val_j$conf.low
         val$ci_high[val$term == nonselected_vars[j]] <- val_j$conf.high
-        # val$p_value[val$term == nonselected_vars[j]] <- val_j$p.value
+        val$p_value[val$term == nonselected_vars[j]] <- val_j$p.value
 
       }
     }

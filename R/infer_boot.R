@@ -160,7 +160,7 @@ boot <- function(object, data, B,
     # Replace NA's in selected_coefs with 0's
     # calculate estimates for selected_coefs
     results <- boot_results_df %>%
-      select(term, estimate) %>%
+      select(term, coef, estimate) %>%
       filter(term %in% names(coef(object))) %>%
       mutate(estimate = ifelse(is.na(estimate), 0, estimate)) %>%
       group_by(term) %>%
@@ -168,7 +168,7 @@ boot <- function(object, data, B,
         estimate_m = mean(estimate),
         ci_low = quantile(estimate, (1 - conf.level) / 2),
         ci_high = quantile(estimate, 1 - (1 - conf.level) / 2),
-        prop_selected = mean(estimate != 0)
+        prop_selected = mean(coef != 0)
       ) %>%
       rename(estimate = estimate_m) %>%
       dplyr::right_join(tidy(object)[,1], by = "term")
@@ -177,13 +177,13 @@ boot <- function(object, data, B,
   if(inference_target == "all") {
     # replace all NAs with uncertain betas (within bootstrap)
     results <- boot_results_df %>%
-      select(term, estimate) %>%
+      select(term, coef, estimate) %>%
       group_by(term) %>%
       summarize(
         estimate_m = mean(estimate),
         ci_low = quantile(estimate, (1 - conf.level) / 2),
         ci_high = quantile(estimate, 1 - (1 - conf.level) / 2),
-        prop_selected = mean(!is.na(estimate))
+        prop_selected = mean(coef != 0)
       )%>%
       rename(estimate = estimate_m)
   }
