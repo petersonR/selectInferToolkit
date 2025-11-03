@@ -26,12 +26,12 @@ as_selector(
 
 \method{print}{selector}(x, ...)
 
-\method{coef}{selector}(x)
+\method{coef}{selector}(x, use_native = FALSE, ...)
 
 reselect(selector_obj, newdata)
 }
 \arguments{
-\item{x}{a \code{selector}}
+\item{x}{a selector object}
 
 \item{all_terms}{a slot containing names of all terms}
 
@@ -39,9 +39,11 @@ reselect(selector_obj, newdata)
 
 \item{meta}{a list containing important meta-information}
 
-\item{...}{additional parameters (not yet used)}
+\item{...}{objects passed to native function, otherwise not used.}
 
 \item{scale_coef}{should scaled betas be returned, or unscaled?}
+
+\item{use_native}{if true, passes call to original class \code{coef}}
 }
 \value{
 An S3 object (list) of class \code{selector} containing:'
@@ -58,7 +60,8 @@ Returns predictions for \code{selector} objects on new data
 
 Returns a tibble with all candidate variables, estimates (scaled & unscaled)
 
-Returns a vector with all selected coefficients (scaled only, includes intercept)
+Returns a vector with all selected coefficients (scaled only, includes
+intercept)
 
 Re-do the selection, possibly on new data. Does not re-do the pre-processing;
 instead uses the original preprocess recipe from \code{selector_obj}.

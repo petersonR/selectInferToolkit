@@ -35,76 +35,43 @@ format_meta <- function(meta, digits = 3) {
   paste(fmt, collapse = ", ")
 }
 
-# Selective inference for stepwise
-#' Title
-#'
-#' @param x  design matrix
-#' @param y  outcome variable
-#' @param mult
-#'
-#' @return  returns a data frame with results from forward stepwise selective inference
-#' @importFrom selectiveInference fs
-#' @importFrom selectiveInference fsInf
-sel_inf_fs <- function(x,y, mult=2, intercept= TRUE, std= F, ...) {
-  variable_names <- colnames(x)
+fill_in_nonselections <- function(inferences, selector_obj, nonselection, X, y, conf.level) {
 
-  # Run forward stepwise selection and compute p-values and confidence intervals
-  fs_result <- fs(x, y, intercept =intercept, normalize= std,... )  # Compute the forward selection object
+  family <- attr(selector_obj, "meta")$family
+  val <- tidy(selector_obj) %>%
+    left_join(inferences, by = c("term", "selected"))
 
-  # Get AIC-based selection with confidence intervals
-  out_aic <- fsInf(fs_result, type = "aic", mult= mult, verbose = FALSE,  alpha = 0.05,...)
+  if(nonselection == "confident_nulls") {
+    val <- val %>%
+      mutate(estimate = ifelse(selected, estimate, 0),
+             ci_low = ifelse(selected, ci_low, 0),
+             ci_high = ifelse(selected, ci_high, 0)
+             # , p_value = ifelse(selected, p_value, 1)
+      )
+  }
 
-  # Extract selected variable names and calculate coefficients
-  selected_vars <- variable_names[out_aic$vars]
+  if(nonselection == "uncertain_nulls") {
 
-  # Calculate the coefficients
-  coefficients <- as.vector(out_aic$vmat %*% y)
-  names(coefficients) <- selected_vars
+    selected_vars <- val$term[val$selected == 1][-1]
+    nonselected_vars <- val$term[!val$selected]
 
-  # Combine the results into a data frame
-  results <- data.frame(
-    term = selected_vars,
-    estimate = out_aic$sign*as.vector(coefficients),  # Convert matrix to vector
-    conf.low =  out_aic$ci[,1],
-    conf.high = out_aic$ci[,2],
-    #ci_ln= round(out_aic$ci[,2]-out_aic$ci[,1],4),
-    p.value =  out_aic$pv
-  )%>% dplyr::arrange(term )
+    f_selected <- paste0(c("y ~ 1 ", selected_vars), collapse = " + ")
 
-  results
-}
+    if(length(nonselected_vars)) {
+      f_selected_fo <- as.formula(f_selected)
+      fit_selected <- glm(f_selected_fo, data = X)
 
-#' Selective inference for lasso (internal helper)
-#'
-#' @param x  design matrix
-#' @param y outcome variable
-#' @param lam lambda.1se or lambda.min
-#' @param std whether to standaddize design matrix
-#' @param ... addtional arguments that can be passed to  cv.glmnet
-#'
-#' @importFrom glmnet cv.glmnet
-#' @importFrom selectiveInference fixedLassoInf
-#' @importFrom magrittr %>%
-#' @importFrom tibble rownames_to_column
-#'
-#' @return returns a data frame with results from lasso selective inference
+      for(j in 1:length(nonselected_vars)) {
+        f_j <- paste0(f_selected, " + ", nonselected_vars[j])
+        fit_j <- glm(as.formula(f_j), data = X)
+        val_j <- tail(tidy(fit_j, conf.int = TRUE), 1)
+        val$estimate[val$term == nonselected_vars[j]] <- val_j$estimate
+        val$ci_low[val$term == nonselected_vars[j]] <- val_j$conf.low
+        val$ci_high[val$term == nonselected_vars[j]] <- val_j$conf.high
+        # val$p_value[val$term == nonselected_vars[j]] <- val_j$p.value
 
-sel_inf <- function(x,y, model, lam = "lambda.min", intercept= TRUE,alpha = 1, ...) {
-  n<- nrow(x)
-  fit_lso <- model[["model"]]
-  lam <- fit_lso[[lam]]
-  sig <- min(sqrt(fit_lso$cvm))
-  b <- coef(fit_lso, s=lam, exact = TRUE,  x = x, y = y)[-1]
-
-  # # re-compute with smaller lambda if none selected (other)
-  # while(all(b == 0))
-  #  b <- coef(fit_lso, s=lam*.99, exact =T,  x = x, y = y, alpha=alpha)[-1]
-
-  # fixed lasso function requires no intercept in beta vector
-  res <- fixedLassoInf(x=x, y= y, b, lam*n, alpha = .05, sigma = sig, intercept =TRUE)
-  bb <- res$vmat %*% y
-  B <- cbind(bb, res$ci, res$pv)
-  dimnames(B) <- list(names(res$vars), c('estimate', 'conf.low', 'conf.high', 'p.value'))
-  data.frame(B) %>%
-    tibble::rownames_to_column("term")
+      }
+    }
+  }
+  val
 }

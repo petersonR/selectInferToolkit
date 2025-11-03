@@ -83,7 +83,7 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
       sd= sd,
       estimate_scaled = estimate,
       ci_low_scaled = ci_low,
-      ci_high_scaled = ci_high,
+      ci_high_scaled = ci_high
     ) %>%
     mutate(
       estimate_unscaled = ifelse(term != "(Intercept)",
@@ -101,13 +101,21 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
 
   if(scale_coef) {
     results <- results %>%
-      select(term, selected, estimate = estimate_scaled,
+      select(term, selected, coef, estimate = estimate_scaled,
              ci_low = ci_low_scaled, ci_high = ci_high_scaled)
   }  else {
     results <- results %>%
-      select(term, selected, estimate = estimate_unscaled,
+      select(term, selected, coef, estimate = estimate_unscaled,
              ci_low = ci_low_unscaled, ci_high = ci_high_unscaled)
   }
+
+  # Check for other goodies, add if available
+  to_add <- which(names(inferences) %in% c("p_value", "prop_selected"))
+  if(length(to_add)) {
+    results <- results %>%
+      left_join(inferences[,c(1, to_add)], by = "term")
+  }
+
 
   results
 }

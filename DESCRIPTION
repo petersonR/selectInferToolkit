@@ -1,7 +1,7 @@
 Package: selectInferToolkit
 Type: Package
 Title: Tools for Variable Selection & Inference
-Version: 0.3.0
+Version: 0.4.0
 Author: Jinal Shah, Ryan Peterson
 Maintainer: Ryan Peterson <ryan.a.peterson@cuanschutz.edu>
 Description: This is a package designed to make the process of post-selection

@@ -39,14 +39,15 @@ infer_upsi <- function(
   selected_formula <- formula(paste0(outcome_name, "~", paste0(c(1, selected_vars), collapse = "+")))
   fit_selected <- glm(selected_formula, data = df, family = meta$family)
 
-  cis <- as.data.frame(matrix(confint(fit_selected, level = conf.level), ncol = 2))
+  cis <- suppressMessages(as.data.frame(matrix(confint(fit_selected, level = conf.level), ncol = 2)))
   names(cis) <- c("ci_low", "ci_high")
   rownames(cis) <- names(coef(fit_selected))
   cis <- rownames_to_column(cis, "term")
 
 
   results <- tidy(object, scale_coef = TRUE) %>%
-    left_join(cis, by = "term")
+    left_join(cis, by = "term") %>%
+    rename(estimate = coef)
 
 
   if(nonselection == "confident_nulls") {
@@ -58,21 +59,12 @@ infer_upsi <- function(
   }
   if(nonselection == "uncertain_nulls") {
 
-    nulls <- which(is.na(results$estimate))
+    X <- bake(attr(object, "recipe_obj"), new_data = data, all_predictors())
+    y <- bake(attr(object, "recipe_obj"), new_data = data, all_outcomes())[[1]]
 
-    if(length(nulls) > 0) {
+    results <- fill_in_nonselections(results, object, nonselection,
+                                     X = X, y = y, conf.level = conf.level)
 
-      r <- residuals(fit_selected)
-
-      for(j in 1:length(nulls)) {
-        x_j <- df[,results$term[nulls[j]]][[1]]
-        model_j <- lm(r ~ x_j)
-        ci_j <- confint(model_j, level = conf.level, parm = 2)
-        results$estimate[nulls[j]] <- model_j$coef[2]
-        results$ci_low[nulls[j]] <- ci_j[1]
-        results$ci_high[nulls[j]] <- ci_j[2]
-      }
-    }
   }
 
   as_inferrer(

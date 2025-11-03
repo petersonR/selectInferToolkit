@@ -1,360 +1,120 @@
-#' Inference for selector_pen_cv class except bootstrap which is it's own function
+#' Inference based on selective inference
 #'
-#' @param model model of selector_pen_cv class returned from  selector_pen_cv function
-#' @param method A character string specifying method of post-selection inference. Currently "hybrid", "selectiveinf" or
-#' "boot" supported
-#' @param nonselection A character string specifying how to handle variables not selected by model selection procedure. One of
-#' "ignored", "confident_nulls" or "uncertain_nulls" supported
-#' @return "infer_pen_cv " class list with
+#' A wrapper for the `selectiveInference` functions on `selector` objects
+#'
+#' @param object a `selector` object
+#' @param data data must be passed to infer
+#' @param nonselection  A character string specifying how to handle variables
+#'   not selected by model selection procedure. One of "ignored",
+#'   "confident_nulls" or "uncertain_nulls" supported
+#' @param conf.level .95 by default
+#' @param use_cv_sigma estimate Sigma via CV (if FALSE, uses SI defaults)
+#' @param ... arguments passed to `selectiveInference` function(s)
+#'
 #' @importFrom broom tidy
 #' @importFrom dplyr filter
 #' @importFrom dplyr select
+#' @importFrom selectiveInference fs fsInf fixedLassoInf
 #'
+#' @return `inferrer` object
 #' @rdname infer
 #' @export
 #'
-#'
+infer_selective <- function(
+    object,
+    data,
+    nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
+    conf.level = .95,
+    use_cv_sigma = FALSE,
+    ...
+  ){
 
-# NEEDS WORK - this is a placeholder
-infer_selective <- function(model, method = "hybrid", nonselection = "ignored",
-                                  B = 250, n_cores = 1, save_beta=FALSE, boot_desparse=FALSE){
-  x <-model[["x"]]
-  y <- model[["y"]]
+  # Check method supported
+  supported <- c("glmnet", "stepwise_ic")
+  type <- attr(object, "name")
 
 
-  if (method == "hybrid" && nonselection == "ignored") {
-    non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
-    non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
+  if(!(type %in% supported))
+    stop("Currently SI only supported for stepwise IC or `glmnet`")
 
-    selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]],
-                                                              check.names = FALSE),check.names = FALSE)
-    if (length(non_zero_terms) == 0) {
-      selected_data <- data.frame(y)
-    } else {
-      selected_data <- selected_data[, c("y", non_zero_terms)]
+  nonselection <- match.arg(nonselection)
+
+  # grab useful components from model
+  X <- bake(attr(object, "recipe_obj"), new_data = data, all_predictors())
+  y <- bake(attr(object, "recipe_obj"), new_data = data, all_outcomes())[[1]]
+  beta <- coef(object)
+  meta <- attr(object, "meta")
+
+  sig <- NULL
+
+  if(type == "stepwise_ic") {
+    if(meta$direction != "forward")
+      stop("Only forward stepwise with IC currently supported")
+
+    if(meta$family != "gaussian")
+      stop("Only Gaussian supported for selective inference with stepwise IC (try glmnet?)")
+
+    if(use_cv_sigma) {
+      sig <- selectiveInference::estimateSigma(as.matrix(X), y)$sigmahat
+      warning("use_cv_sigma with stepwise_ic may yield unexpected results")
     }
 
-    fit <- lm(y ~ ., data = selected_data)
-    conf <- confint(fit)
-    coefs <- coef(summary(fit))
-    terms <- gsub("`", "", rownames(coefs))
-    ci_ln <- conf[, 2] - conf[, 1]
+    ## Run stepwise IC for purpose of SI, using fs function
+    fs_result <- fs(as.matrix(X), y)
 
-    full_mod <- data.frame(
-      term = terms,
-      estimate = coefs[, "Estimate"],
-      std.error = coefs[,"Std. Error"],
-      p.value = coefs[, "Pr(>|t|)"],
-      conf.low = conf[, 1],
-      conf.high = conf[, 2],
-      ci_ln = ci_ln,
-      stringsAsFactors = FALSE
+    # Get IC-based selection with confidence intervals
+    mult <- ifelse(meta$penalty == "AIC", 2, log(nrow(n)))
+
+    res <- selectiveInference::fsInf(
+      fs_result,
+      sigma = sig,
+      type = "aic",
+      mult = mult,
+      alpha = (1 - conf.level) / 2,
+      ntimes = 1,
+      ...
     )
-    rownames(full_mod) <- NULL
+    names(res$vars) <- names(X)[res$vars]
+  }
 
-    all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
-    full_mod <-merge(all_terms, full_mod, by = "term", all.x = TRUE, sort = FALSE)
+  ## Run selective inference on glmnet
+  if(type == "glmnet") {
+    n<- nrow(X)
+    sig <- NULL
+    if(use_cv_sigma)
+      sig <- min(sqrt(object$cvm))
 
-    matched_rows <- match(all_terms$term, full_mod$term)
-    full_mod <- full_mod[matched_rows, ]
-    full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
+    b <- coef(object, use_native = TRUE, s=meta$lambda_used,
+              exact = TRUE, x = X, y = y)[-1]
 
-    ci_avg_ratio  <- mean(full_mod$ci_ln[full_mod$term != "(Intercept)"] , na.rm=T)
-    ci_median_ratio <-  median(full_mod$ci_ln[full_mod$term != "(Intercept)"] , na.rm=T)
-
-
-    result <- list(model=  full_mod,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                   selection_method=model[["penalty"]],lambda= model[["lambda"]],
-                   alpha=model[["alpha"]],
-                   infmethod = method, nonselection = nonselection
+    # fixed lasso function requires no intercept in beta vector
+    res <- selectiveInference::fixedLassoInf(
+      x = as.matrix(X),
+      y = y,
+      beta = b,
+      lambda = meta$lambda_used * n,
+      family = meta$family,
+      alpha = (1 - conf.level) / 2,
+      sigma = sig,
+      ...
     )
-    class(result) <- "infer_pen_cv "
-    result
-
-
   }
-  else if (method == "hybrid" && nonselection == "confident_nulls") {
-    non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
-    non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
 
-    selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]],
-                                                              check.names = FALSE),check.names = FALSE)
-    selected_data <- selected_data[, c("y", non_zero_terms)]
-    if (length(non_zero_terms) == 0) {
-      selected_data <- data.frame(y)
-    } else {
-      selected_data <- selected_data[, c("y", non_zero_terms)]
-    }
+  bb <- res$vmat %*% y
+  inferences <- data.frame(term = names(res$vars), selected = 1, estimate = bb,
+                           ci_low = res$ci[,1], ci_high = res$ci[,2],
+                           p_value = res$pv)
 
-    fit <- lm(y ~ ., data = selected_data)
-    conf <- confint(fit)
-    coefs <- coef(summary(fit))
-    terms <- gsub("`", "", rownames(coefs))
+  # Handle non-selections
+  results <- fill_in_nonselections(inferences, object,
+                                   nonselection = nonselection, X = X, y = y,
+                                   conf.level = conf.level)
 
-    full_mod <- data.frame(
-      term = terms,
-      estimate = coefs[, "Estimate"],
-      std.error = coefs[,"Std. Error"],
-      p.value = coefs[, "Pr(>|t|)"],
-      conf.low = conf[, 1],
-      conf.high = conf[, 2],
-      stringsAsFactors = FALSE
-    )
-    rownames(full_mod) <- NULL
-
-    all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
-    full_mod <-merge(all_terms, full_mod, by = "term", all.x = TRUE, sort = FALSE)
-
-    matched_rows <- match(all_terms$term, full_mod$term)
-    full_mod <- full_mod[matched_rows, ]
-    full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
-
-    # Replace NAs
-    full_mod$estimate   <- ifelse(is.na(full_mod$estimate),   0, full_mod$estimate)
-    full_mod$p.value    <- ifelse(is.na(full_mod$p.value),    1, full_mod$p.value)
-    full_mod$std.error  <- ifelse(is.na(full_mod$std.error),  0, full_mod$std.error)
-    full_mod$conf.low   <- ifelse(is.na(full_mod$conf.low),   0, full_mod$conf.low)
-    full_mod$conf.high  <- ifelse(is.na(full_mod$conf.high),  0, full_mod$conf.high)
-    full_mod$ci_ln <- full_mod$conf.high - full_mod$conf.low
-
-    ci_avg_ratio  <- mean(full_mod$ci_ln[full_mod$term != "(Intercept)"] , na.rm=T)
-    ci_median_ratio <-  median(full_mod$ci_ln[full_mod$term != "(Intercept)"] , na.rm=T)
-
-    result <- list(model= full_mod,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                   selection_method=model[["penalty"]],lambda= model[["lambda"]],
-                   alpha=model[["alpha"]],
-                   infmethod = method, nonselection = nonselection)
-    class(result) <- "infer_pen_cv "
-    result
-  }
-  else if (method == "hybrid" && nonselection == "uncertain_nulls") {
-    non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
-    non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
-    selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]],
-                                                              check.names = FALSE),check.names = FALSE)
-
-    if (length(non_zero_terms) == 0) {
-      selected_data <- data.frame(y)
-    } else {
-      selected_data <- selected_data[, c("y", non_zero_terms)]
-    }
-
-    # xbeta<- as.matrix(cbind("(Intercept)"=1, model[["x"]])) %*% model[["beta"]][["estimate"]]
-    # res <- y - xbeta
-
-    fit <- lm(y ~ ., data = selected_data)
-    conf <- confint(fit)
-    coefs <- coef(summary(fit))
-    terms <- gsub("`", "", rownames(coefs))
-    # Create full_mod data frame
-    full_mod <- data.frame(
-      term = terms,
-      estimate = coefs[, "Estimate"],
-      std.error = coefs[,"Std. Error"],
-      p.value = coefs[, "Pr(>|t|)"],
-      conf.low = conf[, 1],
-      conf.high = conf[, 2],
-      stringsAsFactors = FALSE
-    )
-    rownames(full_mod) <- NULL
-
-    all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
-    full_mod <-merge(all_terms, full_mod, by = "term", all.x = TRUE, sort = FALSE)
-    matched_rows <- match(all_terms$term, full_mod$term)
-    full_mod <- full_mod[matched_rows, ]
-    full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
-
-    estimates <- full_mod$estimate
-    estimates[is.na(estimates)] <- 0
-    xbeta<- as.matrix(cbind("(Intercept)"=1, model[["x"]])) %*% estimates
-    res <- y - xbeta
-
-    final_mod= get_uncertain_nulls (mod= full_mod, res=res,
-                                    x=data.frame(model[["x"]], check.names = FALSE))
-
-    ci_avg_ratio  <- mean(final_mod$ci_ln[final_mod$term != "(Intercept)"] , na.rm=T)
-    ci_median_ratio <-  median(final_mod$ci_ln[final_mod$term != "(Intercept)"] , na.rm=T)
-
-    result <- list(model=   final_mod,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                   selection_method=model[["penalty"]],lambda= model[["lambda"]],
-                   alpha=model[["alpha"]],
-                   infmethod = method, nonselection = nonselection)
-    class(result) <- "infer_pen_cv "
-    return(result)
-  }
-  else if (method == "selectiveinf" && nonselection == "ignored"){
-
-    lam=model[["lambda"]]
-    std=model[["std"]]
-    alpha = model[["alpha"]]
-
-
-    if(sum(model[["beta"]][["estimate"]][model[["beta"]][["term"]] !="(Intercept)"]!=0) ==0){
-      full_mod <- model[["beta"]]
-      full_mod$estimate[full_mod$estimate==0] <- NA
-      full_mod$conf.low <-  full_mod$conf.high <- full_mod$p.value<- full_mod$ci_ln <- NA
-
-    }
-    else{
-
-      fit_lso= sel_inf(x,y,lam = lam, std=T, model=model,alpha =alpha  )
-
-      all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
-      full_mod <-merge(all_terms, fit_lso, by = "term", all.x = TRUE, sort = FALSE)
-      matched_rows <- match(all_terms$term, full_mod$term)
-      full_mod <- full_mod[matched_rows, ]
-      full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
-      full_mod$ci_ln <- full_mod$conf.high - full_mod$conf.low
-    }
-    ci_avg_ratio  <- mean(full_mod$ci_ln[full_mod$term != "(Intercept)"] , na.rm=T)
-    ci_median_ratio <-  median(full_mod$ci_ln[full_mod$term != "(Intercept)"] , na.rm=T)
-
-    result <- list(model=   full_mod ,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                   infmethod = method, nonselection = nonselection,
-                   selection_method=model[["penalty"]],lambda= model[["lambda"]],
-                   alpha=model[["alpha"]]
-    )
-
-    class(result) <- "infer_pen_cv "
-    return(result )
-  }
-  else if (method == "selectiveinf" && nonselection == "confident_nulls") {
-
-    lam=model[["lambda"]]
-    std=model[["std"]]
-    alpha = model[["alpha"]]
-
-
-    if(sum(model[["beta"]][["estimate"]][model[["beta"]][["term"]] !="(Intercept)"]!=0) ==0){
-      full_mod <- model[["beta"]]
-      full_mod$conf.low <-  full_mod$conf.high <- full_mod$p.value<- full_mod$ci_ln <- 0
-
-    }
-    else{
-      fit_lso= sel_inf(x,y,lam = lam, std=std, model=model,alpha =alpha)
-
-      all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
-      full_mod <-merge(all_terms, fit_lso, by = "term", all.x = TRUE, sort = FALSE)
-      matched_rows <- match(all_terms$term, full_mod$term)
-      full_mod <- full_mod[matched_rows, ]
-      full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
-      full_mod$estimate   <- ifelse(is.na(full_mod$estimate),   0, full_mod$estimate)
-      full_mod$p.value    <- ifelse(is.na(full_mod$p.value),    1, full_mod$p.value)
-      full_mod$conf.low   <- ifelse(is.na(full_mod$conf.low),   0, full_mod$conf.low)
-      full_mod$conf.high  <- ifelse(is.na(full_mod$conf.high),  0, full_mod$conf.high)
-      full_mod$ci_ln <- full_mod$conf.high - full_mod$conf.low
-    }
-    ci_avg_ratio  <- mean(full_mod$ci_ln[full_mod$term != "(Intercept)"] , na.rm=T)
-    ci_median_ratio <-  median(full_mod$ci_ln[full_mod$term != "(Intercept)"] , na.rm=T)
-
-    result <- list(model=   full_mod ,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                   selection_method=model[["penalty"]],lambda= model[["lambda"]],
-                   alpha=model[["alpha"]],
-                   infmethod = method, nonselection = nonselection)
-    class(result) <- "infer_pen_cv "
-    return(result )
-
-
-  }
-  else if (method == "selectiveinf" && nonselection == "uncertain_nulls"){
-
-    lam=model[["lambda"]]
-    std=model[["std"]]
-    alpha = model[["alpha"]]
-
-    if(sum(model[["beta"]][["estimate"]][model[["beta"]][["term"]] !="(Intercept)"]!=0) ==0){
-      full_mod <- model[["beta"]]
-      full_mod$estimate[full_mod$estimate==0] <- NA
-      full_mod$conf.low <-  full_mod$conf.high <- full_mod$p.value<-  0
-      full_mod <- full_mod [full_mod$term != "(Intercept)",]
-
-    }
-    else{
-
-      fit_si= sel_inf(x,y,lam = lam, std=std, model=model,  alpha =  alpha )
-      all_terms <- data.frame(term = model[["beta"]][["term"]], stringsAsFactors = FALSE)
-      full_mod <-merge(all_terms, fit_si, by = "term", all.x = TRUE, sort = FALSE)
-      matched_rows <- match(all_terms$term, full_mod$term)
-      full_mod <- full_mod[matched_rows, ]
-      full_mod <- cbind(all_terms, full_mod[ , setdiff(names(full_mod), "term")])
-      full_mod <- full_mod [full_mod$term != "(Intercept)",]
-
-    }
-
-    xbeta<- as.matrix(cbind("(Intercept)"=1, model[["x"]])) %*% model[["beta"]][["estimate"]]
-    res <- y - xbeta
-
-
-    non_zero_terms  <- model[["beta"]]$term[model[["beta"]]$estimate != 0]
-    non_zero_terms  <- non_zero_terms[non_zero_terms != "(Intercept)"]
-    selected_data <-  data.frame(y = model[["y"]], data.frame(model[["x"]],
-                                                              check.names = FALSE),check.names = FALSE)
-    if (length(non_zero_terms) == 0) {
-      selected_data <- data.frame(y)
-    } else {
-      selected_data <- selected_data[, c("y", non_zero_terms)]
-    }
-
-
-    fit <- lm(y ~ ., data = selected_data)
-    conf <- confint(fit)
-    coefs <- coef(summary(fit))
-    terms <- gsub("`", "", rownames(coefs))
-    ols_mod <- data.frame(
-      term = terms,
-      estimate = coefs[, "Estimate"],
-      std.error = coefs[,"Std. Error"],
-      p.value = coefs[, "Pr(>|t|)"],
-      conf.low = conf[, 1],
-      conf.high = conf[, 2],
-      stringsAsFactors = FALSE
-    )
-    rownames(ols_mod) <- NULL
-
-    ols_intercept <- ols_mod [ols_mod $term == "(Intercept)",
-                              c("term", "estimate",  "conf.low", "conf.high","p.value")]
-    ols_intercept <- as.data.frame(ols_intercept, check.names = FALSE)
-
-
-    si_mod_intercept <-  rbind(ols_intercept ,full_mod )
-    si_mod_intercept$std.error <- NA
-    si_mod_intercept <- si_mod_intercept [, c("term", "estimate", "std.error", "p.value","conf.low", "conf.high")]
-    final_si = get_uncertain_nulls (mod= si_mod_intercept , res=res, x=data.frame(model[["x"]], check.names = FALSE))
-    final_si= final_si[, c("term", "estimate", "conf.low","conf.high", "p.value", "selected",  "ci_ln",
-                           "na_coeff" )]
-
-
-
-    ci_avg_ratio  <- mean(final_si$ci_ln[final_si$term != "(Intercept)"] , na.rm=T)
-    ci_median_ratio <-  median(final_si$ci_ln[final_si$term != "(Intercept)"] , na.rm=T)
-
-
-    result <- list(model=  final_si,ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio  ,
-                   selection_method=model[["penalty"]],lambda= model[["lambda"]],
-                   alpha=model[["alpha"]],
-                   infmethod = method, nonselection = nonselection)
-    class(result) <- "infer_pen_cv "
-    result
-  }
-  else if (method == "PIPE") {
-
-    stopifnot(class(model$model) %in% c("ncvreg", "cv.ncvreg"))
-    warning("PIPE method experimental")
-
-    pipe_results <- ncvreg::intervals(model$model)
-
-    # ci_avg_ratio  <- mean(pipe_results$ci_ln[pipe_results$term != "(Intercept)"] , na.rm=T)
-    # ci_median_ratio <-  median(pipe_results$ci_ln[pipe_results$term != "(Intercept)"] , na.rm=T)
-
-    result <- list(model=  pipe_results,
-                   # ci_avg_ratio =ci_avg_ratio ,ci_median_ratio =ci_median_ratio,
-                   selection_method=model[["penalty"]],
-                   lambda= model[["lambda"]],
-                   alpha=model[["alpha"]],
-                   infmethod = method,
-                   nonselection = "N/A")
-    class(result) <- "infer_pen_cv "
-    result
-  }
+  # Return inferrer class
+  as_inferrer(
+    res, "selective", label = "Selective",
+    nonselection = nonselection,
+    conf.level = conf.level, selector = object, meta = list(),
+    inferences = results)
 }
 

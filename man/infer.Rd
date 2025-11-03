@@ -28,24 +28,15 @@ infer(
   ...
 )
 
-infer_pipe(
-  model,
-  method = "hybrid",
-  nonselection = "ignored",
-  B = 250,
-  n_cores = 1,
-  save_beta = FALSE,
-  boot_desparse = FALSE
-)
+infer_pipe(object, data, conf.level = 0.95, ...)
 
 infer_selective(
-  model,
-  method = "hybrid",
-  nonselection = "ignored",
-  B = 250,
-  n_cores = 1,
-  save_beta = FALSE,
-  boot_desparse = FALSE
+  object,
+  data,
+  nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
+  conf.level = 0.95,
+  use_cv_sigma = FALSE,
+  ...
 )
 
 infer_upsi(
@@ -84,7 +75,9 @@ have confidence intervals (at least)}
 
 \item{data}{data must be passed to \code{infer} methods}
 
-\item{...}{additional arguments passed to downstream \verb{infer_*}}
+\item{...}{arguments passed to \code{selectiveInference} function(s)}
+
+\item{use_cv_sigma}{estimate Sigma via CV (if FALSE, uses SI defaults)}
 
 \item{model}{model returned from selector_ic  class}
 
@@ -106,9 +99,9 @@ A list of class \verb{infer_*} containing:'
 \item{alpha}{selected alpha for inference, returned for selector_pen class only}
 \item{B}{The number of bootstrap replicates used (only for bootstrap selection method)}
 
-"infer_pen_cv " class list with
+an \code{inferror} object
 
-"infer_pen_cv " class list with
+\code{inferrer} object
 
 \code{inferrer} object
 
@@ -131,6 +124,8 @@ function.
 This function performs a \code{selector}'s default inference method. Alternative
 inference methods may be available via \verb{infer_*}, which you should use
 instead if you want to do specific tuning.
+
+A wrapper for the \code{selectiveInference} functions on \code{selector} objects
 
 UPSI is sometimes referred to as "hybrid-OLS", but essentially we
 re-fit the selected model to the data as though we never used that

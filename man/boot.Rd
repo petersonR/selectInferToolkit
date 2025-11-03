@@ -8,7 +8,9 @@
 infer_boot(
   object,
   data,
-  nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
+  inference_target = c("selections", "all"),
+  debias = TRUE,
+  estimation_data = c("in-sample", "out-of-sample"),
   conf.level = 0.95,
   type = c("paired", "residual"),
   B = 250,
@@ -20,8 +22,9 @@ boot(
   object,
   data,
   B,
-  nonselection,
-  uncertain_insample = FALSE,
+  inference_target = c("selections", "all"),
+  debias = TRUE,
+  estimation_data = c("in-sample", "out-of-sample"),
   conf.level,
   n_cores,
   ...
@@ -32,8 +35,12 @@ boot(
 
 \item{data}{data must be passed to infer}
 
-\item{nonselection}{A character string specifying how to handle variables not selected by model selection procedure. One of
-"ignored", "confident_nulls" or "uncertain_nulls" supported}
+\item{inference_target}{is inference requested on all or selected only}
+
+\item{debias}{should estimates be debiased (no, non-selections, or all)}
+
+\item{estimation_data}{within a bootstrap, should in-sample or
+out-of-sample residuals be used for estimation (defaults to FALSE)}
 
 \item{conf.level}{.95 by default}
 
@@ -44,9 +51,6 @@ boot(
 \item{n_cores}{number of cores for parallel computation}
 
 \item{...}{any additional arguments to that can be passed to fitting engine}
-
-\item{uncertain_insample}{within a bootstrap, should in-sample or
-out-of-sample residuals be used for estimation (defaults to FALSE)}
 }
 \value{
 \code{inferrer} s3 class with things like...
