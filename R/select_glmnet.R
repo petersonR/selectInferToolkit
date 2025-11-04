@@ -91,7 +91,7 @@ select_glmnet <- function(
 
   if(is.character(lambda)) {
     fit <- cv.glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
-                     family = family, keep = TRUE, ...)
+                     family = family, keep = TRUE, standardize = FALSE, ...)
     lambda_used <- if(lambda == "best") fit[["lambda.min"]] else fit$lambda[which(fit$cve < min(fit$cve + fit$cvse))[1]]
     cv_used <- TRUE
     ll <- ifelse(lambda == "best", "lambda.min", "lambda.1se")
@@ -99,7 +99,7 @@ select_glmnet <- function(
 
   } else {
     fit <- glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
-                  family = family, lambda = lambda, ...)
+                  family = family, lambda = lambda, standardize = FALSE, ...)
     lambda_used <- lambda
     cv_used <- FALSE
     b <- as.matrix(coef(fit, s = lambda))

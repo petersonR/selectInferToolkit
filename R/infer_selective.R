@@ -88,16 +88,28 @@ infer_selective <- function(
               exact = TRUE, x = X, y = y)[-1]
 
     # fixed lasso function requires no intercept in beta vector
-    res <- selectiveInference::fixedLassoInf(
-      x = as.matrix(X),
-      y = y,
-      beta = b,
-      lambda = meta$lambda_used * n,
-      family = meta$family,
-      alpha = (1 - conf.level) / 2,
-      sigma = sig,
-      ...
-    )
+    if(all(b == 0)) {
+      warning("No betas selected at that value of lambda")
+      res <- list(
+        vmat = rbind(rep(NA, length(y))),
+        vars = c(None = NA),
+        ci = cbind(NA, NA),
+        pv = NA
+      )
+
+    } else {
+      res <- selectiveInference::fixedLassoInf(
+        x = as.matrix(X),
+        y = y,
+        beta = b,
+        lambda = meta$lambda_used * n,
+        family = meta$family,
+        alpha = (1 - conf.level) / 2,
+        sigma = sig,
+        ...
+      )
+    }
+
   }
 
   bb <- res$vmat %*% y
