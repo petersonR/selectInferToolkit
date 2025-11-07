@@ -133,19 +133,30 @@ boot <- function(object, data, B,
     if(debias) {
 
       fit_selected_debias <- glm(f_selected_formula, data = new_data, family = family)
-      val_boot <- left_join(val_boot, tidy(fit_selected_debias)[,1:2], by = "term")
+      val_boot <- left_join(val_boot[,c("term", "selected")], tidy(fit_selected_debias)[,1:2] ,
+                            by = "term")
 
-      if(length(nonselected_vars) > 0) {
+      if(length(nonselected_vars) > 0 & inference_target == "all") {
+        val_boot$estimate_all <-  val_boot$estimate_debias
         # If debiased non-selections, set to "uncertain nulls"
         for(j in 1:length(nonselected_vars)) {
           f_j <- paste0(f_selected, " + ", nonselected_vars[j])
           fit_j <- glm(as.formula(f_j), data = new_data, family = family)
           val_j <- tail(tidy(fit_j), 1)
-          val_boot$estimate[val_boot$term == nonselected_vars[j]] <- val_j$estimate
+          val_boot$estimate_all[val_boot$term == nonselected_vars[j]] <- val_j$estimate
         }
       }
     } else {
-      val_boot$estimate <- val_boot$coef
+      if(length(nonselected_vars) > 0 & inference_target == "all") {
+        val_boot$estimate_all <-    val_boot$estimate
+        # If debiased non-selections, set to "uncertain nulls"
+        for(j in 1:length(nonselected_vars)) {
+          f_j <- paste0(f_selected, " + ", nonselected_vars[j])
+          fit_j <- glm(as.formula(f_j), data = new_data, family = family)
+          val_j <- tail(tidy(fit_j), 1)
+          val_boot$estimate_all[val_boot$term == nonselected_vars[j]] <- val_j$estimate
+        }
+      }
     }
 
     val_boot
@@ -160,7 +171,7 @@ boot <- function(object, data, B,
     # Replace NA's in selected_coefs with 0's
     # calculate estimates for selected_coefs
     results <- boot_results_df %>%
-      select(term, coef, estimate) %>%
+      select(term, selected, estimate) %>%
       filter(term %in% names(coef(object))) %>%
       mutate(estimate = ifelse(is.na(estimate), 0, estimate)) %>%
       group_by(term) %>%
@@ -168,24 +179,26 @@ boot <- function(object, data, B,
         estimate_m = mean(estimate),
         ci_low = quantile(estimate, (1 - conf.level) / 2),
         ci_high = quantile(estimate, 1 - (1 - conf.level) / 2),
-        prop_selected = mean(coef != 0)
+        prop_selected = mean(selected != 0)
       ) %>%
       rename(estimate = estimate_m) %>%
-      dplyr::right_join(tidy(object)[,1], by = "term")
+      dplyr::right_join(tidy(object)[,1], by = "term")%>%
+      arrange(match(term, unique(boot_results_df$term)))
   }
 
   if(inference_target == "all") {
     # replace all NAs with uncertain betas (within bootstrap)
     results <- boot_results_df %>%
-      select(term, coef, estimate) %>%
+      select(term, selected, estimate =estimate_all) %>%
       group_by(term) %>%
       summarize(
         estimate_m = mean(estimate),
         ci_low = quantile(estimate, (1 - conf.level) / 2),
         ci_high = quantile(estimate, 1 - (1 - conf.level) / 2),
-        prop_selected = mean(coef != 0)
+        prop_selected = mean(selected != 0)
       )%>%
-      rename(estimate = estimate_m)
+      rename(estimate = estimate_m)%>%
+      arrange(match(term, unique(boot_results_df$term)))
   }
 
 
