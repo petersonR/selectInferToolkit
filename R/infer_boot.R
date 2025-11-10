@@ -61,6 +61,7 @@ infer_boot <- function(
 #' @importFrom broom tidy
 #' @importFrom stats lm model.frame model.matrix na.pass
 #' @importFrom MASS stepAIC
+#' @importFrom rlang sym
 #' @importFrom parallel detectCores clusterExport clusterEvalQ makeCluster
 #' @importFrom pbapply pblapply
 #' @importFrom forcats fct_inorder
@@ -191,7 +192,7 @@ boot <- function(object, data, B,
     # replace all NAs with uncertain betas (within bootstrap)
     results <- boot_results_df %>%
       select(term, selected,
-             estimate =  !!sym(if ("estimate_all" %in% names(.)) "estimate_all" else "estimate"))%>%
+             estimate =  !!rlang::sym(if ("estimate_all" %in% names(.)) "estimate_all" else "estimate"))%>%
       group_by(term) %>%
       summarize(
         estimate_m = mean(estimate),

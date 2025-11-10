@@ -39,7 +39,6 @@ test_that("basic inferrer bootstrap functionality; null model", {
 })
 
 
-
 test_that("basic inferrer bootstrap functionality; stepwise IC", {
 
   # run vanilla version
@@ -79,8 +78,6 @@ test_that("basic inferrer bootstrap functionality; stepwise IC", {
 
   # build in some additional testing
 })
-
-
 
 
 test_that("Full model boot works ", {
