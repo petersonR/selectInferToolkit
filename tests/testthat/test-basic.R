@@ -226,6 +226,7 @@ test_that("basic inferrer bootstrap functionality; glmnet", {
   # build in some additional testing
 })
 
+# small here when comparing coeff
 test_that("basic inferrer bootstrap functionality; ncvreg", {
 
   set.seed(123)
@@ -255,7 +256,7 @@ test_that("basic inferrer bootstrap functionality; ncvreg", {
   expect_equal(vals1$coef, vals2$coef)
 
   cyl_ci_high <- unname(vals2$ci_high[6])
-  expect_lt(cyl_ci_high, 0)
+  expect_lt(cyl_ci_high, 0) # error
 
   # try for "all" inference target
   expect_no_warning({

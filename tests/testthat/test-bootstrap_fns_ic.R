@@ -1,24 +1,84 @@
-##### Test IRIS data ######
+##### Test mtcars data ######
 
-data(iris)
-iris <- iris[1:100,]
-
+data("mtcars")
+library(testthat)
 set.seed(123)
+sel0 <- select_null_model(mpg ~ ., data = mtcars)
+sel1 <- select_stepwise_ic(mpg ~ ., data = mtcars)
+sel2 <- select_glmnet(mpg ~ ., data = mtcars)
+sel3 <- select_ncvreg(mpg ~ ., data = mtcars, fold = sel2$foldid)
+sel4 <- select_full_model(mpg ~ ., data = mtcars)
 
-# Add another unbalanced factor
-iris$Group <- factor(sample(c('A', 'B'), nrow(iris), replace = TRUE))
+test_that("basic inferrer bootstrap functionality; null model", {
 
-# Add a nzv variable
-#iris$NotUseful <- 2
+  # run vanilla version
+  expect_no_warning({
+    inf1 <- infer_boot(sel0, data = mtcars, B = 50, debias = FALSE)
+    vals1 <- tidy(inf1)
+  })
 
-# Add a binary variable
-iris$BV <- rbinom(nrow(iris), 1, prob = .5)
+  # try debiasing everything
+  expect_no_warning({
+    inf2 <- infer_boot(sel0, data = mtcars, B = 50, debias = TRUE)
+    vals2 <- tidy(inf2)
+  })
 
-# Add an unbalanced binary variable
-# iris$UBV <- rbinom(nrow(iris), 1, prob = .02)
+  # try for "all" inference target
+  expect_no_warning({
+    inf3 <- infer_boot(sel0, data = mtcars, B = 50, debias = FALSE, inference_target = "all")
+    vals3 <- tidy(inf3)
+  })
 
-x <- iris[, -which(names(iris) == "Sepal.Length")]
-y<- iris$Sepal.Length
+  # try debiasing
+  expect_no_warning({
+    inf4 <- infer_boot(sel0, data = mtcars, B = 50, debias = TRUE, inference_target = "all")
+    vals4 <- tidy(inf4)
+  })
+
+  # build in some additional testing
+})
+
+
+
+test_that("basic inferrer bootstrap functionality; stepwise IC", {
+
+  # run vanilla version
+  expect_no_warning({
+    inf1 <- infer_boot(sel1, data = mtcars, B = 50, debias = FALSE)
+    vals1 <- tidy(inf1)
+  })
+
+  # coef for `cyl` should be selected and nonzero
+  expect_equal(vals1$selected[2], 1)
+  expect_lt(cyl_coef <- vals1$coef[2], 0 )
+
+  # coef for `gear` should be zero
+  expect_equal(vals1$coef[10], 0)
+  expect_true(is.na(vals1$estimate[10]))
+
+  # try debiasing everything
+  expect_no_warning({
+    inf2 <- infer_boot(sel1, data = mtcars, B = 50, debias = TRUE)
+    vals2 <- tidy(inf2)
+  })
+
+  # coefs should be the same
+  expect_equal(vals1$coef, vals2$coef)
+
+  # try for "all" inference target
+  expect_no_warning({
+    inf3 <- infer_boot(sel1, data = mtcars, B = 50, debias = FALSE, inference_target = "all")
+    vals3 <- tidy(inf3)
+  })
+
+  # try debiasing
+  expect_no_warning({
+    inf4 <- infer_boot(sel1, data = mtcars, B = 50, debias = TRUE, inference_target = "all")
+    vals4 <- tidy(inf4)
+  })
+
+  # build in some additional testing
+})
 
 
 
