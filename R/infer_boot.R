@@ -57,7 +57,7 @@ infer_boot <- function(
 #' @param ... 	any additional arguments to that can be passed to fitting engine
 #'
 #' @importFrom magrittr %>%
-#' @importFrom dplyr mutate_if select mutate summarize bind_rows rename arrange
+#' @importFrom dplyr mutate_if select mutate summarize bind_rows rename arrange right_join
 #' @importFrom broom tidy
 #' @importFrom stats lm model.frame model.matrix na.pass
 #' @importFrom MASS stepAIC
@@ -117,7 +117,6 @@ boot <- function(object, data, B,
 
     sel_boot = reselect(object, newdata = data_boot)
     val_boot <- tidy(sel_boot)
-    colnames(val_boot )[ colnames(val_boot )=="coef"] <-"estimate"
 
     selected_vars <- val_boot$term[val_boot$selected == 1][-1]
     nonselected_vars <- val_boot$term[!val_boot$selected]
@@ -135,30 +134,21 @@ boot <- function(object, data, B,
     if(debias) {
 
       fit_selected_debias <- glm(f_selected_formula, data = new_data, family = family)
-      val_boot <- left_join(val_boot[,c("term", "selected")], tidy(fit_selected_debias)[,1:2] ,
-                            by = "term")
+      val_boot <- left_join(val_boot, tidy(fit_selected_debias)[,1:2], by = "term")
 
-      if(length(nonselected_vars) > 0 & inference_target == "all") {
-        val_boot$estimate_all <-  val_boot$estimate
+      if(length(nonselected_vars) > 0) {
         # If debiased non-selections, set to "uncertain nulls"
         for(j in 1:length(nonselected_vars)) {
           f_j <- paste0(f_selected, " + ", nonselected_vars[j])
           fit_j <- glm(as.formula(f_j), data = new_data, family = family)
           val_j <- tail(tidy(fit_j), 1)
-          val_boot$estimate_all[val_boot$term == nonselected_vars[j]] <- val_j$estimate
+          val_boot$estimate[val_boot$term == nonselected_vars[j]] <- val_j$estimate
         }
       }
     } else {
-      if(length(nonselected_vars) > 0 & inference_target == "all") {
-        val_boot$estimate_all <-    val_boot$estimate
-        # If debiased non-selections, set to "uncertain nulls"
-        for(j in 1:length(nonselected_vars)) {
-          f_j <- paste0(f_selected, " + ", nonselected_vars[j])
-          fit_j <- glm(as.formula(f_j), data = new_data, family = family)
-          val_j <- tail(tidy(fit_j), 1)
-          val_boot$estimate_all[val_boot$term == nonselected_vars[j]] <- val_j$estimate
-        }
-      }
+      val_boot$estimate <- val_boot$coef
+      val_boot$estimate <- ifelse(is.na(val_boot$estimate),0,val_boot$estimate)
+
     }
 
     val_boot
@@ -173,7 +163,7 @@ boot <- function(object, data, B,
     # Replace NA's in selected_coefs with 0's
     # calculate estimates for selected_coefs
     results <- boot_results_df %>%
-      select(term, selected, estimate) %>%
+      select(term, coef, estimate) %>%
       filter(term %in% names(coef(object))) %>%
       mutate(estimate = ifelse(is.na(estimate), 0, estimate)) %>%
       group_by(term) %>%
@@ -181,27 +171,26 @@ boot <- function(object, data, B,
         estimate_m = mean(estimate),
         ci_low = quantile(estimate, (1 - conf.level) / 2),
         ci_high = quantile(estimate, 1 - (1 - conf.level) / 2),
-        prop_selected = mean(selected != 0)
+        prop_selected = mean(coef != 0)
       ) %>%
       rename(estimate = estimate_m) %>%
-      dplyr::right_join(tidy(object)[,1], by = "term")%>%
-      dplyr::arrange(match(term, unique(boot_results_df$term)))
+      right_join(tidy(object)[,1], by = "term")%>%
+      arrange(match(term, unique(boot_results_df$term)))
   }
 
   if(inference_target == "all") {
     # replace all NAs with uncertain betas (within bootstrap)
     results <- boot_results_df %>%
-      select(term, selected,
-             estimate =  !!rlang::sym(if ("estimate_all" %in% names(.)) "estimate_all" else "estimate"))%>%
+      select(term, coef,estimate)%>%
       group_by(term) %>%
       summarize(
         estimate_m = mean(estimate),
         ci_low = quantile(estimate, (1 - conf.level) / 2),
         ci_high = quantile(estimate, 1 - (1 - conf.level) / 2),
-        prop_selected = mean(selected != 0)
+        prop_selected = mean(coef != 0)
       )%>%
       rename(estimate = estimate_m)%>%
-      dplyr::arrange(match(term, unique(boot_results_df$term)))
+      arrange(match(term, unique(boot_results_df$term)))
   }
 
 
