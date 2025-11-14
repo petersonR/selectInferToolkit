@@ -26,18 +26,20 @@ as_selector(
 
 \method{print}{selector}(x, ...)
 
-\method{coef}{selector}(x, use_native = FALSE, ...)
+\method{coef}{selector}(object, use_native = FALSE, ...)
 
 reselect(selector_obj, newdata)
 }
 \arguments{
-\item{x}{a selector object}
+\item{x}{a \code{selector}}
 
 \item{all_terms}{a slot containing names of all terms}
 
 \item{selected_coefs}{a numeric vector of selected coefficient estimates}
 
 \item{meta}{a list containing important meta-information}
+
+\item{object}{a selector object}
 
 \item{...}{objects passed to native function, otherwise not used.}
 
