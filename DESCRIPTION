@@ -10,7 +10,6 @@ License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Imports:
-  methods,
   tibble,
   magrittr,
   dplyr,
@@ -19,12 +18,11 @@ Imports:
   ncvreg,
   selectiveInference,
   glmnet,
-  knitr,
   parallel,
   pbapply,
   forcats,
-  tidyverse,
-  recipes
+  recipes,
+  rlang
 Suggests: 
     testthat (>= 3.0.0),  knitr (>= 1.49), rmarkdown (>= 2.29)
 Config/testthat/edition: 3

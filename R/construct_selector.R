@@ -140,17 +140,17 @@ print.selector <- function(x, ...) {
 #' Returns a vector with all selected coefficients (scaled only, includes
 #' intercept)
 #'
-#' @param x a selector object
+#' @param object a selector object
 #' @param use_native if true, passes call to original class `coef`
 #' @param ... objects passed to native function, otherwise not used.
 #'
 #' @rdname selector
 #'
 #' @export
-coef.selector <- function(x, use_native = FALSE, ...) {
+coef.selector <- function(object, use_native = FALSE, ...) {
   if(use_native)
     return(NextMethod())
-  attr(x, "selected_coefs")
+  attr(object, "selected_coefs")
 }
 
 
