@@ -5,6 +5,8 @@
 
 <!-- badges: start -->
 
+[![Codecov test
+coverage](https://codecov.io/gh/petersonR/practicalPSI/graph/badge.svg)](https://app.codecov.io/gh/petersonR/practicalPSI)
 <!-- badges: end -->
 
 The `selectInferToolkit` package aims to addresses a critical challenge
