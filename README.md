@@ -307,23 +307,23 @@ set.seed(12)
 fit_lso <- select_glmnet(mpg ~ ., data = mtcars) 
 fit_lso 
 #> Penalized `glmnet`-based selector
-#> 3 of 10 variables selected: hp, cyl, wt 
-#> Meta information: family=gaussian, lambda=best, lambda_used=0.801, cv_info=list(...), ellipses=list(...) 
+#> 4 of 10 variables selected: am, hp, cyl, wt 
+#> Meta information: family=gaussian, lambda=best, lambda_used=0.654, cv_info=list(...), ellipses=list(...) 
 #> Default `infer()` method: selective
 tidy(fit_lso)
 #> # A tibble: 11 × 3
-#>    term        selected   coef
-#>    <chr>          <dbl>  <dbl>
-#>  1 (Intercept)        1 20.1  
-#>  2 cyl                1 -1.58 
-#>  3 disp               0  0    
-#>  4 hp                 1 -0.801
-#>  5 drat               0  0    
-#>  6 wt                 1 -2.65 
-#>  7 qsec               0  0    
-#>  8 vs                 0  0    
-#>  9 am                 0  0    
-#> 10 gear               0  0    
+#>    term        selected     coef
+#>    <chr>          <dbl>    <dbl>
+#>  1 (Intercept)        1 20.1    
+#>  2 cyl                1 -1.59   
+#>  3 disp               0  0      
+#>  4 hp                 1 -0.879  
+#>  5 drat               0  0      
+#>  6 wt                 1 -2.72   
+#>  7 qsec               0  0      
+#>  8 vs                 0  0      
+#>  9 am                 1  0.00672
+#> 10 gear               0  0      
 #> 11 carb               0  0
 ```
 
@@ -337,19 +337,19 @@ for selection.
 fit_lasso_infer_upsi <-infer_upsi(fit_lso, data = mtcars) 
 tidy(fit_lasso_infer_upsi)
 #> # A tibble: 11 × 7
-#>    term        selected   coef estimate ci_low ci_high   p_value
-#>    <chr>          <dbl>  <dbl>    <dbl>  <dbl>   <dbl>     <dbl>
-#>  1 (Intercept)        1 20.1      20.1   19.2   21.0    9.94e-28
-#>  2 cyl                1 -1.58     -1.68  -3.61   0.247  9.85e- 2
-#>  3 disp               0  0        NA     NA     NA     NA       
-#>  4 hp                 1 -0.801    -1.24  -2.83   0.359  1.40e- 1
-#>  5 drat               0  0        NA     NA     NA     NA       
-#>  6 wt                 1 -2.65     -3.10  -4.52  -1.68   1.99e- 4
-#>  7 qsec               0  0        NA     NA     NA     NA       
-#>  8 vs                 0  0        NA     NA     NA     NA       
-#>  9 am                 0  0        NA     NA     NA     NA       
-#> 10 gear               0  0        NA     NA     NA     NA       
-#> 11 carb               0  0        NA     NA     NA     NA
+#>    term        selected     coef estimate ci_low ci_high   p_value
+#>    <chr>          <dbl>    <dbl>    <dbl>  <dbl>   <dbl>     <dbl>
+#>  1 (Intercept)        1 20.1       20.1   19.2    21.0    5.23e-27
+#>  2 cyl                1 -1.59      -1.33  -3.37    0.709  2.12e- 1
+#>  3 disp               0  0         NA     NA      NA     NA       
+#>  4 hp                 1 -0.879     -1.71  -3.54    0.123  7.86e- 2
+#>  5 drat               0  0         NA     NA      NA     NA       
+#>  6 wt                 1 -2.72      -2.55  -4.31   -0.786  8.60e- 3
+#>  7 qsec               0  0         NA     NA      NA     NA       
+#>  8 vs                 0  0         NA     NA      NA     NA       
+#>  9 am                 1  0.00672    0.738 -0.672   2.15   3.14e- 1
+#> 10 gear               0  0         NA     NA      NA     NA       
+#> 11 carb               0  0         NA     NA      NA     NA
 ```
 
 These results should look familiar: since the model selected by lasso is
@@ -362,19 +362,19 @@ identical; `wt` is still seemingly significant.
 fit_lasso_infer_SI <- infer_selective(fit_lso, data = mtcars)
 tidy(fit_lasso_infer_SI)
 #> # A tibble: 11 × 7
-#>    term        selected   coef estimate ci_low ci_high    p_value
-#>    <chr>          <dbl>  <dbl>    <dbl>  <dbl>   <dbl>      <dbl>
-#>  1 (Intercept)        1 20.1      NA     NA      NA    NA        
-#>  2 cyl                1 -1.58     -1.68  -5.41    1.77  0.112    
-#>  3 disp               0  0        NA     NA      NA    NA        
-#>  4 hp                 1 -0.801    -1.24  -3.48    3.06  0.246    
-#>  5 drat               0  0        NA     NA      NA    NA        
-#>  6 wt                 1 -2.65     -3.10  -4.95   -1.33  0.0000918
-#>  7 qsec               0  0        NA     NA      NA    NA        
-#>  8 vs                 0  0        NA     NA      NA    NA        
-#>  9 am                 0  0        NA     NA      NA    NA        
-#> 10 gear               0  0        NA     NA      NA    NA        
-#> 11 carb               0  0        NA     NA      NA    NA
+#>    term        selected     coef estimate  ci_low ci_high   p_value
+#>    <chr>          <dbl>    <dbl>    <dbl>   <dbl>   <dbl>     <dbl>
+#>  1 (Intercept)        1 20.1       NA       NA     NA     NA       
+#>  2 cyl                1 -1.59      -1.33  -Inf      0.213  0.0147  
+#>  3 disp               0  0         NA       NA     NA     NA       
+#>  4 hp                 1 -0.879     -1.71    -2.35 Inf      0.947   
+#>  5 drat               0  0         NA       NA     NA     NA       
+#>  6 wt                 1 -2.72      -2.55  -Inf     -2.22   0.000395
+#>  7 qsec               0  0         NA       NA     NA     NA       
+#>  8 vs                 0  0         NA       NA     NA     NA       
+#>  9 am                 1  0.00672    0.738 -Inf      0.504  0.981   
+#> 10 gear               0  0         NA       NA     NA     NA       
+#> 11 carb               0  0         NA       NA     NA     NA
 ```
 
 Here we see that after adjusting for the selective process with
@@ -407,19 +407,19 @@ set.seed(1)
 fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", debias = TRUE) 
 tidy(fit_lasso_infer_boot) 
 #> # A tibble: 11 × 7
-#>    term        selected   coef estimate ci_low ci_high prop_selected
-#>    <chr>          <dbl>  <dbl>    <dbl>  <dbl>   <dbl>         <dbl>
-#>  1 (Intercept)        1 20.1    20.1    19.3    21.1            1   
-#>  2 cyl                1 -1.58   -0.516  -3.10    3.60           0.8 
-#>  3 disp               0  0       1.41   -0.621   4.79           0.12
-#>  4 hp                 1 -0.801  -1.26   -3.22    1.07           0.9 
-#>  5 drat               0  0       0.550  -0.538   2.24           0.4 
-#>  6 wt                 1 -2.65   -2.71   -5.52   -0.241          1   
-#>  7 qsec               0  0       0.733  -1.12    3.23           0.09
-#>  8 vs                 0  0       0.0767 -1.48    2.57           0.16
-#>  9 am                 0  0       0.770  -0.667   2.39           0.35
-#> 10 gear               0  0       0.306  -1.95    2.95           0.05
-#> 11 carb               0  0      -0.851  -2.89    0.827          0.38
+#>    term        selected     coef estimate ci_low ci_high prop_selected
+#>    <chr>          <dbl>    <dbl>    <dbl>  <dbl>   <dbl>         <dbl>
+#>  1 (Intercept)        1 20.1       20.1   19.3    21.1            1   
+#>  2 cyl                1 -1.59      -0.542 -3.21    3.51           0.9 
+#>  3 disp               0  0          1.28  -1.06    4.97           0.09
+#>  4 hp                 1 -0.879     -1.23  -3.40    1.32           0.82
+#>  5 drat               0  0          0.616 -0.541   2.91           0.44
+#>  6 wt                 1 -2.72      -2.61  -5.34   -0.626          1   
+#>  7 qsec               0  0          0.910 -1.19    2.93           0.11
+#>  8 vs                 0  0          0.157 -1.49    2.48           0.23
+#>  9 am                 1  0.00672    0.881 -0.599   2.47           0.43
+#> 10 gear               0  0          0.393 -1.32    3.10           0.06
+#> 11 carb               0  0         -0.885 -2.72    0.926          0.51
 ```
 
 With this approach, we see that the `wt` has a CI which does not
@@ -432,19 +432,19 @@ set.seed(1)
 fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", debias = FALSE) 
 tidy(fit_lasso_infer_boot) 
 #> # A tibble: 11 × 7
-#>    term        selected   coef estimate ci_low ci_high prop_selected
-#>    <chr>          <dbl>  <dbl>    <dbl>  <dbl>   <dbl>         <dbl>
-#>  1 (Intercept)        1 20.1    20.1    19.2    20.9            1   
-#>  2 cyl                1 -1.58   -1.10   -2.96    0              0.8 
-#>  3 disp               0  0      -0.0696 -0.732   0              0.12
-#>  4 hp                 1 -0.801  -0.964  -2.31    0              0.9 
-#>  5 drat               0  0       0.170   0       1.30           0.4 
-#>  6 wt                 1 -2.65   -2.55   -4.23   -0.884          1   
-#>  7 qsec               0  0       0.0641  0       0.796          0.09
-#>  8 vs                 0  0       0.0843  0       0.973          0.16
-#>  9 am                 0  0       0.173   0       1.08           0.35
-#> 10 gear               0  0       0.0214  0       0.215          0.05
-#> 11 carb               0  0      -0.153  -0.927   0              0.38
+#>    term        selected     coef estimate ci_low ci_high prop_selected
+#>    <chr>          <dbl>    <dbl>    <dbl>  <dbl>   <dbl>         <dbl>
+#>  1 (Intercept)        1 20.1     20.1     19.3    21.0            1   
+#>  2 cyl                1 -1.59    -1.25    -2.89    0              0.9 
+#>  3 disp               0  0       -0.0580  -0.755   0              0.09
+#>  4 hp                 1 -0.879   -0.862   -2.20    0              0.82
+#>  5 drat               0  0        0.223    0       1.19           0.44
+#>  6 wt                 1 -2.72    -2.43    -3.85   -0.732          1   
+#>  7 qsec               0  0        0.0624   0       0.558          0.11
+#>  8 vs                 0  0        0.0691   0       0.811          0.23
+#>  9 am                 1  0.00672  0.235    0       1.27           0.43
+#> 10 gear               0  0        0.00933  0       0.141          0.06
+#> 11 carb               0  0       -0.187   -0.928   0              0.51
 ```
 
 For a more in depth tutorial and examples for different methods, please

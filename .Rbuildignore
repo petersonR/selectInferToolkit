@@ -5,3 +5,7 @@
 ^data-raw$
 ^doc$
 ^Meta$
+^codecov\.yml$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
