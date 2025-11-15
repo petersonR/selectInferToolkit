@@ -3,7 +3,7 @@ pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   selectInferToolkit: selectInferToolkit.html
-last_built: 2025-11-15T03:14Z
+last_built: 2025-11-15T03:21Z
 urls:
   reference: https://petersonr.github.io/selectInferToolkit/reference
   article: https://petersonr.github.io/selectInferToolkit/articles
