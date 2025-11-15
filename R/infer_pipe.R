@@ -1,13 +1,13 @@
 #' Inference for selector_pen_cv class except bootstrap which is it's own function
 #'
-#' @param model model of selector_pen_cv class returned from  selector_pen_cv function
+#' @param object model of selector_pen_cv class returned from  selector_pen_cv function
 #' @param data data must be passed to infer
 #' @param conf.level .95 by default
 #' @param ... arguments passed to `ncvreg::intervals()` function
-
 #' @return an `inferror` object
 #'
 #' @rdname infer
+#' @importFrom tibble tibble
 #' @export
 #'
 infer_pipe <- function(object, data, conf.level = .95, ...) {
@@ -24,7 +24,7 @@ infer_pipe <- function(object, data, conf.level = .95, ...) {
   pipe_results <- ncvreg::intervals(object, level = conf.level, X = as.matrix(X), ...)
   inferences <- pipe_results %>%
     select(term = variable, estimate, ci_low = lower, ci_high = upper, p_value = p.value) %>%
-    as_tibble()
+    tibble()
 
 
   as_inferrer(

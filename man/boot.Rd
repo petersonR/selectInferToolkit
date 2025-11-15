@@ -55,15 +55,7 @@ out-of-sample residuals be used for estimation (defaults to FALSE)}
 \value{
 \code{inferrer} s3 class with things like...
 
-Ddataframe with bootstrap result and CIs
-\item{term}{variable name}
-\item{mean_estimate}{mean of regression coefficients across bootstrap samples}
-\item{conf.low}{lower 2.5 percentile bootstrap interval}
-\item{conf.high}{upper 97.5 percentile bootstrap interval}
-\item{median_p.value}{median p value of regression coefficients  across bootstrap samples}
-\item{ci_ln}{confidence interval length}
-\item{prop.select}{propotion of times a given variable is selected by model selection method}
-\item{prop.rej}{proportion of time coefficient was found significant at 0.05 alpha level}
+an \code{inferrer} object
 }
 \description{
 Inference for \code{selector} via bootstrapping

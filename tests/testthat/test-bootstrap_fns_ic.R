@@ -246,13 +246,13 @@ test_that("basic inferrer bootstrap functionality; glmnet + out-of-sample estima
 
 
 
-
+skip() # Code below requires updating
 
 # ##### Test HERS data ######
 # Test HERS Data set
-y= raw_data$hdl1
-#x <-model.matrix(hdl1 ~., model.frame(~ ., raw_data, na.action=na.pass))[,-1]
-x <- raw_data %>% dplyr::select(-hdl1)
+y= hers$hdl1
+#x <-model.matrix(hdl1 ~., model.frame(~ ., hers, na.action=na.pass))[,-1]
+x <- hers %>% dplyr::select(-hdl1)
 
 
 

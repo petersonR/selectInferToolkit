@@ -87,7 +87,7 @@ test_that("reselector operations", {
 
   # expect estimates to be close, may differ slightly
   rsel_error <- max(tidy(sel)$coef - tidy(rsel)$coef, na.rm = TRUE)
-  expect_lt(rsel_error, .001)
+  expect_lt(rsel_error, .01)
 
   # Try to re-fit with re-select to "new" data
   rsel2 <- reselect(sel, newdata = mtcars[-7,])

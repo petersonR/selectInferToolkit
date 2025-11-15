@@ -42,12 +42,13 @@ fill_in_nonselections <- function(inferences, selector_obj, nonselection, X, y, 
     left_join(inferences, by = c("term", "selected"))
 
   if(nonselection == "confident_nulls") {
-    val <- val %>%
-      mutate(estimate = ifelse(selected, estimate, 0),
-             ci_low = ifelse(selected, ci_low, 0),
-             ci_high = ifelse(selected, ci_high, 0),
-             p_value = ifelse(selected, p_value, 1)
-      )
+    val$estimate <- ifelse(val$selected, val$estimate, 0)
+
+    val$estimate = ifelse(val$selected, val$estimate, 0)
+    val$ci_low = ifelse(val$selected, val$ci_low, 0)
+    val$ci_high = ifelse(val$selected, val$ci_high, 0)
+    val$p_value = ifelse(val$selected, val$p_value, 1)
+
   }
 
   if(nonselection == "uncertain_nulls") {

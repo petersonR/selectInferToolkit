@@ -14,7 +14,6 @@ vignette: >
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,fig.height = 5, fig.width = 7)
 library(selectInferToolkit)
-library(tidyverse)
 library(knitr)
 
 ```
@@ -105,15 +104,15 @@ TBD. For now please see the package readme for a use-case.
 <!-- First let's look at the data a litte: -->
 
 <!-- ```{r} -->
-<!-- data("raw_data") -->
-<!-- summary(raw_data) -->
+<!-- data("hers") -->
+<!-- summary(hers) -->
 <!-- ``` -->
 
 
 
 <!-- ```{r} -->
-<!-- y= raw_data$hdl1 -->
-<!-- x <- raw_data %>% dplyr::select(-hdl1) -->
+<!-- y= hers$hdl1 -->
+<!-- x <- hers %>% dplyr::select(-hdl1) -->
 <!-- ``` -->
 
 

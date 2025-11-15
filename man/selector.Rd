@@ -33,19 +33,31 @@ reselect(selector_obj, newdata)
 \arguments{
 \item{x}{a \code{selector}}
 
+\item{name}{name of the selector}
+
+\item{label}{label of the selector (for pretty printing)}
+
 \item{all_terms}{a slot containing names of all terms}
 
-\item{selected_coefs}{a numeric vector of selected coefficient estimates}
+\item{recipe_obj}{preprocessor trained from recipes package}
+
+\item{selected_coefs}{a vector of only selected coefficients}
+
+\item{default_infer}{the root string of the default infer method}
 
 \item{meta}{a list containing important meta-information}
 
 \item{object}{a selector object}
+
+\item{newdata}{a new data set (or same one)}
 
 \item{...}{objects passed to native function, otherwise not used.}
 
 \item{scale_coef}{should scaled betas be returned, or unscaled?}
 
 \item{use_native}{if true, passes call to original class \code{coef}}
+
+\item{selector_obj}{a selector object}
 }
 \value{
 An S3 object (list) of class \code{selector} containing:'

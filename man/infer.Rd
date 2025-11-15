@@ -72,14 +72,11 @@ have confidence intervals (at least)}
 \item{...}{arguments passed to \code{selectiveInference} function(s)}
 
 \item{use_cv_sigma}{estimate Sigma via CV (if FALSE, uses SI defaults)}
-
-\item{model}{model of selector_pen_cv class returned from  selector_pen_cv function}
 }
 \value{
 An S3 object (list) of class \code{inferrer}
 
 A list of class \verb{infer_*} containing:'
-\item{model}{A data frame with post-selection inference results}
 \item{ci_avg_ratio}{Average CI length across all variables in model}
 \item{ci_median_ratio}{median CI length across all variables in model}
 \item{nonselection}{method chosen  to deal with non selection}

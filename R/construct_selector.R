@@ -5,9 +5,13 @@
 #' function.
 #'
 #' @param x an object from a selection algorithm
+#' @param name name of the selector
+#' @param label label of the selector (for pretty printing)
 #' @param all_terms a slot containing names of all terms
+#' @param recipe_obj preprocessor trained from recipes package
+#' @param selected_coefs a vector of only selected coefficients
+#' @param default_infer the root string of the default infer method
 #' @param meta a list containing important meta-information
-#' @param selected_coefs a numeric vector of selected coefficient estimates
 #'
 #' @return An S3 object (list) of class `selector` containing:'
 #'   x
@@ -158,6 +162,9 @@ coef.selector <- function(object, use_native = FALSE, ...) {
 #'
 #' Re-do the selection, possibly on new data. Does not re-do the pre-processing;
 #' instead uses the original preprocess recipe from `selector_obj`.
+#'
+#' @param selector_obj a selector object
+#' @param newdata a new data set (or same one)
 #'
 #' @rdname selector
 #'

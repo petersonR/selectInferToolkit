@@ -11,7 +11,6 @@
 #' @param ... additional arguments passed to downstream `infer_*`
 
 #' @return A list of class `infer_*` containing:'
-#' \item{model}{A data frame with post-selection inference results}
 #' \item{ci_avg_ratio}{Average CI length across all variables in model}
 #' \item{ci_median_ratio}{median CI length across all variables in model}
 #' \item{nonselection}{method chosen  to deal with non selection}
