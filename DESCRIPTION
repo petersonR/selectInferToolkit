@@ -32,3 +32,4 @@ Depends:
     R (>= 3.5),
     broom
 VignetteBuilder: knitr
+URL: https://petersonr.github.io/selectInferToolkit/
