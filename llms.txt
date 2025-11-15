@@ -556,45 +556,58 @@ tidy(fit_mcp_infer_pipe)
 
 ## All functions
 
-- [`infer_boot()`](boot.md) [`boot()`](boot.md) :
+- [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md)
+  [`boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md)
+  :
 
   Inference for `selector` via bootstrapping
 
-- [`ciratio()`](ciratio.md) : Computing mean/median CI ratio and
-  significant Discoveries
+- [`ciratio()`](https://petersonr.github.io/selectInferToolkit/reference/ciratio.md)
+  : Computing mean/median CI ratio and significant Discoveries
 
-- [`hers`](hers.md) : HERS data example
+- [`hers`](https://petersonr.github.io/selectInferToolkit/reference/hers.md)
+  : HERS data example
 
-- [`as_inferrer()`](infer.md) [`infer()`](infer.md)
-  [`infer_pipe()`](infer.md) [`infer_selective()`](infer.md)
-  [`infer_upsi()`](infer.md) :
+- [`as_inferrer()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  [`infer()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  [`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  :
 
   Constructor for `inferrer`s
 
-- [`tidy(`*`<inferrer>`*`)`](inferrer.md)
-  [`print(`*`<inferrer>`*`)`](inferrer.md) :
+- [`tidy(`*`<inferrer>`*`)`](https://petersonr.github.io/selectInferToolkit/reference/inferrer.md)
+  [`print(`*`<inferrer>`*`)`](https://petersonr.github.io/selectInferToolkit/reference/inferrer.md)
+  :
 
   tidy method for `inferrer` object
 
-- [`select_full_model()`](select_full_model.md) : Select a full model
+- [`select_full_model()`](https://petersonr.github.io/selectInferToolkit/reference/select_full_model.md)
+  : Select a full model
 
-- [`select_glmnet()`](select_glmnet.md) : Fit an (relaxed) lasso or
-  elastic net penalized regression via glmnet
+- [`select_glmnet()`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md)
+  : Fit an (relaxed) lasso or elastic net penalized regression via
+  glmnet
 
-- [`select_ncvreg()`](select_ncvreg.md) :
+- [`select_ncvreg()`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md)
+  :
 
   Fit an MCP- or SCAD-penalized regression via `ncvreg`
 
-- [`select_null_model()`](select_null_model.md) : Select a null model
+- [`select_null_model()`](https://petersonr.github.io/selectInferToolkit/reference/select_null_model.md)
+  : Select a null model
 
-- [`select_stepwise_ic()`](select_stepwise_ic.md) : Stepwise
-  forward/backward/bidirectional selection with AIC/BIC
+- [`select_stepwise_ic()`](https://petersonr.github.io/selectInferToolkit/reference/select_stepwise_ic.md)
+  : Stepwise forward/backward/bidirectional selection with AIC/BIC
 
-- [`as_selector()`](selector.md)
-  [`predict(`*`<selector>`*`)`](selector.md)
-  [`tidy(`*`<selector>`*`)`](selector.md)
-  [`print(`*`<selector>`*`)`](selector.md)
-  [`coef(`*`<selector>`*`)`](selector.md) [`reselect()`](selector.md) :
+- [`as_selector()`](https://petersonr.github.io/selectInferToolkit/reference/selector.md)
+  [`predict(`*`<selector>`*`)`](https://petersonr.github.io/selectInferToolkit/reference/selector.md)
+  [`tidy(`*`<selector>`*`)`](https://petersonr.github.io/selectInferToolkit/reference/selector.md)
+  [`print(`*`<selector>`*`)`](https://petersonr.github.io/selectInferToolkit/reference/selector.md)
+  [`coef(`*`<selector>`*`)`](https://petersonr.github.io/selectInferToolkit/reference/selector.md)
+  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/selector.md)
+  :
 
   Constructor for `selector`s
 
@@ -602,4 +615,5 @@ tidy(fit_mcp_infer_pipe)
 
 ### All vignettes
 
-- [Using the selectInferToolkit Package](selectInferToolkit.md):
+- [Using the selectInferToolkit
+  Package](https://petersonr.github.io/selectInferToolkit/articles/selectInferToolkit.md):

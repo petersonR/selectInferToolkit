@@ -117,7 +117,7 @@ A data frame with `n` rows and `p` variables:
 
 - hers:
 
-  [insert-url-here](insert-url-here)
+  [insert-url-here](https://petersonr.github.io/selectInferToolkit/reference/insert-url-here)
 
 ## References
 
