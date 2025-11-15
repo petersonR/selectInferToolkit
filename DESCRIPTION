@@ -2,8 +2,15 @@ Package: selectInferToolkit
 Type: Package
 Title: Tools for Variable Selection & Inference
 Version: 0.4.1
-Author: Jinal Shah, Ryan Peterson
-Maintainer: Ryan Peterson <ryan.a.peterson@cuanschutz.edu>
+Authors@R: c(
+    person("Jinal", "Shah", , "jinal.shah@cuanschutz.edu", role = c("aut"),
+      comment = c()
+    ),
+    person("Ryan", "Peterson", "A", "ryan-peterson@uiowa.edu", 
+    role = c("aut", "cre"),
+      comment = c(ORCID = "0000-0002-4650-5798")
+    )
+  )
 Description: This is a package designed to make the process of post-selection
     inference easier.  
 License: GPL (>= 3)
