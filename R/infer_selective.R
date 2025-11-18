@@ -81,11 +81,15 @@ infer_selective <- function(
   if(type == "glmnet") {
     n<- nrow(X)
     sig <- NULL
-    if(use_cv_sigma)
-      sig <- min(sqrt(object$cvm))
-
     b <- coef(object, use_native = TRUE, s=meta$lambda_used,
               exact = TRUE, x = X, y = y)[-1]
+
+    if(use_cv_sigma) {
+      # Similar to estimateSigma, but no new CV required
+      nz = sum(b != 0)
+      rss <- min(object$cvm) * n
+      sig <- sqrt(rss/(n - nz - 1))
+    }
 
     # fixed lasso function requires no intercept in beta vector
     if(all(b == 0)) {
