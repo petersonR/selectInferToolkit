@@ -59,9 +59,17 @@ select_stepwise_ic <- function(
   # If a typical formula is supplied, will center/scale
   if(!inherits(rec_obj, "recipe")) {
 
+    # if(select_factors_together ==T) {
+    #   rec_obj <- recipe(formula, data = data)
+    # }else{
+    #   rec_obj <- recipe(formula, data = data) %>%
+    #     step_dummy(all_factor_predictors(),
+    #                naming = function(...) dummy_names(..., sep = ""))
+    # }
+
     rec_obj <- recipe(formula, data = data) %>%
-      step_dummy(all_factor_predictors(), #skip = select_factors_together,
-                 naming = function(...) dummy_names(..., sep = ""))  %>%
+      step_dummy(all_factor_predictors(),
+                 naming = function(...) dummy_names(..., sep = "")) %>%
       step_zv(all_predictors()) %>%
       step_center(all_numeric_predictors()) %>%
       step_scale(all_numeric_predictors()) %>%
