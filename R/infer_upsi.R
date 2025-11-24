@@ -50,7 +50,7 @@ infer_upsi <- function(
       mutate(estimate = ifelse(is.na(estimate), 0, estimate),
              ci_low = ifelse(is.na(ci_low), 0, ci_low),
              ci_high = ifelse(is.na(ci_high), 0, ci_high),
-             p_value = ifelse(is.na(p_value, 1, p_value))
+             p_value = ifelse(is.na(p_value), 1, p_value)
       )
   }
   if(nonselection == "uncertain_nulls") {

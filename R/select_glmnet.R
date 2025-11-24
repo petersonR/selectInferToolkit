@@ -57,6 +57,7 @@ select_glmnet <- function(
     rec_obj <- recipe(formula, data = data) %>%
       step_dummy(all_factor_predictors(),
                  naming = function(...) dummy_names(..., sep = "")) %>%
+      step_zv(all_predictors()) %>%
       step_center(all_numeric_predictors()) %>%
       step_scale(all_numeric_predictors()) %>%
        prep()
@@ -92,7 +93,7 @@ select_glmnet <- function(
   if(is.character(lambda)) {
     fit <- cv.glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
                      family = family, keep = TRUE, standardize = FALSE, ...)
-    lambda_used <- if(lambda == "best") fit[["lambda.min"]] else fit$lambda[which(fit$cve < min(fit$cve + fit$cvse))[1]]
+    lambda_used <- if(lambda == "best") fit[["lambda.min"]] else fit[["lambda.1se"]]
     cv_used <- TRUE
     ll <- ifelse(lambda == "best", "lambda.min", "lambda.1se")
     b <- as.matrix(coef(fit, s = ll))

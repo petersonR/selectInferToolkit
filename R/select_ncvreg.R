@@ -48,6 +48,7 @@ select_ncvreg <- function(
     rec_obj <- recipe(formula, data = data) %>%
       step_dummy(all_factor_predictors(),
                  naming = function(...) dummy_names(..., sep = "")) %>%
+      step_zv(all_predictors()) %>%
       step_center(all_numeric_predictors()) %>%
       step_scale(all_numeric_predictors()) %>%
       prep()

@@ -51,7 +51,7 @@ select_stepwise_ic <- function(
       formula <- attr(fitted_selector, "recipe_obj")
   }
 
-  k_val <- if(penalty == "AIC") 2 else log(nrow(raw_data))
+  k_val <- if(penalty == "AIC") 2 else log(nrow(data))
 
   # Initial pre-processing
   rec_obj <- formula
@@ -60,13 +60,13 @@ select_stepwise_ic <- function(
   if(!inherits(rec_obj, "recipe")) {
 
     rec_obj <- recipe(formula, data = data) %>%
-      step_dummy(all_factor_predictors(), skip = select_factors_together,
-                 naming = function(...) dummy_names(..., sep = "")) %>%
+      step_dummy(all_factor_predictors(), #skip = select_factors_together,
+                 naming = function(...) dummy_names(..., sep = ""))  %>%
+      step_zv(all_predictors()) %>%
       step_center(all_numeric_predictors()) %>%
       step_scale(all_numeric_predictors()) %>%
       prep()
 
-    # bake first observation for names
     y1 <- bake(rec_obj, new_data = data[1,,drop = FALSE], all_outcomes())
     X1 <- bake(rec_obj, new_data = data[1,,drop=FALSE], all_predictors())
     df1 <- bake(rec_obj, new_data = data[1,,drop = FALSE])
