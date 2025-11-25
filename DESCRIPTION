@@ -6,7 +6,7 @@ Authors@R: c(
     person("Jinal", "Shah", , "jinal.shah@cuanschutz.edu", role = c("aut"),
       comment = c()
     ),
-    person("Ryan", "Peterson", "A", "ryan-peterson@uiowa.edu", 
+    person("Ryan A", "Peterson", , "ryan-peterson@uiowa.edu", 
     role = c("aut", "cre"),
       comment = c(ORCID = "0000-0002-4650-5798")
     )
