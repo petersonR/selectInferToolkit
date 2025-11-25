@@ -728,7 +728,6 @@ test_that("backward selection works", {
 
 
 
-#testthat::test_file("tests/testthat/test-select_stepwise_ic.R")
 
 
 
