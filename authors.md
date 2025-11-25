@@ -9,7 +9,7 @@
 
 ## Citation
 
-Shah J, Peterson RA (2025). *selectInferToolkit: Tools for Variable
+Shah J, Peterson R (2025). *selectInferToolkit: Tools for Variable
 Selection & Inference*. R package version 0.4.1,
 <https://petersonr.github.io/selectInferToolkit/>.
 
