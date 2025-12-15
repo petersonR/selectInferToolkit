@@ -162,6 +162,8 @@ test_that("basic inferrer bootstrap functionality; null model", {
 
 })
 
+
+
 ###### Test HERS Data set continuous outcome ####
 data("hers")
 force(hers)

@@ -59,36 +59,37 @@ select_stepwise_ic <- function(
   # If a typical formula is supplied, will center/scale
   if(!inherits(rec_obj, "recipe")) {
 
-    # if(select_factors_together ==T) {
-    #   rec_obj <- recipe(formula, data = data)
-    # }else{
-    #   rec_obj <- recipe(formula, data = data) %>%
-    #     step_dummy(all_factor_predictors(),
-    #                naming = function(...) dummy_names(..., sep = ""))
-    # }
-
     rec_obj <- recipe(formula, data = data) %>%
-      step_dummy(all_factor_predictors(),
-                 naming = function(...) dummy_names(..., sep = "")) %>%
       step_zv(all_predictors()) %>%
       step_center(all_numeric_predictors()) %>%
-      step_scale(all_numeric_predictors()) %>%
-      prep()
+      step_scale(all_numeric_predictors())
 
+    # Dummy coding ONLY if we want per-level selection
+    if (!select_factors_together) {
+      rec_obj <- rec_obj %>%
+        step_dummy(all_factor_predictors(),
+                   naming = function(...) dummy_names(..., sep = ""))
+    }
+
+    rec_obj <- prep(rec_obj)
+
+    # extract terms
     y1 <- bake(rec_obj, new_data = data[1,,drop = FALSE], all_outcomes())
     X1 <- bake(rec_obj, new_data = data[1,,drop=FALSE], all_predictors())
     df1 <- bake(rec_obj, new_data = data[1,,drop = FALSE])
 
-
     # collect all terms
-    formula_full <- as.formula(paste0(names(y1), " ~ ", paste0(names(X1), collapse = " + ")))
+    formula_full <- as.formula( paste0( names(y1), " ~ ",
+        paste0(ifelse( grepl("[^a-zA-Z0-9._]", names(X1)),
+                       paste0("`", names(X1), "`"),names(X1)),
+          collapse = " + ")))
     all_terms <- colnames(model.matrix(formula_full, data = df1))
+    all_terms <- gsub("`", "", all_terms)
 
     # add additional zero variance step
     rec_obj <- rec_obj %>%
       step_zv() %>%
       prep()
-
     attr(rec_obj, "prepped_selector_recipe") <- TRUE
     attr(rec_obj, "formula_full") <- formula_full
 
@@ -124,7 +125,8 @@ select_stepwise_ic <- function(
     scope = list(lower = formula_null, upper = formula_full),
     direction = direction,
     k = k_val,
-    trace = trace
+    trace = trace,
+    ...
   )
 
   meta_information <- list(
@@ -135,8 +137,15 @@ select_stepwise_ic <- function(
   )
 
   selected_coefs <- coef(selected_model)
+  names(selected_coefs) <- ifelse(
+    grepl("[^a-zA-Z0-9._]", names(selected_coefs)),
+    paste0("`", gsub("`", "", names(selected_coefs)), "`"),
+    names(selected_coefs)
+  )
+
 
   as_selector(selected_model, name = "stepwise_ic", label = "Stepwise IC-based",
               all_terms = all_terms, recipe_obj = rec_obj, default_infer = "boot",
+              formula_full =formula_full,
               selected_coefs = selected_coefs, meta = meta_information)
 }

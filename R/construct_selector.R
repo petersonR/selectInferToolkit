@@ -23,7 +23,7 @@
 #' @export
 
 as_selector <- function(x, name, label = name, all_terms, recipe_obj,
-                        selected_coefs,
+                        formula_full, selected_coefs,
                         default_infer, meta = list()) {
 
   stopifnot(is.list(meta))
@@ -35,6 +35,7 @@ as_selector <- function(x, name, label = name, all_terms, recipe_obj,
             label = label,
             all_terms = all_terms,
             recipe_obj = recipe_obj,
+            formula_full =formula_full,
             selected_coefs = selected_coefs,
             default_infer = default_infer,
             meta = meta)
@@ -52,13 +53,26 @@ predict.selector <- function(object, newdata = NULL, ...) {
     stop("Please provide newdata")
 
   rec_obj <- attr(object, "recipe_obj")
+  beta <- attr(object, "selected_coefs")
 
   newdata <- bake(rec_obj, newdata) %>%
     as.data.frame()
 
-  beta <- attr(object, "selected_coefs")
-  XX <- cbind(1, as.matrix(newdata[,names(beta)[-1]]))
-  return(as.vector(XX %*% beta))
+  outcome_name <- rec_obj$var_info %>%
+    filter(role == "outcome") %>%
+    pull(variable)
+
+  X_full <- model.matrix(~ .,
+    data = newdata[, setdiff(names(newdata), outcome_name), drop = FALSE]
+  )
+
+  ## align columns with beta
+  common_terms <- intersect(colnames(X_full), names(beta))
+
+  X_sel <-  X_full[, common_terms, drop = FALSE]
+  beta  <- beta[common_terms]
+
+  return(as.vector(X_sel %*% beta))
 }
 
 #' tidy method for `selector` object

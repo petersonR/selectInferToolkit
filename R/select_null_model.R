@@ -89,5 +89,6 @@ select_null_model <- function(
 
   as_selector(fit, name = "null_model", label = "Null model (no selection)",
               all_terms = all_terms, recipe_obj = rec_obj, default_infer = "upsi",
-              selected_coefs = selected_coefs, meta = meta_information)
+              selected_coefs = selected_coefs, meta = meta_information,
+              formula_full = formula_null)
 }

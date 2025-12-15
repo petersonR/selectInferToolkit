@@ -13,7 +13,7 @@
 #'
 #' @return `inferrer` object
 #'
-#' @importFrom dplyr right_join group_by summarize bind_rows pull
+#' @importFrom dplyr right_join group_by summarize bind_rows pull filter
 #'
 #' @rdname infer
 #' @export
@@ -25,19 +25,53 @@ infer_upsi <- function(
     conf.level = .95){
 
   nonselection <- match.arg(nonselection)
-
-  selected_vars <- names(coef(object)[-1])
   rec_obj <- attr(object, "recipe_obj")
   meta <- attr(object, "meta")
+  all_terms <- attr(object, "all_terms")
+
   outcome_name <- rec_obj$var_info %>%
     filter(role == "outcome") %>%
     pull(variable)
-  all_terms <- attr(object, "all_terms")
+
+  fam <- if (is.character(meta$family)) {get(meta$family, mode = "function")()
+    }else {meta$family}
 
   df <- bake(rec_obj, new_data = data)
+  y <- bake(rec_obj, new_data = data, all_outcomes())
 
-  selected_formula <- formula(paste0(outcome_name, "~", paste0(c(1, selected_vars), collapse = "+")))
-  fit_selected <- glm(selected_formula, data = df, family = meta$family)
+
+  # build full model matrix using the stored full formula
+  X_full <- model.matrix(attr(object, "formula_full"), data = df)
+  mm <- model.matrix(
+    ~ .,
+    data = df[, setdiff(names(df), outcome_name), drop = FALSE]
+  )
+
+  ## selected terms
+  selected_terms<- tidy(object, scale_coef = TRUE) |>
+    filter(selected == 1, term != "(Intercept)") |>
+    pull(term)
+
+  ## subset matrix
+  X_sel <- mm[, c("(Intercept)", selected_terms), drop = FALSE]
+
+  ## build data frame for glm()
+  glm_df <- as.data.frame(X_sel)
+  glm_df[[outcome_name]] <- y[[outcome_name]]
+
+  ## clean formula (now columns exist!)
+  glm_formula <- reformulate(
+    termlabels = colnames(X_sel)[-1],
+    response   = outcome_name
+  )
+
+  ## refit
+  fit_selected <- glm(
+    glm_formula,
+    data   = glm_df,
+    family = fam
+  )
+
   results_selected <- tidy(fit_selected, conf.int = TRUE, conf.level = conf.level) %>%
     select(term, estimate, ci_low = conf.low, ci_high = conf.high, p_value = p.value)
 

@@ -191,6 +191,26 @@ data("hers")
 force(hers)
 fullmod <- select_full_model(hdl1 ~ ., hers)
 
+
+test_that("basic inferrer UPSI functionality", {
+
+  expect_no_warning({
+    inf <- infer_upsi(fullmod, data =hers)
+    tidy(inf)
+  })
+
+  expect_no_warning({
+    inf2 <- infer_upsi(fullmod, data = hers, nonselection = "uncertain_nulls")
+    tidy(inf2)
+  })
+
+  expect_no_warning({
+    inf3 <- infer_upsi(fullmod, data = hers, nonselection = "confident_nulls")
+    tidy(inf3)
+  })
+
+})
+
 test_that("basic inferrer bootstrap functionality; full model", {
 
   expect_equal(unname(predict.glm(fullmod)), predict(fullmod, newdata = hers))
