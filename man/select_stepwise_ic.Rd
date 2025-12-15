@@ -8,7 +8,7 @@ select_stepwise_ic(
   formula,
   data,
   family = c("gaussian", "binomial"),
-  select_factors_together = TRUE,
+  select_factors_together = FALSE,
   penalty = c("AIC", "BIC"),
   direction = c("forward", "backward", "both"),
   trace = 0,

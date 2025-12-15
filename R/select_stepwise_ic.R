@@ -24,7 +24,7 @@
 
 select_stepwise_ic <- function(
     formula, data, family = c("gaussian", "binomial"),
-    select_factors_together = TRUE,
+    select_factors_together = FALSE,
     penalty = c("AIC", "BIC"),
     direction = c("forward", "backward", "both"),
     trace = 0,
@@ -58,6 +58,10 @@ select_stepwise_ic <- function(
 
   # If a typical formula is supplied, will center/scale
   if(!inherits(rec_obj, "recipe")) {
+
+    if(select_factors_together) {
+      warning("select_factors_together is experimental; please use with caution")
+    }
 
     # if(select_factors_together ==T) {
     #   rec_obj <- recipe(formula, data = data)
