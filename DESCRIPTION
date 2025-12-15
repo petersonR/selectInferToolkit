@@ -1,7 +1,7 @@
 Package: selectInferToolkit
 Type: Package
 Title: Tools for Variable Selection & Inference
-Version: 0.4.1
+Version: 0.4.2
 Authors@R: c(
     person("Jinal", "Shah", , "jinal.shah@cuanschutz.edu", role = c("aut"),
       comment = c()
