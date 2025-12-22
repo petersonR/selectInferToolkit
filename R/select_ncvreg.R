@@ -115,6 +115,8 @@ select_ncvreg <- function(
 
   as_selector(fit, "ncvreg", label = "Penalized `ncvreg`-based",
               all_terms = all_terms, recipe_obj = rec_obj,
+             orig_formula =formula,
+              selected_terms =  names(selected_coefs),
               selected_coefs = selected_coefs,
               default_infer = "pipe", meta = meta_information)
 }

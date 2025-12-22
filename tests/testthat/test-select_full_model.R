@@ -78,18 +78,18 @@ test_that("basic inferrer bootstrap functionality; full model", {
   })
 
   # try debiasing
-  # expect_no_warning({
-  #   set.seed(1)
-  #   inf4 <- infer_boot(fullmod,, data = iris, B = 50, debias = TRUE, inference_target = "all")
-  #   vals4 <- tidy(inf4)
-  #   sum(vals4$selected==0) ==0
-  #   sum(vals4$prop_selected==1) ==nrow(vals4)
-  #
-  # })
+  expect_no_warning({
+    set.seed(1)
+    inf4 <- infer_boot(fullmod,, data = iris, B = 50, debias = TRUE, inference_target = "all")
+    vals4 <- tidy(inf4)
+    sum(vals4$selected==0) ==0
+    sum(vals4$prop_selected==1) ==nrow(vals4)
+
+  })
 
   # with no selections and same seed, models should have same result
-  #expect_equal( vals1, vals2)
-  #expect_equal( vals3, vals4)
+  expect_equal( vals1, vals2)
+  expect_equal( vals3, vals4)
 
 
   # re-sampling
@@ -100,8 +100,9 @@ test_that("basic inferrer bootstrap functionality; full model", {
 
   # Try to re-fit with re-select to "new" data
   rsel2 <- reselect(fullmod, newdata = iris[1:50,])
- # in theory should at least have same selections
-#  in practice a bit different due to pre-processing
+
+  # in theory should at least have same selections
+  #  in practice a bit different due to pre-processing
   # expect_equal(
   #   names(coef(rsel2)),
   #   names(coef(select_full_model(Sepal.Length ~ ., iris[1:50,])))
@@ -346,3 +347,4 @@ test_that("basic inferrer bootstrap functionality; full model", {
   )
 })
 
+#testthat::test_file("tests/testthat/test-select_full_model.R")

@@ -86,9 +86,16 @@ select_null_model <- function(
 
   meta_information <- list(family = family)
   selected_coefs <- coef(fit)
+  fit_sum = summary(fit)
+  selected_terms <- rownames(fit_sum[["coefficients"]])
 
   as_selector(fit, name = "null_model", label = "Null model (no selection)",
-              all_terms = all_terms, recipe_obj = rec_obj, default_infer = "upsi",
-              selected_coefs = selected_coefs, meta = meta_information,
-              formula_full = formula_null)
+              all_terms = all_terms,
+              recipe_obj = rec_obj,
+              #formula_full = formula_null,
+              orig_formula = formula,
+              selected_terms=selected_terms,
+              selected_coefs = selected_coefs,
+              default_infer = "upsi",
+              meta = meta_information)
 }

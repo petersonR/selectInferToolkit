@@ -22,8 +22,9 @@
 #'
 #' @export
 
-as_selector <- function(x, name, label = name, all_terms, recipe_obj,
-                        formula_full, selected_coefs,
+as_selector <- function(x, name, label = name, all_terms,
+                        recipe_obj, orig_formula,#formula_full,
+                        selected_terms,selected_coefs,
                         default_infer, meta = list()) {
 
   stopifnot(is.list(meta))
@@ -35,7 +36,9 @@ as_selector <- function(x, name, label = name, all_terms, recipe_obj,
             label = label,
             all_terms = all_terms,
             recipe_obj = recipe_obj,
-            formula_full =formula_full,
+            #formula_full =formula_full,
+            orig_formula=  orig_formula,
+            selected_terms=selected_terms,
             selected_coefs = selected_coefs,
             default_infer = default_infer,
             meta = meta)
@@ -47,33 +50,34 @@ as_selector <- function(x, name, label = name, all_terms, recipe_obj,
 #'
 #' @rdname selector
 #' @export
-predict.selector <- function(object, newdata = NULL, ...) {
+
+predict.selector <- function(object, newdata, scale = TRUE, ...) {
 
   if(missing(newdata))
     stop("Please provide newdata")
 
   rec_obj <- attr(object, "recipe_obj")
-  beta <- attr(object, "selected_coefs")
 
-  newdata <- bake(rec_obj, newdata) %>%
+  baked <- bake(rec_obj, new_data = newdata) %>%
     as.data.frame()
 
-  outcome_name <- rec_obj$var_info %>%
-    filter(role == "outcome") %>%
-    pull(variable)
+  if (attr(object, "name") =="stepwise_ic") {
+    formula_used <- formula(object)
+    X <- model.matrix(formula_used, baked)
+    beta <- coef(object)
+    XX <- X[, names(beta), drop = FALSE]
+  } else {
+    formula_used <- attr(object, "orig_formula")
+    X <- model.matrix(formula_used, baked)
+    beta <- attr(object, "selected_coefs")
+    XX <- X[, names(beta), drop = FALSE]
+  }
 
-  X_full <- model.matrix(~ .,
-    data = newdata[, setdiff(names(newdata), outcome_name), drop = FALSE]
-  )
-
-  ## align columns with beta
-  common_terms <- intersect(colnames(X_full), names(beta))
-
-  X_sel <-  X_full[, common_terms, drop = FALSE]
-  beta  <- beta[common_terms]
-
-  return(as.vector(X_sel %*% beta))
+    return(as.vector(XX %*% beta))
 }
+
+
+
 
 #' tidy method for `selector` object
 #'
@@ -84,7 +88,7 @@ predict.selector <- function(object, newdata = NULL, ...) {
 #'
 #' @importFrom tibble rownames_to_column
 #' @importFrom broom tidy
-#' @importFrom dplyr left_join
+#' @importFrom dplyr left_join filter select mutate if_else
 #' @importFrom tibble tibble
 #'
 #' @rdname selector
@@ -92,13 +96,28 @@ predict.selector <- function(object, newdata = NULL, ...) {
 #' @export
 tidy.selector <- function(x, scale_coef = TRUE, ...) {
 
-  selected_coefs <- tibble::rownames_to_column(
-    data.frame(estimate = coef(x), selected = 1), "term")
-
   all_terms <- attr(x, "all_terms")
-  rec_obj <- attr(x, "recipe_obj")
-  scale_step_idx <- which(tidy(rec_obj)$type == "scale")
+  if (c("(Intercept)")%in% all_terms ){all_terms=all_terms}else
+     {all_terms=c("(Intercept)",all_terms)}
 
+  rec_obj <- attr(x, "recipe_obj")
+
+  # Coefficients from selected model
+  coef_df <- tibble(term = names(coef(x)),
+    estimate = as.numeric(coef(x)),
+    selected =1)
+
+  # Drop intercept for term-level table
+  selected_terms <- coef_df $term
+
+  base <- tibble(
+    term = all_terms,
+    selected1 = as.integer(all_terms %in% selected_terms)) %>%
+    #left_join(coef_df_terms, by = "term")
+    left_join(coef_df, by = "term")
+
+
+  scale_step_idx <- which(tidy(rec_obj)$type == "scale")
   if(length(scale_step_idx)) {
     sds <- tidy(rec_obj, number = scale_step_idx) %>%
       select(term = terms, sd = value)
@@ -106,27 +125,31 @@ tidy.selector <- function(x, scale_coef = TRUE, ...) {
     stop("a scaling step is required")
   }
 
-
-  results <- tibble(term = all_terms) %>%
-    left_join(selected_coefs, by = "term") %>%
-    mutate(selected = ifelse(is.na(selected), 0, selected)) %>%
+  results <- base %>%
     left_join(sds, by = "term") %>%
-    mutate(coef_scaled = estimate,
-           coef_unscaled = ifelse(term != "(Intercept)", coef_scaled/sd, estimate) ) %>%
-    select(term, selected, estimate, coef_scaled, coef_unscaled)
+    mutate(
+      coef_scaled = estimate,
+      coef_unscaled = dplyr::if_else(
+        !is.na(sd),
+        coef_scaled / sd,
+        coef_scaled   ))
 
-  if(scale_coef) {
+  if (scale_coef) {
     results <- results %>%
-      mutate(coef = ifelse(is.na(coef_scaled),  0, coef_scaled)) %>%
-      select(term, selected, coef )
-  }  else {
+      mutate(coef = ifelse(is.na(coef_scaled), 0, coef_scaled),
+            selected =ifelse(is.na(selected),0,selected))
+  } else {
     results <- results %>%
-      mutate(coef = ifelse(is.na(coef_unscaled), 0, coef_unscaled)) %>%
-      select(term, selected, coef)
+     mutate(coef = ifelse(is.na(coef_unscaled), 0, coef_unscaled),
+              selected =ifelse(is.na(selected),0,selected))
   }
 
-  results
+  results %>%
+    select(term, selected, coef)
+
 }
+
+
 
 #'
 #' @rdname selector

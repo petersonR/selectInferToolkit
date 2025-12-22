@@ -35,11 +35,14 @@ format_meta <- function(meta, digits = 3) {
   paste(fmt, collapse = ", ")
 }
 
-fill_in_nonselections <- function(inferences, selector_obj, nonselection, X, y, conf.level) {
+fill_in_nonselections <- function(inferences, selector_obj,
+                                  nonselection, X, y, conf.level,
+                                  term_to_col = NULL) {
 
   family <- attr(selector_obj, "meta")$family
   val <- tidy(selector_obj) %>%
     left_join(inferences, by = c("term", "selected"))
+
 
   if(nonselection == "confident_nulls") {
     val$estimate <- ifelse(val$selected, val$estimate, 0)
@@ -52,31 +55,50 @@ fill_in_nonselections <- function(inferences, selector_obj, nonselection, X, y, 
   }
 
   if(nonselection == "uncertain_nulls") {
+    selected_terms <- term_to_col$col[term_to_col$term %in% val$term[val$selected==1]]
+    nonselected_terms <- val$term[!val$selected]
 
-    selected_vars <- val$term[val$selected == 1][-1]
-    nonselected_vars <- val$term[!val$selected]
+    if(length(nonselected_terms)) {
 
-    f_selected <- paste0(c("y ~ 1 ", selected_vars), collapse = " + ")
+      df <- X
+      df$y <- y
 
-    if(length(nonselected_vars)) {
-      f_selected_fo <- as.formula(f_selected)
-      fit_selected <- glm(f_selected_fo, data = X, family = family)
+      for(term in nonselected_terms) {
 
-      for(j in 1:length(nonselected_vars)) {
-        f_j <- paste0(f_selected, " + ", nonselected_vars[j])
-        fit_j <- glm(as.formula(f_j), data = X, family = family)
-        val_j <- tail(tidy(fit_j, conf.int = TRUE), 1)
-        val$estimate[val$term == nonselected_vars[j]] <- val_j$estimate
-        val$ci_low[val$term == nonselected_vars[j]] <- val_j$conf.low
-        val$ci_high[val$term == nonselected_vars[j]] <- val_j$conf.high
-        val$p_value[val$term == nonselected_vars[j]] <- val_j$p.value
+        cols <- term_to_col$col[term_to_col$term == term]
+        if(length(cols) == 0) next  # skip if no match
+
+        all_terms <- c(selected_terms, cols)
+
+        # construct formula with selected columns + current nonselected column(s)
+        formula_str <- paste0("y ~ ", paste0("`", all_terms, "`", collapse = " + "))
+        fit <- glm(as.formula(formula_str), data = df, family = attr(selector_obj, "meta")$family)
+
+        # extract coefficient info for this term
+        fit_tidy <- tidy(fit, conf.int = TRUE, conf.level = conf.level)
+        coef_row <- fit_tidy[fit_tidy$term %in% cols, ]
+        if(nrow(coef_row) == 0) next
+
+        val$estimate[val$term == term] <- coef_row$estimate
+        val$ci_low[val$term == term] <- coef_row$conf.low
+        val$ci_high[val$term == term] <- coef_row$conf.high
+        val$p_value[val$term == term] <- coef_row$p.value
 
       }
     }
   }
+
+  if("term_clean" %in% colnames(val)){val %>% select(-term_clean)}
+
   val
 }
 
 
-
+NULL
+clean_name <- function(x) {
+  x<- gsub("\\s+", ".", x)        # spaces -> dot
+  x <- gsub("-", ".", x)           # hyphens -> dot
+  x <- gsub("\\+", ".", x)         # plus signs -> dot
+  x
+}
 

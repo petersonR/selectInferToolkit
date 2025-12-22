@@ -25,7 +25,6 @@ test_that("bi-direction works", {
 
   expect_no_warning({
     capture_output(print(sel))
-    tidy(sel)
     tidy(sel,scale_coef = F)
     predict(sel, newdata =iris[1:5,])
     predict(sel, newdata = iris)
@@ -389,7 +388,7 @@ test_that("bi-direction works", {
 
   expect_no_warning({
     capture_output(print(sel))
-    tidy(sel)
+    print( tidy(sel), n=50)
     tidy(sel,scale_coef = F)
     predict(sel, newdata =hers[1:5,])
     predict(sel, newdata = hers)
@@ -437,6 +436,66 @@ test_that("bi-direction works", {
     names(coef(rsel2)),
     names(coef(select_stepwise_ic(hdl1 ~ ., hers[1:50,],  direction="both",
                                   penalty ="BIC")))
+  )
+
+
+})
+
+test_that("bi-direction works individual factors ", {
+  sel <- select_stepwise_ic(hdl1 ~ ., hers,  direction="both",
+                                select_factors_together = F)
+
+  expect_no_warning({
+    capture_output(print(sel))
+    print( tidy(sel), n=50)
+    tidy(sel,scale_coef = F)
+    predict(sel, newdata =hers[1:5,])
+    predict(sel, newdata = hers)
+  })
+
+
+  expect_equal(unname(predict.glm(sel)), predict(sel, newdata =hers))
+
+  rsel <- reselect(sel, hers)
+  expect_identical(coef(sel), coef(rsel))
+  expect_identical(predict(sel, newdata = hers), predict(rsel, newdata = hers))
+  expect_identical(tidy(sel), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel, newdata = hers[1:500,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(hdl1 ~ ., hers[1:500,],select_factors_together = F)))
+  )
+
+
+
+  sel2 <- select_stepwise_ic(hdl1 ~ ., hers,  direction="both",
+                             penalty ="BIC",  select_factors_together = F)
+
+  expect_no_warning({
+    capture_output(print(sel2))
+    tidy(sel2)
+    tidy(sel2,scale_coef = F)
+    predict(sel2, newdata =hers[1:5,])
+    predict(sel2, newdata = hers)
+  })
+
+  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = hers))
+
+  rsel2 <- reselect(sel2, hers)
+  expect_identical(coef(sel2), coef(rsel2))
+  expect_identical(predict(sel2, newdata = hers), predict(rsel2, newdata = hers))
+  expect_identical(tidy(sel2), tidy(rsel2))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel2, newdata = hers[1:50,])
+  #should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(hdl1 ~ ., hers[1:50,],  direction="both",
+                                  select_factors_together = F, penalty ="BIC")))
   )
 
 
@@ -493,6 +552,64 @@ test_that("forward selection works", {
     names(coef(rsel2)),
     names(coef(select_stepwise_ic(hdl1 ~ ., hers[1:50,],  direction="forward",
                                   penalty ="BIC")))
+  )
+
+
+})
+
+test_that("forward selection works, individual factors", {
+  sel <- select_stepwise_ic(hdl1 ~ ., hers,  direction="forward",
+                            select_factors_together = F)
+
+  expect_no_warning({
+    capture_output(print(sel))
+    tidy(sel)
+    tidy(sel,scale_coef = F)
+    predict(sel, newdata =hers[1:5,])
+    predict(sel, newdata = hers)
+  })
+
+  expect_equal(unname(predict.glm(sel)), predict(sel, newdata = hers))
+
+  rsel <- reselect(sel, hers)
+  expect_identical(coef(sel), coef(rsel))
+  expect_identical(predict(sel, newdata = hers), predict(rsel, newdata = hers))
+  expect_identical(tidy(sel), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel, newdata = hers[1:500,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(hdl1 ~ ., hers[1:500,],  direction="forward",
+                                  select_factors_together = F)))
+  )
+
+  sel2 <- select_stepwise_ic(hdl1 ~ ., hers,  direction="forward",
+                             penalty ="BIC", select_factors_together = F)
+
+  expect_no_warning({
+    capture_output(print(sel2))
+    tidy(sel2)
+    tidy(sel2,scale_coef = F)
+    predict(sel2, newdata =hers[1:5,])
+    predict(sel2, newdata = hers)
+  })
+
+  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = hers))
+
+  rsel2 <- reselect(sel2, hers)
+  expect_identical(coef(sel2), coef(rsel2))
+  expect_identical(predict(sel2, newdata = hers), predict(rsel2, newdata = hers))
+  expect_identical(tidy(sel2), tidy(rsel2))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel2, newdata = hers[1:50,])
+  #should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(hdl1 ~ ., hers[1:50,],  direction="forward",
+                                  penalty ="BIC", select_factors_together = F)))
   )
 
 
@@ -555,7 +672,67 @@ test_that("backward selection works", {
 
 })
 
+test_that("backward selection works  individual factors", {
+  sel <- select_stepwise_ic(hdl1 ~ ., hers,  direction="backward",
+                            select_factors_together = F)
+
+  expect_no_warning({
+    capture_output(print(sel))
+    tidy(sel)
+    tidy(sel,scale_coef = F)
+    predict(sel, newdata =hers[1:5,])
+    predict(sel, newdata = hers)
+  })
+
+  expect_equal(unname(predict.glm(sel)), predict(sel, newdata = hers))
+  rsel <- reselect(sel, hers)
+  expect_identical(coef(sel), coef(rsel))
+  expect_identical(predict(sel, newdata = hers), predict(rsel, newdata = hers))
+  expect_identical(tidy(sel), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel, newdata = hers[1:500,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(hdl1 ~ ., hers[1:500,],direction="backward",
+                                  select_factors_together = F)))
+  )
+
+
+  sel2 <- select_stepwise_ic(hdl1 ~ ., hers,  direction="backward",
+                             penalty ="BIC", select_factors_together = F)
+
+  expect_no_warning({
+    capture_output(print(sel2))
+    tidy(sel2)
+    tidy(sel2,scale_coef = F)
+    predict(sel2, newdata =hers[1:5,])
+    predict(sel2, newdata = hers)
+  })
+
+  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = hers))
+
+  rsel2 <- reselect(sel2, hers)
+  expect_identical(coef(sel2), coef(rsel2))
+  expect_identical(predict(sel2, newdata = hers), predict(rsel2, newdata = hers))
+  expect_identical(tidy(sel2), tidy(rsel2))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel2, newdata = hers[1:150,])
+  #should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(hdl1 ~ ., hers[1:150,],  direction="backward",
+                                  penalty ="BIC", select_factors_together = F)))
+  )
+
+
+
+})
+
 ###### Test HERS Data set binary outcome ####
+
 hers_diab <- hers  %>% select (-hdl1, -dmpills, -insulin)
 head(hers_diab)
 
@@ -609,6 +786,64 @@ test_that("bi-direction works", {
     names(coef(rsel2)),
     names(coef(select_stepwise_ic(diabetes~ ., hers_diab[1:150,],  direction="both",family = "binomial",
                                   penalty ="BIC")))
+  )
+
+
+
+})
+
+test_that("bi-direction works individual factors", {
+  sel <- select_stepwise_ic(diabetes ~ ., hers_diab,  direction="both",
+                            family = "binomial", select_factors_together = F)
+
+  expect_no_warning({
+    capture_output(print(sel))
+    tidy(sel)
+    tidy(sel,scale_coef = F)
+    predict(sel, newdata =hers_diab[1:5,])
+    predict(sel, newdata = hers_diab)
+  })
+
+  expect_equal(unname(predict.glm(sel)), predict(sel, newdata =hers_diab))
+  rsel <- reselect(sel, hers_diab)
+  expect_identical(coef(sel), coef(rsel))
+  expect_identical(predict(sel, newdata = hers_diab), predict(rsel, newdata = hers))
+  expect_identical(tidy(sel), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel, newdata = hers_diab[1:500,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(diabetes ~ ., hers_diab[1:500,],direction="both",
+                                  family = "binomial", select_factors_together = F)))
+  )
+
+  sel2 <- select_stepwise_ic(diabetes ~ ., hers_diab,  direction="both",family = "binomial",
+                             penalty ="BIC", select_factors_together = F)
+
+  expect_no_warning({
+    capture_output(print(sel2))
+    tidy(sel2)
+    tidy(sel2,scale_coef = F)
+    predict(sel2, newdata =hers_diab[1:5,])
+    predict(sel2, newdata = hers_diab)
+  })
+
+  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = hers_diab))
+
+  rsel2 <- reselect(sel2, hers_diab)
+  expect_identical(coef(sel2), coef(rsel2))
+  expect_identical(predict(sel2, newdata = hers_diab), predict(rsel2, newdata = hers_diab))
+  expect_identical(tidy(sel2), tidy(rsel2))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel2, newdata = hers_diab[1:150,])
+  #should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(diabetes~ ., hers_diab[1:150,],  direction="both",family = "binomial",
+                                  penalty ="BIC", select_factors_together = F)))
   )
 
 
@@ -671,6 +906,64 @@ test_that("forward selection works", {
 
 })
 
+test_that("forward selection works individual factors", {
+  sel <- select_stepwise_ic(diabetes ~ ., hers_diab,  direction="forward",
+                            family = "binomial", select_factors_together = F)
+
+
+  expect_no_warning({
+    capture_output(print(sel))
+    tidy(sel)
+    tidy(sel,scale_coef = F)
+    predict(sel, newdata =hers_diab[1:5,])
+    predict(sel, newdata = hers_diab)
+  })
+
+  expect_equal(unname(predict.glm(sel)), predict(sel, newdata =hers_diab))
+  rsel <- reselect(sel, hers_diab)
+  expect_identical(coef(sel), coef(rsel))
+  expect_identical(predict(sel, newdata = hers_diab), predict(rsel, newdata = hers))
+  expect_identical(tidy(sel), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel, newdata = hers_diab[1:500,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(diabetes ~ ., hers_diab[1:500,],direction="forward",
+                                  family = "binomial", select_factors_together = F)))
+  )
+
+
+  sel2 <- select_stepwise_ic(diabetes ~ ., hers_diab,  direction="forward",family = "binomial",
+                             penalty ="BIC", select_factors_together = F)
+
+  expect_no_warning({
+    capture_output(print(sel2))
+    tidy(sel2)
+    tidy(sel2,scale_coef = F)
+    predict(sel2, newdata =hers_diab[1:5,])
+    predict(sel2, newdata = hers_diab)
+  })
+
+  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = hers_diab))
+
+  rsel2 <- reselect(sel2, hers_diab)
+  expect_identical(coef(sel2), coef(rsel2))
+  expect_identical(predict(sel2, newdata = hers_diab), predict(rsel2, newdata = hers_diab))
+  expect_identical(tidy(sel2), tidy(rsel2))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel2, newdata = hers_diab[1:150,])
+  #should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(diabetes~ ., hers_diab[1:150,],  direction="forward",family = "binomial",
+                                  penalty ="BIC", select_factors_together = F)))
+  )
+
+})
+
 test_that("backward selection works", {
   sel <- select_stepwise_ic(diabetes ~ ., hers_diab,  direction="backward",family = "binomial")
 
@@ -727,8 +1020,65 @@ test_that("backward selection works", {
 })
 
 
+test_that("backward selection works indiviudal factors", {
+  sel <- select_stepwise_ic(diabetes ~ ., hers_diab,
+                            direction="backward",family = "binomial",
+                            select_factors_together = F)
+
+  expect_no_warning({
+    capture_output(print(sel))
+    tidy(sel)
+    tidy(sel,scale_coef = F)
+    predict(sel, newdata =hers_diab[1:5,])
+    predict(sel, newdata = hers_diab)
+  })
+
+  expect_equal(unname(predict.glm(sel)), predict(sel, newdata =hers_diab))
+  rsel <- reselect(sel, hers_diab)
+  expect_identical(coef(sel), coef(rsel))
+  expect_identical(predict(sel, newdata = hers_diab), predict(rsel, newdata = hers))
+  expect_identical(tidy(sel), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel, newdata = hers_diab[1:500,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(diabetes ~ ., hers_diab[1:500,],
+                                  direction="backward",family = "binomial",select_factors_together = F)))
+  )
 
 
+  sel2 <- select_stepwise_ic(diabetes ~ ., hers_diab,  direction="backward",family = "binomial",
+                             penalty ="BIC", select_factors_together = F)
 
+  expect_no_warning({
+    capture_output(print(sel2))
+    tidy(sel2)
+    tidy(sel2,scale_coef = F)
+    predict(sel2, newdata =hers_diab[1:5,])
+    predict(sel2, newdata = hers_diab)
+  })
+
+  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = hers_diab))
+  rsel2 <- reselect(sel2, hers_diab)
+  expect_identical(coef(sel2), coef(rsel2))
+  expect_identical(predict(sel2, newdata = hers_diab), predict(rsel2, newdata = hers_diab))
+  expect_identical(tidy(sel2), tidy(rsel2))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel2, newdata = hers_diab[1:150,])
+  #should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(diabetes~ ., hers_diab[1:150,],  direction="backward",family = "binomial",
+                                  penalty ="BIC", select_factors_together = F)))
+  )
+
+
+})
+
+
+#testthat::test_file("tests/testthat/test-select_stepwise_ic.R")
 
 

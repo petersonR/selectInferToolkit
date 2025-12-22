@@ -108,6 +108,25 @@ iris_binary = iris %>% select(-Species)
 formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
 nullmod <- select_null_model(as.formula(formula), iris_binary,family = "binomial" )
 
+test_that("basic inferrer UPSI functionality", {
+
+  expect_no_error({
+    inf <- infer_upsi(nullmod, data =iris_binary)
+    tidy(inf)
+  })
+
+  expect_no_error({
+    inf2 <- infer_upsi(nullmod, data = iris_binary, nonselection = "uncertain_nulls")
+    tidy(inf2)
+  })
+
+  expect_no_error({
+    inf3 <- infer_upsi(nullmod, data = iris_binary, nonselection = "confident_nulls")
+    tidy(inf3)
+  })
+
+})
+
 test_that("basic inferrer bootstrap functionality; null model", {
 
   # run vanilla version
@@ -169,6 +188,26 @@ data("hers")
 force(hers)
 nullmod <- select_null_model(hdl1 ~ ., hers)
 
+test_that("basic inferrer UPSI functionality", {
+
+  expect_no_warning({
+    inf <- infer_upsi(nullmod, data =hers)
+    tidy(inf)
+  })
+
+  expect_no_warning({
+    inf2 <- infer_upsi(nullmod, data = hers, nonselection = "uncertain_nulls")
+    tidy(inf2)
+  })
+
+  expect_no_warning({
+    inf3 <- infer_upsi(nullmod, data = hers, nonselection = "confident_nulls")
+    tidy(inf3)
+  })
+
+})
+
+
 test_that("basic inferrer bootstrap functionality; null model", {
 
   # run vanilla version
@@ -225,17 +264,38 @@ hers_diab <- hers  %>% select (-hdl1, -dmpills, -insulin)
 
 nullmod <- select_null_model(diabetes ~ ., hers_diab, family = "binomial")
 
+test_that("basic inferrer UPSI functionality", {
+
+  expect_no_warning({
+    inf <- infer_upsi(nullmod, data =hers_diab)
+    tidy(inf)
+  })
+
+  expect_no_warning({
+    inf2 <- infer_upsi(nullmod, data = hers_diab, nonselection = "uncertain_nulls")
+    tidy(inf2)
+  })
+
+  expect_no_warning({
+    inf3 <- infer_upsi(nullmod, data = hers_diab, nonselection = "confident_nulls")
+    tidy(inf3)
+  })
+
+})
+
+
+
 test_that("basic inferrer bootstrap functionality; null model", {
 
   # run vanilla version
-  expect_no_error({
+  expect_no_warning({
     inf1 <- infer_boot(nullmod , data = hers_diab, B = 50, debias = FALSE)
     vals1 <- tidy(inf1)
     sum(vals1$selected==0) ==nrow(vals1)-1
   })
 
   # try debiasing everything
-  expect_no_error({
+  expect_no_warning({
     inf2 <- infer_boot(nullmod , data = hers_diab, B = 50, debias = TRUE)
     vals2 <- tidy(inf2)
     sum(vals2$selected==0) ==nrow(vals2)-1
@@ -244,7 +304,7 @@ test_that("basic inferrer bootstrap functionality; null model", {
   })
 
   # try for "all" inference target
-  expect_no_error({
+  expect_no_warning({
     inf3 <- infer_boot(nullmod, data = hers_diab, B = 50, debias = FALSE, inference_target = "all")
     vals3 <- tidy(inf3)
     sum(vals3$selected==0) ==nrow(vals3)-1
@@ -252,7 +312,7 @@ test_that("basic inferrer bootstrap functionality; null model", {
   })
 
   # try debiasing
-  expect_no_error({
+  expect_no_warning({
     inf4 <- infer_boot(nullmod,, data = hers_diab, B = 50, debias = TRUE, inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==nrow(vals4)-1

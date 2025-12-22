@@ -21,104 +21,200 @@
 #' @import recipes
 #' @return A  `selector` object
 #' @export
+#
+# select_stepwise_ic <- function(
+#     formula, data, family = c("gaussian", "binomial"),
+#     select_factors_together = TRUE,
+#     penalty = c("AIC", "BIC"),
+#     direction = c("forward", "backward", "both"),
+#     trace = 0,
+#     fitted_selector = NULL,
+#     ...) {
+#
+#
+#
+#   # If this has never been fit before, check args
+#   if(is.null(fitted_selector)) {
+#     family = match.arg(family)
+#     penalty = match.arg(penalty)
+#     direction = match.arg(direction)
+#     if(missing(formula))
+#       stop("Must supply formula")
+#
+#   } else {
+#     meta <- attr(fitted_selector, "meta")
+#     family <- meta$family
+#     penalty <- meta$penalty
+#     direction <- meta$direction
+#
+#     if(missing(formula))
+#       formula <- attr(fitted_selector, "recipe_obj")
+#   }
+#
+#   k_val <- if(penalty == "AIC") 2 else log(nrow(data))
+#
+#   # Initial pre-processing
+#   rec_obj <- formula
+#
+#   # If a typical formula is supplied, will center/scale
+#   if(!inherits(rec_obj, "recipe")) {
+#
+#
+#     rec_obj <- recipe(formula, data = data) %>%
+#       step_zv(all_predictors()) %>%
+#       step_center(all_numeric_predictors()) %>%
+#       step_scale(all_numeric_predictors())
+#
+#     # Dummy coding ONLY if we want per-level selection
+#     if (!select_factors_together) {
+#       rec_obj <- rec_obj %>%
+#         step_dummy(all_factor_predictors(),
+#                    naming = function(...) dummy_names(..., sep = ""))
+#     }
+#
+#     # add additional zero variance step
+#     rec_obj <- rec_obj %>%
+#       step_zv() %>%
+#       prep()
+#
+#     df  <- bake(rec_obj, new_data = data)
+#     y1 <- names(bake(rec_obj, data[1,, drop = FALSE], all_outcomes()))
+#     x1 <- names(bake(rec_obj, data[1,, drop = FALSE], all_predictors()))
+#
+#     x_terms <- ifelse(
+#       grepl("[^a-zA-Z0-9._]", x1),
+#       paste0("`", x1, "`"),
+#       x1
+#     )
+#
+#     formula_full <- as.formula(
+#       paste0(y1, " ~ ", paste(x_terms, collapse = " + "))
+#     )
+#
+#
+#     attr(rec_obj, "prepped_selector_recipe") <- TRUE
+#     attr(rec_obj, "formula_full") <- formula_full
+#
+#   } else if(!attr(rec_obj, "prepped_selector_recipe")) {
+#     stop("custom recipes not yet supported")
+#   } else {
+#     # May need to read additional things here if this is re-called later
+#     all_terms <- attr(fitted_selector, "all_terms")
+#     formula_full <- attr(rec_obj, "formula_full")
+#     y1 <- names(bake(rec_obj, data[1,, drop = FALSE], all_outcomes()))
+#     df  <- bake(rec_obj, new_data = data)
+#
+#   }
+#
+#
+#   # formulae for use with MASS::stepAIC
+#   formula_null <- as.formula(paste0(y1, " ~ 1"))
+#
+#   if(direction == "backward") {
+#     formula_start <- formula_full
+#   } else {
+#     formula_start <- formula_null
+#   }
+#
+#   model_start <- glm(formula_start, data = df, family = family,
+#                      x = TRUE, y = TRUE, model = TRUE)
+#
+#   # crucial for reselection operation
+#   model_start$call$data <- df
+#
+#   selected_model <- MASS::stepAIC(
+#     model_start,
+#     scope = list(lower = formula_null, upper = formula_full),
+#     direction = direction,
+#     k = k_val,
+#     trace = trace,
+#     ...
+#   )
+#
+#   mm <- model.matrix(formula_full, df)
+#   all_terms <- setdiff(colnames(mm), "(Intercept)")
+#   selected_coefs <- coef(selected_model)
+#   selected_terms <- attr(terms(selected_model), "term.labels")
+#
+#   meta_information <- list(
+#     family = family,
+#     select_factors_together = select_factors_together,
+#     penalty = penalty,
+#     direction = direction
+#   )
+#
+#   out <- as_selector(selected_model, name = "stepwise_ic", label = "Stepwise IC-based",
+#               all_terms = all_terms, recipe_obj = rec_obj, default_infer = "boot",
+#               formula_full =formula_full,
+#               selected_terms=selected_terms,
+#               selected_coefs = selected_coefs, meta = meta_information)
+#
+#
+# }
+
+
 
 select_stepwise_ic <- function(
-    formula, data, family = c("gaussian", "binomial"),
+    formula, data,
+    family = c("gaussian", "binomial"),
     select_factors_together = TRUE,
     penalty = c("AIC", "BIC"),
     direction = c("forward", "backward", "both"),
     trace = 0,
     fitted_selector = NULL,
-    ...) {
+    ...
+) {
 
 
-
-  # If this has never been fit before, check args
-  if(is.null(fitted_selector)) {
-    family = match.arg(family)
-    penalty = match.arg(penalty)
-    direction = match.arg(direction)
-    if(missing(formula))
+  if (is.null(fitted_selector)) {
+    family    <- match.arg(family)
+    penalty   <- match.arg(penalty)
+    direction <- match.arg(direction)
+    if (missing(formula))
       stop("Must supply formula")
-
   } else {
-    meta <- attr(fitted_selector, "meta")
-    family <- meta$family
-    penalty <- meta$penalty
+    meta      <- attr(fitted_selector, "meta")
+    family    <- meta$family
+    penalty   <- meta$penalty
     direction <- meta$direction
-
-    if(missing(formula))
-      formula <- attr(fitted_selector, "recipe_obj")
+    formula   <- attr(fitted_selector, "orig_formula")
+    select_factors_together <- meta$select_factors_together
   }
 
-  k_val <- if(penalty == "AIC") 2 else log(nrow(data))
+  k_val <- if (penalty == "AIC") 2 else log(nrow(data))
 
-  # Initial pre-processing
-  rec_obj <- formula
+  # build recipe
+  rec_spec <- recipe(formula, data = data) %>%
+    step_zv(all_predictors()) %>%
+    step_center(all_numeric_predictors()) %>%
+    step_scale(all_numeric_predictors())
 
-  # If a typical formula is supplied, will center/scale
-  if(!inherits(rec_obj, "recipe")) {
-
-    rec_obj <- recipe(formula, data = data) %>%
-      step_zv(all_predictors()) %>%
-      step_center(all_numeric_predictors()) %>%
-      step_scale(all_numeric_predictors())
-
-    # Dummy coding ONLY if we want per-level selection
-    if (!select_factors_together) {
-      rec_obj <- rec_obj %>%
-        step_dummy(all_factor_predictors(),
-                   naming = function(...) dummy_names(..., sep = ""))
-    }
-
-    rec_obj <- prep(rec_obj)
-
-    # extract terms
-    y1 <- bake(rec_obj, new_data = data[1,,drop = FALSE], all_outcomes())
-    X1 <- bake(rec_obj, new_data = data[1,,drop=FALSE], all_predictors())
-    df1 <- bake(rec_obj, new_data = data[1,,drop = FALSE])
-
-    # collect all terms
-    formula_full <- as.formula( paste0( names(y1), " ~ ",
-        paste0(ifelse( grepl("[^a-zA-Z0-9._]", names(X1)),
-                       paste0("`", names(X1), "`"),names(X1)),
-          collapse = " + ")))
-    all_terms <- colnames(model.matrix(formula_full, data = df1))
-    all_terms <- gsub("`", "", all_terms)
-
-    # add additional zero variance step
-    rec_obj <- rec_obj %>%
-      step_zv() %>%
-      prep()
-    attr(rec_obj, "prepped_selector_recipe") <- TRUE
-    attr(rec_obj, "formula_full") <- formula_full
-
-  } else if(!attr(rec_obj, "prepped_selector_recipe")) {
-    stop("custom recipes not yet supported")
-  } else {
-    # May need to read additional things here if this is re-called later
-    all_terms <- attr(fitted_selector, "all_terms")
-    formula_full <- attr(rec_obj, "formula_full")
+  if (!select_factors_together) {
+    rec_spec <- rec_spec %>%
+      step_dummy(all_factor_predictors(),
+                 naming = function(...) dummy_names(..., sep = ""))
   }
 
-  # Create model matrix
-  X <- bake(rec_obj, new_data = data, all_predictors())
-  y <- bake(rec_obj, new_data = data, all_outcomes())
-  df_for_fit <- bake(rec_obj, new_data = data)
+  ## prep on current data (important for reffiting)
+  rec_obj <- prep(rec_spec, training = data)
+  df <- bake(rec_obj, new_data = data)
 
-  # formulae for use with MASS::stepAIC
-  formula_null <- update(formula_full, . ~ 1)
-  if(direction == "backward") {
-    formula_start <- formula_full
-  } else {
-    formula_start <- formula_null
-  }
+  y_name <- names(bake(rec_obj, data[1, , drop = FALSE], all_outcomes()))
+  x_names <- names(bake(rec_obj, data[1, , drop = FALSE], all_predictors()))
 
-  model_start <- glm(formula_start, data = df_for_fit, family = family,
-                     x = TRUE, y = TRUE, model = TRUE)
+  # term name cleaning
+  x_terms <- ifelse(grepl("[^a-zA-Z0-9._]", x_names),paste0("`", x_names, "`"),
+    x_names)
 
-  # crucial for reselection operation
-  model_start$call$data <- df_for_fit
+  # collect all terms
+  formula_full <- as.formula( paste0(y_name, " ~ ", paste(x_terms, collapse = " + ")))
+  formula_null <- as.formula(paste0(y_name, " ~ 1"))
+  formula_start <- if (direction == "backward") formula_full else formula_null
+
+  model_start <- glm( formula_start, data = df, family = family, x = TRUE,
+    y = TRUE, model = TRUE )
+
+  model_start$call$data <- df
 
   selected_model <- MASS::stepAIC(
     model_start,
@@ -129,6 +225,12 @@ select_stepwise_ic <- function(
     ...
   )
 
+  ## bookkeeping
+  mm <- model.matrix(formula_full, df)
+  all_terms <- setdiff(colnames(mm), "(Intercept)")
+  selected_terms <- attr(terms(selected_model), "term.labels")
+  selected_coefs <- coef(selected_model)
+
   meta_information <- list(
     family = family,
     select_factors_together = select_factors_together,
@@ -136,16 +238,21 @@ select_stepwise_ic <- function(
     direction = direction
   )
 
-  selected_coefs <- coef(selected_model)
-  names(selected_coefs) <- ifelse(
-    grepl("[^a-zA-Z0-9._]", names(selected_coefs)),
-    paste0("`", gsub("`", "", names(selected_coefs)), "`"),
-    names(selected_coefs)
+  orig_formula =formula
+
+  ## output
+  as_selector(
+    selected_model,
+    name = "stepwise_ic",
+    label = "Stepwise IC-based",
+    all_terms = all_terms,
+    recipe_obj = rec_obj,
+    default_infer = "boot",
+    #formula_full = formula_full,
+    orig_formula = formula,
+    selected_terms = selected_terms,
+    selected_coefs = selected_coefs,
+    meta = meta_information
   )
-
-
-  as_selector(selected_model, name = "stepwise_ic", label = "Stepwise IC-based",
-              all_terms = all_terms, recipe_obj = rec_obj, default_infer = "boot",
-              formula_full =formula_full,
-              selected_coefs = selected_coefs, meta = meta_information)
 }
+

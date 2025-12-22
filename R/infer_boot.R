@@ -57,9 +57,11 @@ infer_boot <- function(
 #' @param ... 	any additional arguments to that can be passed to fitting engine
 #'
 #' @importFrom magrittr %>%
-#' @importFrom dplyr mutate_if select mutate summarize bind_rows rename arrange right_join
+#' @importFrom dplyr mutate_if filter select mutate summarise bind_rows rename arrange right_join
 #' @importFrom broom tidy
 #' @importFrom stats lm model.frame model.matrix na.pass
+#' @importFrom tibble tibble
+#' @importFrom purrr map
 #' @importFrom MASS stepAIC
 #' @importFrom rlang sym
 #' @importFrom parallel detectCores clusterExport clusterEvalQ makeCluster
@@ -80,16 +82,35 @@ boot <- function(object, data, B,
                  conf.level, n_cores, ...) {
   stopifnot(inherits(object, "selector"))
 
-
-  rec_obj <- attr(object, "recipe_obj")
-  family <- attr(object, "meta")$family
-  val <- tidy(object)
-  outcome <- bake(rec_obj, new_data = data, all_outcomes())
-  outcome_name <- names(outcome)
-
   if(estimation_data != "in-sample") {
     warning("using out-of-sample data is experimental; requires large sample size.")
   }
+
+  rec_obj <- attr(object, "recipe_obj")
+  family  <- attr(object, "meta")$family
+  family <- if (is.character(family)) get(family,mode = "function")() else family
+
+  outcome_name <- rec_obj$var_info |> filter(role == "outcome") |> pull(variable)
+
+  # if cat var selected togther, expand them
+  if (attr(object, "name") == "stepwise_ic" &&
+      attr(object, "meta")$select_factors_together) {
+
+    rec_obj <- rec_obj |> step_dummy(all_factor_predictors(),
+        naming = function(...) dummy_names(..., sep = "")
+      ) |>prep()
+  }
+
+  X_full <- bake(rec_obj, new_data = data, recipes::all_predictors())
+  y_full <- bake(rec_obj, new_data = data, recipes::all_outcomes())[[1]]
+
+  # term to  column mapping (CRITICAL for when factors are selected togther) ----
+  tidy0 <- tidy(object)
+
+  # align column names
+  term_to_col <-tibble( term = tidy0$term,term_clean = clean_name(tidy0$term)) |>
+    mutate( col = map( term_clean,
+        ~ colnames(X_full)[clean_name(colnames(X_full)) == .x]))
 
   # Uncomment after debug
   # # do with parallel computing, Number of cores to use
@@ -112,38 +133,61 @@ boot <- function(object, data, B,
 
     sel_boot = reselect(object, newdata = data_boot)
     val_boot <- tidy(sel_boot)
+    val_boot <- val_boot %>%
+      mutate(term_clean = clean_name(term))
 
-    selected_vars <- val_boot$term[val_boot$selected == 1][-1]
-    nonselected_vars <- val_boot$term[!val_boot$selected]
-
-    f_selected <- paste0(c(paste0(outcome_name, "~ 1"), selected_vars), collapse = " + ")
-    f_selected_formula <- as.formula(f_selected)
-
-    if(estimation_data == "in-sample") {
-      new_data <- bake(rec_obj, new_data = data_boot)
+    # bake estimation data
+    if (estimation_data == "in-sample") {
+      X <- bake(rec_obj, new_data = data_boot, recipes::all_predictors())
+      y <- bake(rec_obj, new_data = data_boot, recipes::all_outcomes())[[1]]
     } else {
-      new_data <-  bake(rec_obj, new_data = data[-boot_idx,])
+      X <- bake(rec_obj, new_data = data[-boot_idx, ], recipes::all_predictors())
+      y <- bake(rec_obj, new_data = data[-boot_idx, ], recipes::all_outcomes())[[1]]
     }
+
+    selected_terms <- val_boot$term[val_boot$selected == 1]
+    selected_cols <- term_to_col |>filter(term %in% selected_terms) |>pull(col) |>
+      unlist()
 
     # debiasing for selected terms
     if(debias) {
 
-      fit_selected_debias <- glm(f_selected_formula, data = new_data, family = family)
-      val_boot <- left_join(val_boot, tidy(fit_selected_debias)[,1:2], by = "term")
+      df <- X
+      df$y <- y
 
-      if(length(nonselected_vars) > 0) {
-        # If debiased non-selections, set to "uncertain nulls"
-        for(j in 1:length(nonselected_vars)) {
-          f_j <- paste0(f_selected, " + ", nonselected_vars[j])
-          fit_j <- glm(as.formula(f_j), data = new_data, family = family)
-          val_j <- tail(tidy(fit_j), 1)
-          val_boot$estimate[val_boot$term == nonselected_vars[j]] <- val_j$estimate
-        }
+      if(length( selected_cols) ==0){
+        formula_str <- paste0("y ~ .")
+      }else{
+        formula_str <- paste0("y ~ ", paste0( selected_cols , collapse = " + "))
       }
-    } else {
-      val_boot$estimate <- val_boot$coef
-      val_boot$estimate <- ifelse(is.na(val_boot$estimate),0,val_boot$estimate)
+      fit_sel_debias <- glm(as.formula(formula_str), data = df, family = family)
 
+      sel_coefs <- tidy(  fit_sel_debias )[, c("term", "estimate")] %>%
+        mutate(term_clean = term)
+
+      val_boot <- val_boot %>% left_join(sel_coefs %>% select(term_clean, estimate),
+          by = "term_clean",suffix = c("", "_new"))  %>%select( -term_clean)
+      nonselected_terms <- val_boot$term[val_boot$selected == 0]
+
+      if(length(nonselected_terms) > 0) {
+        # If debiased non-selections, set to "uncertain nulls"
+        for (t in nonselected_terms) {
+          cols_t <- term_to_col$col[term_to_col$term == t][[1]]
+          if (length(cols_t) == 0) next
+          X_aug <- X[, c(selected_cols, cols_t), drop = FALSE]
+          df_fit <- cbind(y, X_aug)
+          fit_j <- glm(y ~.,data=df_fit,family = family)
+          tj <- tidy(fit_j)
+          tj <- tj[tj$term %in% cols_t, , drop = FALSE]
+          if (nrow(tj) > 0) {
+            val_boot$estimate[val_boot$term == t] <- tj$estimate[1]}
+        }
+        # for weird cases where it's not possible to do ucnertain null
+        val_boot$estimate <- ifelse(is.na(val_boot$coef), 0, val_boot$coef)
+      }
+
+    } else {
+      val_boot$estimate <- ifelse(is.na(val_boot$coef), 0, val_boot$coef)
     }
 
     val_boot
@@ -152,40 +196,38 @@ boot <- function(object, data, B,
     )
 
   # parallel::stopCluster(cl) # uncomment after debug
-  boot_results_df <- bind_rows(boot_fits, .id = "bootstrap")
+  boot_df<- bind_rows(boot_fits, .id = "bootstrap")
 
   if(inference_target=="selections") {
-    # Replace NA's in selected_coefs with 0's
-    # calculate estimates for selected_coefs
-    results <- boot_results_df %>%
-      select(term, coef, estimate) %>%
+    results <- boot_df  %>%
       filter(term %in% names(coef(object))) %>%
-      mutate(estimate = ifelse(is.na(estimate), 0, estimate)) %>%
-      group_by(term) %>%
-      summarize(
+      select(term, coef, estimate) %>%
+      group_by(term)  %>%
+      summarise(
         estimate_m = mean(estimate),
-        ci_low = quantile(estimate, (1 - conf.level) / 2),
-        ci_high = quantile(estimate, 1 - (1 - conf.level) / 2),
-        prop_selected = mean(coef != 0)
-      ) %>%
+        ci_low   = quantile(estimate, (1 - conf.level) / 2),
+        ci_high  = quantile(estimate, 1 - (1 - conf.level) / 2),
+        prop_selected = mean(coef != 0),
+        .groups = "drop"
+      )%>%
       rename(estimate = estimate_m) %>%
       right_join(tidy(object)[,1], by = "term")%>%
-      arrange(match(term, unique(boot_results_df$term)))
+      arrange(match(term, unique(boot_df$term)))
   }
 
-  if(inference_target == "all") {
-    # replace all NAs with uncertain betas (within bootstrap)
-    results <- boot_results_df %>%
-      select(term, coef,estimate)%>%
-      group_by(term) %>%
-      summarize(
+  if(inference_target=="all") {
+    results <- boot_df  %>%
+      select(term, coef, estimate) %>%
+      group_by(term)  %>%
+      summarise(
         estimate_m = mean(estimate),
-        ci_low = quantile(estimate, (1 - conf.level) / 2),
-        ci_high = quantile(estimate, 1 - (1 - conf.level) / 2),
-        prop_selected = mean(coef != 0)
+        ci_low   = quantile(estimate, (1 - conf.level) / 2),
+        ci_high  = quantile(estimate, 1 - (1 - conf.level) / 2),
+        prop_selected = mean(coef != 0),
+        .groups = "drop"
       )%>%
-      rename(estimate = estimate_m)%>%
-      arrange(match(term, unique(boot_results_df$term)))
+      rename(estimate = estimate_m) %>%
+      arrange(match(term, unique(boot_df$term)))
   }
 
 
@@ -197,7 +239,7 @@ boot <- function(object, data, B,
   )
 
   as_inferrer(
-    boot_results_df,
+    boot_df,
     name = "boot",
     label = "Bootstrap",
     nonselection = "N/A",

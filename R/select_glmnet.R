@@ -119,6 +119,8 @@ select_glmnet <- function(
 
   as_selector(fit, "glmnet", label = "Penalized `glmnet`-based",
               all_terms = all_terms, recipe_obj = rec_obj,
+               orig_formula =formula,
+              selected_terms = names(selected_coefs),
               selected_coefs = selected_coefs,
               default_infer = "selective", meta = meta_information)
 }

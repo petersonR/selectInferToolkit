@@ -63,7 +63,7 @@ infer_selective <- function(
     fs_result <- fs(as.matrix(X), y)
 
     # Get IC-based selection with confidence intervals
-    mult <- ifelse(meta$penalty == "AIC", 2, log(nrow(n)))
+    mult <- ifelse(meta$penalty == "AIC", 2, log(nrow(X )))
 
     res <- selectiveInference::fsInf(
       fs_result,
@@ -122,9 +122,13 @@ infer_selective <- function(
                            p_value = res$pv)
 
   # Handle non-selections
+  term_to_col <- tibble(
+    term =  colnames(X),
+    col  = colnames(X))
+
   results <- fill_in_nonselections(inferences, object,
                                    nonselection = nonselection, X = X, y = y,
-                                   conf.level = conf.level)
+                                   conf.level = conf.level, term_to_col = term_to_col )
 
   # Return inferrer class
   as_inferrer(

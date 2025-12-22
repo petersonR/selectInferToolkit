@@ -114,81 +114,6 @@ test_that("MCP works", {
 
 })
 
-###### Test IRIS data binary outcome ########
-
-iris_binary = iris
-iris$setosa_bin <- ifelse(iris$Species=="setosa",1,0)
-iris$setosa_bin <-factor(iris$setosa_bin , levels = c(0,1),labels  = c("other","setosa"))
-iris_binary = iris %>% select(-Species)
-
-# test_that("lasso  works", {
-#   formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
-#   set.seed(3)
-#   sel <- select_ncvreg(formula = as.formula(formula), iris_binary,
-#                        penalty ="lasso", alpha=1,
-#                        family = "binomial")
-#   expect_no_warning({
-#     capture_output(print(sel))
-#     tidy(sel)
-#     tidy(sel,scale_coef = F)
-#     predict(sel, newdata =iris[1:5,])
-#     predict(sel, newdata = iris)
-#   })
-#
-#   rsel <- reselect(sel, iris_binary)
-#   # expect estimates to be close, may differ slightly
-#   rsel_error <- max(tidy(sel)$coef - tidy(rsel)$coef, na.rm = TRUE)
-#   expect_lt(rsel_error, .05)
-#   # Try to re-fit with re-select to "new" data
-#   rsel2 <- reselect(sel, newdata = iris[-7,])
-#   set.seed(3)
-#   sel_rep <- select_ncvreg(Sepal.Length ~ ., iris, penalty ="lasso", alpha=1)
-#   # No variance across same method with same seed
-#   expect_equal(tidy( sel_rep ), tidy(sel))
-#
-#   set.seed(4)
-#   sel2 <- select_ncvreg(formula = as.formula(formula), iris_binary,
-#                         penalty ="lasso", alpha=1,
-#                         lambda = "compact", family = "binomial")
-#   expect_no_warning({
-#     capture_output(print(sel2))
-#     tidy(sel2)
-#     tidy(sel2,scale_coef = F)
-#     predict(sel2, newdata =iris[1:5,],)
-#     predict(sel2, newdata = iris)
-#   })
-#
-#
-# })
-#
-# test_that("MCP works", {
-#   formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
-#   set.seed(5)
-#   sel <- select_ncvreg(formula = as.formula(formula), iris_binary, alpha=0.5,
-#                        penalty ="MCP",
-#                        family = "binomial")
-#     expect_no_warning({
-#     capture_output(print(sel))
-#     tidy(sel)
-#     tidy(sel,scale_coef = F)
-#     predict(sel, newdata =iris[1:5,])
-#     predict(sel, newdata = iris)
-#   })
-#
-#   formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
-#   sel2 <- select_ncvreg(formula = as.formula(formula), iris_binary, alpha=0.5,
-#                         penalty ="MCP",
-#                          family = "binomial",lambda = "compact")
-#
-#   expect_no_warning({
-#     capture_output(print(sel2))
-#     tidy(sel2)
-#     tidy(sel2,scale_coef = F)
-#     predict(sel2, newdata =iris[1:5,])
-#     predict(sel2, newdata = iris)
-#   })
-#
-# })
 
 ###### Test HERS Data set continuous outcome ####
 data("hers")
@@ -200,7 +125,7 @@ test_that("lasso  works", {
   expect_no_warning({
     capture_output(print(sel))
     tidy(sel)
-    tidy(sel,scale_coef = F)
+    print(tidy(sel,scale_coef = F))
     predict(sel, newdata =hers[1:5,])
     predict(sel, newdata = hers)
   })

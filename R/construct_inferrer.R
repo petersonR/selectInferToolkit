@@ -64,7 +64,6 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
   inferences <- attr(x, "inferences")
   selector_obj <- attr(x, "selector")
   results <- tidy(selector_obj, scale_coef = scale_coef)
-
   rec_obj <- attr(selector_obj, "recipe_obj")
 
   scale_step_idx <- which(tidy(rec_obj)$type == "scale")

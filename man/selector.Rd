@@ -15,12 +15,14 @@ as_selector(
   label = name,
   all_terms,
   recipe_obj,
+  orig_formula,
+  selected_terms,
   selected_coefs,
   default_infer,
   meta = list()
 )
 
-\method{predict}{selector}(object, newdata = NULL, ...)
+\method{predict}{selector}(object, newdata, scale = TRUE, ...)
 
 \method{tidy}{selector}(x, scale_coef = TRUE, ...)
 
