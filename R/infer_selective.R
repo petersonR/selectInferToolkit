@@ -75,6 +75,7 @@ infer_selective <- function(
       ...
     )
     names(res$vars) <- names(X)[res$vars]
+    bb <- res$sign* as.vector(res$vmat %*% y)
   }
 
   ## Run selective inference on glmnet
@@ -113,10 +114,9 @@ infer_selective <- function(
         ...
       )
     }
-
+    bb <- res$vmat %*% y
   }
 
-  bb <- res$vmat %*% y
   inferences <- data.frame(term = names(res$vars), selected = 1, estimate = bb,
                            ci_low = res$ci[,1], ci_high = res$ci[,2],
                            p_value = res$pv)

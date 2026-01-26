@@ -57,7 +57,11 @@ select_full_model <- function(
 
     # collect all terms
     formula_full <- as.formula(paste0(names(y1), " ~ ", paste0(names(X1), collapse = " + ")))
-    all_terms <- colnames(model.matrix(formula_full, data = df1))
+
+    mm <- model.matrix(formula, data = data)
+    all_terms <- make.names(colnames(mm))
+   if(all_terms[1] =="X.Intercept.") all_terms[1] = "(Intercept)"
+
 
     # add additional zero variance step
     rec_obj <- rec_obj %>%
@@ -65,7 +69,7 @@ select_full_model <- function(
       prep()
 
     attr(rec_obj, "prepped_selector_recipe") <- TRUE
-    attr(rec_obj, "formula_full") <- formula_full
+    #attr(rec_obj, "formula_full") <- formula_full
 
   } else if(!attr(rec_obj, "prepped_selector_recipe")) {
     stop("custom recipes not yet supported")
@@ -81,7 +85,8 @@ select_full_model <- function(
 
     # collect all terms
     formula_full <- as.formula(paste0(names(y1), " ~ ", paste0(names(X1), collapse = " + ")))
-    all_terms <- colnames(model.matrix(formula_full, data = df1))
+
+    all_terms <- attr(fitted_selector, "all_terms")
 
   }
 

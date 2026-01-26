@@ -45,6 +45,10 @@ infer_upsi <- function(
   fit_selected <- glm(selected_formula, data = df, family = meta$family)
   results_selected <- tidy(fit_selected, conf.int = TRUE, conf.level = conf.level) %>%
     select(term, estimate, ci_low = conf.low, ci_high = conf.high, p_value = p.value)
+  results_selected$term <- make.names(results_selected$term )
+
+  if(results_selected$term[1] =="X.Intercept.") results_selected$term[1] = "(Intercept)"
+
 
   results <- tidy(object, scale_coef = TRUE) %>%
     left_join(results_selected, by = "term")

@@ -106,6 +106,8 @@ tidy.selector <- function(x, scale_coef = TRUE, ...) {
   coef_df <- tibble(term = names(coef(x)),
     estimate = as.numeric(coef(x)),
     selected =1)
+  coef_df$term <- make.names(coef_df$term )
+  if(coef_df$term[1] =="X.Intercept.") coef_df$term[1] = "(Intercept)"
 
   # Drop intercept for term-level table
   selected_terms <- coef_df $term
@@ -113,7 +115,6 @@ tidy.selector <- function(x, scale_coef = TRUE, ...) {
   base <- tibble(
     term = all_terms,
     selected1 = as.integer(all_terms %in% selected_terms)) %>%
-    #left_join(coef_df_terms, by = "term")
     left_join(coef_df, by = "term")
 
 

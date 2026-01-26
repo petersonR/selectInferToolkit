@@ -94,11 +94,52 @@ fill_in_nonselections <- function(inferences, selector_obj,
 }
 
 
-NULL
+
 clean_name <- function(x) {
-  x<- gsub("\\s+", ".", x)        # spaces -> dot
-  x <- gsub("-", ".", x)           # hyphens -> dot
-  x <- gsub("\\+", ".", x)         # plus signs -> dot
+  x<- gsub("\\s+", ".", x)        # spaces to dot
+  x <- gsub("-", ".", x)           # hyphens to dot
+  x <- gsub("\\+", ".", x)         # plus signs to dot
   x
 }
 
+order_terms_like_data <- function(baked_X, orig_data, outcome = NULL, rec_obj = NULL) {
+  baked_names <- colnames(baked_X)
+  outcome <- outcome %||% names(orig_data)[1]
+
+  # original variable names (drop outcome)
+  orig_vars <- setdiff(colnames(orig_data), outcome)
+
+  dummy_map <- list()
+
+  if (!is.null(rec_obj)) {
+    dummy_steps <- rec_obj$steps[vapply(rec_obj$steps, inherits, logical(1), "step_dummy")]
+
+    if (length(dummy_steps) > 0) {
+      dummy_step <- dummy_steps[[1]]
+
+      for (varname in names(dummy_step$levels)) {
+        # Match any dummy column that starts with the factor name
+        # Allow additional characters like . or letters after it
+        matches <- grep(paste0("^", varname), baked_names, value = TRUE)
+
+        # If multiple columns, keep all
+        dummy_map[[varname]] <- matches
+      }
+    }
+  }
+
+  # Build ordered terms following the original data column order
+  ordered_terms <- c()
+  for (v in orig_vars) {
+    if (v %in% baked_names) {
+      ordered_terms <- c(ordered_terms, v)
+    } else if (!is.null(dummy_map[[v]])) {
+      ordered_terms <- c(ordered_terms, dummy_map[[v]])
+    }
+  }
+
+  # Ensure all terms exist in baked_names
+  ordered_terms <- ordered_terms[ordered_terms %in% baked_names]
+
+  ordered_terms
+}

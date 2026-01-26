@@ -70,7 +70,9 @@ select_glmnet <- function(
 
       # collect all terms
       formula_full <- as.formula(paste0(names(y1), " ~ ", paste0(names(X1), collapse = " + ")))
-      all_terms <- colnames(model.matrix(formula_full, data = df1))
+      mm <- model.matrix(formula, data = data)
+      all_terms <- make.names(colnames(mm))
+      if(all_terms[1] =="X.Intercept.") all_terms[1] = "(Intercept)"
 
       # add additional zero variance step
       rec_obj <- rec_obj %>%

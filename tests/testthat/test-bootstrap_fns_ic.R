@@ -21,7 +21,7 @@ iris$UBV <- rbinom(nrow(iris), 1, prob = .02)
 test_that("AIC bi-directional, debias=F, insample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "both")
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "both")
     inf <- infer_boot(sel, data = iris, B = 20, debias = FALSE,  inference_target ="selections")
     vals <- tidy(inf)
     capture_output(print(inf))
@@ -50,7 +50,7 @@ test_that("AIC bi-directional, debias=F, insample", {
 test_that("AIC bi-directional, debias=F, out-of-sample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "both")
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "both")
     inf <- infer_boot(sel, data = iris, B = 20, debias = FALSE,  inference_target ="selections",
                       estimation_data ="out-of-sample")
     vals <- tidy(inf)
@@ -81,7 +81,7 @@ test_that("AIC bi-directional, debias=F, out-of-sample", {
 test_that("AIC bi-directional, debias=T, insample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "both")
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "both")
     inf <- infer_boot(sel, data = iris, B = 20, debias = T,  inference_target ="selections")
     vals <- tidy(inf)
     capture_output(print(inf))
@@ -110,7 +110,7 @@ test_that("AIC bi-directional, debias=T, insample", {
 test_that("AIC bi-directional, debias=T, out-of-sample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "both")
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "both")
     inf <- infer_boot(sel, data = iris, B = 20, debias = T,  inference_target ="selections",
                       estimation_data ="out-of-sample")
     vals <- tidy(inf)
@@ -141,7 +141,7 @@ test_that("AIC bi-directional, debias=T, out-of-sample", {
 test_that("BIC bi-directional, debias=F, insample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "both",penalty = "BIC")
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "both",penalty = "BIC")
     inf <- infer_boot(sel, data = iris, B = 20, debias = FALSE,  inference_target ="selections")
     vals <- tidy(inf)
     capture_output(print(inf))
@@ -170,7 +170,7 @@ test_that("BIC bi-directional, debias=F, insample", {
 test_that("BIC bi-directional, debias=T, insample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "both",penalty = "BIC")
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "both",penalty = "BIC")
     inf <- infer_boot(sel, data = iris, B = 20, debias = T,  inference_target ="selections")
     vals <- tidy(inf)
     capture_output(print(inf))
@@ -200,7 +200,7 @@ test_that("BIC bi-directional, debias=T, insample", {
 test_that("AIC forward, debias=F, insample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "forward")
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "forward")
     inf <- infer_boot(sel, data = iris, B = 20, debias = FALSE,  inference_target ="selections")
     vals <- tidy(inf)
     capture_output(print(inf))
@@ -229,7 +229,7 @@ test_that("AIC forward, debias=F, insample", {
 test_that("AIC forward,, debias=F, out-of-sample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "forward")
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "forward")
     inf <- infer_boot(sel, data = iris, B = 20, debias = FALSE,  inference_target ="selections",
                       estimation_data ="out-of-sample")
     vals <- tidy(inf)
@@ -260,7 +260,7 @@ test_that("AIC forward,, debias=F, out-of-sample", {
 test_that("AIC forward,, debias=T, insample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "forward")
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "forward")
     inf <- infer_boot(sel, data = iris, B = 20, debias = T,  inference_target ="selections")
     vals <- tidy(inf)
     capture_output(print(inf))
@@ -289,7 +289,7 @@ test_that("AIC forward,, debias=T, insample", {
 test_that("AIC forward,, debias=T, out-of-sample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "forward")
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "forward")
     inf <- infer_boot(sel, data = iris, B = 20, debias = T,  inference_target ="selections",
                       estimation_data ="out-of-sample")
     vals <- tidy(inf)
@@ -320,7 +320,7 @@ test_that("AIC forward,, debias=T, out-of-sample", {
 test_that("BIC forward seperate factors, debias=F, insample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "forward",
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "forward",
                               penalty = "BIC",select_factors_together = F)
     inf <- infer_boot(sel, data = iris, B = 20, debias = FALSE,  inference_target ="selections")
     vals <- tidy(inf)
@@ -350,7 +350,7 @@ test_that("BIC forward seperate factors, debias=F, insample", {
 test_that("BIC forward seperate factors, debias=F, out-of-sample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "forward",
+    sel <- select_stepwise_ic(Sepal.Length ~ ., iris, direction = "forward",
                               penalty = "BIC",select_factors_together = F)
     inf <- infer_boot(sel, data = iris, B = 20, debias = FALSE,  inference_target ="selections",
                       estimation_data ="out-of-sample")
@@ -382,7 +382,7 @@ test_that("BIC forward seperate factors, debias=F, out-of-sample", {
 test_that("BIC forward seperate factors, debias=T, insample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "forward",
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "forward",
                               penalty = "BIC", select_factors_together = F)
     inf <- infer_boot(sel, data = iris, B = 20, debias = T,  inference_target ="selections")
     vals <- tidy(inf)
@@ -412,7 +412,7 @@ test_that("BIC forward seperate factors, debias=T, insample", {
 test_that("BIC forward seperate factors, debias=T, out-of-sample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "forward",
+    sel <- select_stepwise_ic(Sepal.Length ~ ., hers, direction = "forward",
                               penalty = "BIC", select_factors_together = F)
     inf <- infer_boot(sel, data = iris, B = 20, debias = T,  inference_target ="selections",
                       estimation_data ="out-of-sample")
@@ -444,7 +444,7 @@ test_that("BIC forward seperate factors, debias=T, out-of-sample", {
 test_that("BIC  backwards seperate factors, debias=F, insample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "backward",
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "backward",
                               penalty = "BIC",select_factors_together = F)
     inf <- infer_boot(sel, data = iris, B = 20, debias = FALSE,  inference_target ="selections")
     vals <- tidy(inf)
@@ -474,7 +474,7 @@ test_that("BIC  backwards seperate factors, debias=F, insample", {
 test_that("AIC  backwards seperate factors, debias=T, insample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(hdl1 ~ ., iris, direction = "backward",
+    sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "backward",
                               penalty = "AIC",select_factors_together = F)
     inf <- infer_boot(sel, data = iris, B = 20, debias = T,  inference_target ="selections")
     vals <- tidy(inf)
@@ -528,10 +528,10 @@ test_that("AIC bi-directional, debias=F, insample", {
 
   # Test 2: for inference target all, variables selected less than half the time,
   # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
+  expect_true(
+    sum(val_conf$prop_selected < 0.5 &
+          (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
+  )
 
 })
 

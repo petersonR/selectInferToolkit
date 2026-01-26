@@ -191,7 +191,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
 data("hers")
 force(hers)
 fullmod <- select_full_model(hdl1 ~ ., hers)
-
+print(tidy(fullmod), n=32)
 
 test_that("basic inferrer UPSI functionality", {
 

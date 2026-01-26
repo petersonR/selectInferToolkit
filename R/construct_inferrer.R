@@ -77,23 +77,32 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
 
   tidy_inferences <- inferences %>%
     left_join(sds, by = "term") %>%
-    transmute(
-      term = term,
-      sd= sd,
+    transmute(term, sd,
       estimate_scaled = estimate,
-      ci_low_scaled = ci_low,
-      ci_high_scaled = ci_high
+      ci_low_scaled   = ci_low,
+      ci_high_scaled  = ci_high
     ) %>%
     mutate(
-      estimate_unscaled = ifelse(term != "(Intercept)",
-                                               estimate_scaled/sd,
-                                 estimate_scaled),
-      ci_low_unscaled = ifelse(term != "(Intercept)", ci_low_scaled/sd,
-                               ci_low_scaled),
-      ci_high_unscaled = ifelse(term != "(Intercept)",
-                                ci_high_scaled/sd,
-                                ci_high_scaled),
+      estimate_unscaled = case_when(
+        term == "(Intercept)"  ~ estimate_scaled,
+        is.na(estimate_scaled) ~ NA_real_,
+        !is.na(sd)             ~ estimate_scaled / sd,
+        is.na(sd)              ~ estimate_scaled
+      ),
+      ci_low_unscaled = case_when(
+        term == "(Intercept)" ~ ci_low_scaled,
+        is.na(ci_low_scaled)  ~ NA_real_,
+        !is.na(sd)           ~ ci_low_scaled / sd,
+        is.na(sd)            ~ ci_low_scaled
+      ),
+      ci_high_unscaled = case_when(
+        term == "(Intercept)"  ~ ci_high_scaled,
+        is.na(ci_high_scaled)  ~ NA_real_,
+        !is.na(sd)             ~ ci_high_scaled / sd,
+        is.na(sd)              ~ ci_high_scaled
+      )
     )
+
 
   results <- results %>%
     left_join(tidy_inferences, by = c("term"))

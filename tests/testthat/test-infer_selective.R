@@ -318,11 +318,11 @@ test_that("HERS Lasso min works (ncvreg,glmnet) ", {
     capture_output(print(inf))
     print(tidy(inf), n=35)
 
-    inf_conf <- infer_selective(sel, data = hers, nonselection = "confident")
+    inf_conf <- infer_selective(sel_glm, data = hers, nonselection = "confident")
     capture_output(print(inf_conf))
     print(tidy(inf_conf), n=35)
 
-    inf_un <- infer_selective(sel, data = hers, nonselection = "uncertain_nulls")
+    inf_un <- infer_selective(sel_glm, data = hers, nonselection = "uncertain_nulls")
     capture_output(print(inf_un))
     print(tidy(inf_un), n=35)
 

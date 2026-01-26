@@ -104,7 +104,7 @@ boot <- function(object, data, B,
   X_full <- bake(rec_obj, new_data = data, recipes::all_predictors())
   y_full <- bake(rec_obj, new_data = data, recipes::all_outcomes())[[1]]
 
-  # term to  column mapping (CRITICAL for when factors are selected togther) ----
+  # term to  column mapping (CRITICAL for when factors are selected togther)
   tidy0 <- tidy(object)
 
   # align column names
