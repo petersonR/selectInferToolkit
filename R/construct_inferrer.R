@@ -54,7 +54,7 @@ as_inferrer <- function(
 #'
 #' @importFrom tibble rownames_to_column
 #' @importFrom broom tidy
-#' @importFrom dplyr left_join transmute
+#' @importFrom dplyr left_join transmute case_when
 #' @importFrom tibble tibble
 #' @rdname inferrer
 #'

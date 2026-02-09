@@ -56,14 +56,16 @@ select_stepwise_ic <- function(
   # build recipe
   rec_spec <- recipe(formula, data = data) %>%
     step_zv(all_predictors()) %>%
-    step_center(all_numeric_predictors()) %>%
-    step_scale(all_numeric_predictors())
+    step_center(all_numeric_predictors())
 
   if (!select_factors_together) {
     rec_spec <- rec_spec %>%
       step_dummy(all_factor_predictors(),
                  naming = function(...) dummy_names(..., sep = ""))
   }
+
+  rec_spec <-  rec_spec  %>% step_scale(all_numeric_predictors())
+
 
   ## prep on current data (important for reffiting)
   rec_obj <- prep(rec_spec, training = data)

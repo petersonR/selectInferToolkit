@@ -130,7 +130,7 @@ tidy.selector <- function(x, scale_coef = TRUE, ...) {
     left_join(sds, by = "term") %>%
     mutate(
       coef_scaled = estimate,
-      coef_unscaled = dplyr::if_else(
+      coef_unscaled = if_else(
         !is.na(sd),
         coef_scaled / sd,
         coef_scaled   ))
