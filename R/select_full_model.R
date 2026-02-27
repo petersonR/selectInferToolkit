@@ -69,7 +69,6 @@ select_full_model <- function(
       prep()
 
     attr(rec_obj, "prepped_selector_recipe") <- TRUE
-    #attr(rec_obj, "formula_full") <- formula_full
 
   } else if(!attr(rec_obj, "prepped_selector_recipe")) {
     stop("custom recipes not yet supported")

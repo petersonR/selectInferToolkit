@@ -57,7 +57,7 @@ infer_boot <- function(
 #' @param ... 	any additional arguments to that can be passed to fitting engine
 #'
 #' @importFrom magrittr %>%
-#' @importFrom dplyr mutate_if filter select mutate summarise bind_rows rename arrange right_join
+#' @importFrom dplyr mutate_if filter select mutate summarise bind_rows rename arrange right_join transmute
 #' @importFrom broom tidy
 #' @importFrom stats lm model.frame model.matrix na.pass
 #' @importFrom tibble tibble
@@ -97,8 +97,8 @@ boot <- function(object, data, B,
       attr(object, "meta")$select_factors_together) {
 
     rec_obj <- rec_obj |> step_dummy(all_factor_predictors(),
-        naming = function(...) dummy_names(..., sep = "")
-      ) |>prep()
+                                     naming = function(...) dummy_names(..., sep = "")
+    ) |>prep()
   }
 
   X_full <- bake(rec_obj, new_data = data, recipes::all_predictors())
@@ -108,9 +108,12 @@ boot <- function(object, data, B,
   tidy0 <- tidy(object)
 
   # align column names
-  term_to_col <-tibble( term = tidy0$term,term_clean = clean_name(tidy0$term)) |>
-    mutate( col = map( term_clean,
-        ~ colnames(X_full)[clean_name(colnames(X_full)) == .x]))
+  term_to_col <- tibble(
+    term = tidy0$term
+  ) |>
+    mutate(
+      col = map(term, ~ intersect(.x, colnames(X_full)))
+    )
 
   # Uncomment after debug
   # # do with parallel computing, Number of cores to use
@@ -133,8 +136,6 @@ boot <- function(object, data, B,
 
     sel_boot = reselect(object, newdata = data_boot)
     val_boot <- tidy(sel_boot)
-    val_boot <- val_boot %>%
-      mutate(term_clean = clean_name(term))
 
     # bake estimation data
     if (estimation_data == "in-sample") {
@@ -162,12 +163,12 @@ boot <- function(object, data, B,
       }
       fit_sel_debias <- glm(as.formula(formula_str), data = df, family = family)
 
-      sel_coefs <- tidy(  fit_sel_debias )[, c("term", "estimate")] %>%
-        mutate(term_clean = term)
+      sel_coefs <- tidy(  fit_sel_debias )[, c("term", "estimate")]
 
-      val_boot <- val_boot %>% left_join(sel_coefs %>% select(term_clean, estimate),
-          by = "term_clean",suffix = c("", "_new"))  %>%select( -term_clean)
+      val_boot <- val_boot %>% left_join(sel_coefs %>% select(term, estimate),
+                                         by = "term",suffix = c("", "_new"))
       nonselected_terms <- val_boot$term[val_boot$selected == 0]
+
 
       if(length(nonselected_terms) > 0) {
         # If debiased non-selections, set to "uncertain nulls"
@@ -191,9 +192,9 @@ boot <- function(object, data, B,
     }
 
     val_boot
-    }
-    # ,cl=cl uncomment after debug
-    )
+  }
+  # ,cl=cl uncomment after debug
+  )
 
   # parallel::stopCluster(cl) # uncomment after debug
   boot_df<- bind_rows(boot_fits, .id = "bootstrap")

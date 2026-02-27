@@ -87,18 +87,21 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
         term == "(Intercept)"  ~ estimate_scaled,
         is.na(estimate_scaled) ~ NA_real_,
         !is.na(sd)             ~ estimate_scaled / sd,
+        # Below is case when selecting factors together in stepAIC fn, so their sd is NA
         is.na(sd)              ~ estimate_scaled
       ),
       ci_low_unscaled = case_when(
         term == "(Intercept)" ~ ci_low_scaled,
         is.na(ci_low_scaled)  ~ NA_real_,
         !is.na(sd)           ~ ci_low_scaled / sd,
+        # Below is case when selecting factors together in stepAIC fn, so their sd is NA
         is.na(sd)            ~ ci_low_scaled
       ),
       ci_high_unscaled = case_when(
         term == "(Intercept)"  ~ ci_high_scaled,
         is.na(ci_high_scaled)  ~ NA_real_,
         !is.na(sd)             ~ ci_high_scaled / sd,
+        # Below is case when selecting factors together in stepAIC fn, so their sd is NA
         is.na(sd)              ~ ci_high_scaled
       )
     )

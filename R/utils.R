@@ -94,14 +94,6 @@ fill_in_nonselections <- function(inferences, selector_obj,
 }
 
 
-
-clean_name <- function(x) {
-  x<- gsub("\\s+", ".", x)        # spaces to dot
-  x <- gsub("-", ".", x)           # hyphens to dot
-  x <- gsub("\\+", ".", x)         # plus signs to dot
-  x
-}
-
 order_terms_like_data <- function(baked_X, orig_data, outcome = NULL, rec_obj = NULL) {
   baked_names <- colnames(baked_X)
   outcome <- outcome %||% names(orig_data)[1]

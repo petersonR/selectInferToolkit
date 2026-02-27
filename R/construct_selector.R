@@ -23,7 +23,7 @@
 #' @export
 
 as_selector <- function(x, name, label = name, all_terms,
-                        recipe_obj, orig_formula,#formula_full,
+                        recipe_obj, orig_formula,
                         selected_terms,selected_coefs,
                         default_infer, meta = list()) {
 
@@ -36,7 +36,6 @@ as_selector <- function(x, name, label = name, all_terms,
             label = label,
             all_terms = all_terms,
             recipe_obj = recipe_obj,
-            #formula_full =formula_full,
             orig_formula=  orig_formula,
             selected_terms=selected_terms,
             selected_coefs = selected_coefs,
@@ -58,19 +57,17 @@ predict.selector <- function(object, newdata, scale = TRUE, ...) {
 
   rec_obj <- attr(object, "recipe_obj")
 
-  baked <- bake(rec_obj, new_data = newdata) %>%
+  newdata<- bake(rec_obj, new_data = newdata) %>%
     as.data.frame()
 
   if (attr(object, "name") =="stepwise_ic") {
     formula_used <- formula(object)
-    X <- model.matrix(formula_used, baked)
+    X <- model.matrix(formula_used, newdata)
     beta <- coef(object)
     XX <- X[, names(beta), drop = FALSE]
   } else {
-    formula_used <- attr(object, "orig_formula")
-    X <- model.matrix(formula_used, baked)
     beta <- attr(object, "selected_coefs")
-    XX <- X[, names(beta), drop = FALSE]
+    XX <- cbind(1, as.matrix( newdata[,names(beta)[-1]]))
   }
 
     return(as.vector(XX %*% beta))

@@ -46,7 +46,6 @@ infer_upsi <- function(
   results_selected <- tidy(fit_selected, conf.int = TRUE, conf.level = conf.level) %>%
     select(term, estimate, ci_low = conf.low, ci_high = conf.high, p_value = p.value)
   results_selected$term <- make.names(results_selected$term )
-
   if(results_selected$term[1] =="X.Intercept.") results_selected$term[1] = "(Intercept)"
 
 
@@ -78,12 +77,12 @@ infer_upsi <- function(
     X <- bake(rec_obj, new_data = data, all_predictors())
     y <- bake(rec_obj, new_data = data, all_outcomes())[[1]]
 
-    results <- results %>%
-      mutate(term_clean = clean_name(term))
 
     term_to_col <- tibble(
       term = results$term,
-      col  = colnames(X)[match(results$term_clean, clean_name(colnames(X)))]
+      col  = colnames(X)[
+        match(make.names(results$term),
+              make.names(colnames(X)))]
        )%>%filter(!is.na(col))
 
     results <- fill_in_nonselections(results, object, nonselection,
