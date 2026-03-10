@@ -25,9 +25,8 @@
 
 
 select_stepwise_ic <- function(
-    formula, data,
-    family = c("gaussian", "binomial"),
-    select_factors_together = TRUE,
+    formula, data, family = c("gaussian", "binomial"),
+    select_factors_together = FALSE,
     penalty = c("AIC", "BIC"),
     direction = c("forward", "backward", "both"),
     trace = 0,
