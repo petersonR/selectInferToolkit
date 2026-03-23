@@ -1,12 +1,8 @@
 ####### Test IRIS data ########
 
 data(iris)
-iris <- iris[1:100,]
 
 set.seed(123)
-
-#skip() # tests require updating, currently skipped
-
 
 # Add another unbalanced factor
 iris$Group <- factor(sample(c('A', 'B'), nrow(iris), replace = TRUE))
@@ -63,43 +59,6 @@ test_that("Stepwise AIC forward seelction works", {
 
 })
 
-# test_that("Stepwise BIC forward seelction works", {
-#
-#   expect_no_error({
-#     sel <- select_stepwise_ic(Sepal.Length ~ ., iris, direction = "forward",penalty = "BIC")
-#     inf <- infer_selective(sel, data = iris, nonselection = "ignore")
-#     capture_output(print(inf))
-#     tidy(inf)
-#
-#     inf_conf <- infer_selective(sel, data = iris, nonselection = "confident")
-#     capture_output(print(inf_conf))
-#     tidy(inf_conf)
-#
-#     inf_un <- infer_selective(sel, data = iris, nonselection = "uncertain_nulls")
-#     capture_output(print(inf_un))
-#     tidy(inf_un)
-#
-#   })
-#
-#   # Test 1: if select == 0, estimate must be NA for ignore case
-#   # expect_true(
-#   #   sum(inf$select == 0 & !is.na(inf$estimate)) == 0
-#   # )
-#
-#
-#   # Test 2: confident_nulls then estimate = 0 whenever select = 0
-#   expect_equal(
-#     sum(inf_conf$select == 0 & inf_conf$estimate == 0),
-#     sum(inf_conf$select == 0)
-#   )
-#
-#   # Test 3: uncertain_nulls → estimate is NA or 0? (your logic said "not NA and not 0"?)
-#   expect_equal(
-#     sum(inf_un$select == 0 & !is.na(inf_un$estimate) & inf_un$estimate != 0),
-#     sum(inf_un$select == 0)
-#   )
-#
-# })
 
 
 test_that("Lasso min works (glmnet) ", {
@@ -277,11 +236,11 @@ test_that("HERS Lasso min works (ncvreg,glmnet) ", {
     capture_output(print(inf))
     print(tidy(inf), n=35)
 
-    inf_conf <- infer_selective(sel, data = hers, nonselection = "confident")
+    inf_conf <- infer_selective(sel_glm, data = hers, nonselection = "confident")
     capture_output(print(inf_conf))
     print(tidy(inf_conf), n=35)
 
-    inf_un <- infer_selective(sel, data = hers, nonselection = "uncertain_nulls")
+    inf_un <- infer_selective(sel_glm, data = hers, nonselection = "uncertain_nulls")
     capture_output(print(inf_un))
     print(tidy(inf_un), n=35)
 

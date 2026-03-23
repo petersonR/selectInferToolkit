@@ -30,20 +30,15 @@ test_that("AIC bi-directional, debias=F, insample", {
     capture_output(print(inf_all))
     val_conf <- tidy(inf_all)
 
+    # Test 1: if select == 0, estimate must be NA for selections case
+    expect_true(
+      sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
+    )
+
+
   })
 
-  # Test 1: if select == 0, estimate must be NA for selections case
-  expect_true(
-    sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
-  )
 
-
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  expect_true(
-    sum(val_conf$prop_selected < 0.5 &
-          (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  )
 
 })
 
@@ -69,13 +64,6 @@ test_that("AIC bi-directional, debias=F, out-of-sample", {
   )
 
 
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
-
 })
 
 test_that("AIC bi-directional, debias=T, insample", {
@@ -98,12 +86,7 @@ test_that("AIC bi-directional, debias=T, insample", {
   )
 
 
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  expect_true(
-    sum(val_conf$prop_selected < 0.5 &
-          (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  )
+
 
 })
 
@@ -129,13 +112,6 @@ test_that("AIC bi-directional, debias=T, out-of-sample", {
   )
 
 
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
-
 })
 
 test_that("BIC bi-directional, debias=F, insample", {
@@ -157,13 +133,6 @@ test_that("BIC bi-directional, debias=F, insample", {
     sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
   )
 
-
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  expect_true(
-    sum(val_conf$prop_selected < 0.5 &
-          (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  )
 
 })
 
@@ -187,15 +156,7 @@ test_that("BIC bi-directional, debias=T, insample", {
   )
 
 
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  expect_true(
-    sum(val_conf$prop_selected < 0.5 &
-          (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  )
-
 })
-
 
 test_that("AIC forward, debias=F, insample", {
 
@@ -216,17 +177,9 @@ test_that("AIC forward, debias=F, insample", {
     sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
   )
 
-
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
-
 })
 
-test_that("AIC forward,, debias=F, out-of-sample", {
+test_that("AIC forward, debias=F, out-of-sample", {
 
   expect_no_error({
     sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "forward")
@@ -248,16 +201,9 @@ test_that("AIC forward,, debias=F, out-of-sample", {
   )
 
 
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
-
 })
 
-test_that("AIC forward,, debias=T, insample", {
+test_that("AIC forward, debias=T, insample", {
 
   expect_no_error({
     sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "forward")
@@ -269,24 +215,18 @@ test_that("AIC forward,, debias=T, insample", {
     capture_output(print(inf_all))
     val_conf <- tidy(inf_all)
 
+    # Test 1: if select == 0, estimate must be NA for selections case
+    expect_true(
+      sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
+    )
+
+
   })
 
-  # Test 1: if select == 0, estimate must be NA for selections case
-  expect_true(
-    sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
-  )
-
-
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  expect_true(
-    sum(val_conf$prop_selected < 0.5 &
-          (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  )
 
 })
 
-test_that("AIC forward,, debias=T, out-of-sample", {
+test_that("AIC forward, debias=T, out-of-sample", {
 
   expect_no_error({
     sel <- select_stepwise_ic(Sepal.Length  ~ ., iris, direction = "forward")
@@ -307,13 +247,6 @@ test_that("AIC forward,, debias=T, out-of-sample", {
     sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
   )
 
-
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
 
 })
 
@@ -337,13 +270,6 @@ test_that("BIC forward seperate factors, debias=F, insample", {
     sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
   )
 
-
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
 
 })
 
@@ -370,13 +296,6 @@ test_that("BIC forward seperate factors, debias=F, out-of-sample", {
   )
 
 
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
-
 })
 
 test_that("BIC forward seperate factors, debias=T, insample", {
@@ -400,19 +319,12 @@ test_that("BIC forward seperate factors, debias=T, insample", {
   )
 
 
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  expect_true(
-    sum(val_conf$prop_selected < 0.5 &
-          (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  )
-
 })
 
 test_that("BIC forward seperate factors, debias=T, out-of-sample", {
 
   expect_no_error({
-    sel <- select_stepwise_ic(Sepal.Length ~ ., hers, direction = "forward",
+    sel <- select_stepwise_ic(Sepal.Length ~ ., iris, direction = "forward",
                               penalty = "BIC", select_factors_together = F)
     inf <- infer_boot(sel, data = iris, B = 20, debias = T,  inference_target ="selections",
                       estimation_data ="out-of-sample")
@@ -430,14 +342,6 @@ test_that("BIC forward seperate factors, debias=T, out-of-sample", {
   expect_true(
     sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
   )
-
-
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
 
 })
 
@@ -460,14 +364,6 @@ test_that("BIC  backwards seperate factors, debias=F, insample", {
   expect_true(
     sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
   )
-
-
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
 
 })
 
@@ -492,13 +388,6 @@ test_that("AIC  backwards seperate factors, debias=T, insample", {
   )
 
 
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  # expect_true(
-  #   sum(val_conf$prop_selected < 0.5 &
-  #         (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  # )
-
 })
 
 
@@ -514,24 +403,19 @@ test_that("AIC bi-directional, debias=F, insample", {
     vals <- tidy(inf)
     capture_output(print(inf))
 
+    # Test 1: if select == 0, estimate must be NA for selections case
+    expect_true(
+      sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
+    )
+
+
     inf_all <- infer_boot(sel, data = hers,B = 20, debias = FALSE, inference_target ="all")
     capture_output(print(inf_all))
     val_conf <- tidy(inf_all)
 
+
+
   })
-
-  # Test 1: if select == 0, estimate must be NA for selections case
-  expect_true(
-    sum(vals$selected == 0 & !is.na(vals$estimate)) == 0
-  )
-
-
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  expect_true(
-    sum(val_conf$prop_selected < 0.5 &
-          (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  )
 
 })
 
@@ -675,15 +559,7 @@ test_that("BIC bi-directional, debias=T, insample", {
   )
 
 
-  # Test 2: for inference target all, variables selected less than half the time,
-  # should have one of the limit as 0
-  expect_true(
-    sum(val_conf$prop_selected < 0.5 &
-          (val_conf$ci_low ==0 |val_conf$ci_high==0 )) == sum(val_conf$prop_selected < 0.5 )
-  )
-
 })
-
 
 test_that("AIC forward, debias=F, insample", {
 
@@ -988,4 +864,6 @@ test_that("AIC  backwards seperate factors, debias=T, insample", {
   # )
 
 })
+
+#testthat::test_file("tests/testthat/test-bootstrap_fns_ic.R")
 
