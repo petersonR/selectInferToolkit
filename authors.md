@@ -9,14 +9,14 @@
 
 ## Citation
 
-Shah J, Peterson R (2025). *selectInferToolkit: Tools for Variable
+Shah J, Peterson R (2026). *selectInferToolkit: Tools for Variable
 Selection & Inference*. R package version 0.4.2,
 <https://petersonr.github.io/selectInferToolkit/>.
 
     @Manual{,
       title = {selectInferToolkit: Tools for Variable Selection & Inference},
       author = {Jinal Shah and Ryan A Peterson},
-      year = {2025},
+      year = {2026},
       note = {R package version 0.4.2},
       url = {https://petersonr.github.io/selectInferToolkit/},
     }
