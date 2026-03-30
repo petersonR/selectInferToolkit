@@ -9,6 +9,8 @@
 #' @param label label of the selector (for pretty printing)
 #' @param all_terms a slot containing names of all terms
 #' @param recipe_obj preprocessor trained from recipes package
+#' @param orig_formula Original formula provided by user
+#' @param selected_terms names of selected variables
 #' @param selected_coefs a vector of only selected coefficients
 #' @param default_infer the root string of the default infer method
 #' @param meta a list containing important meta-information
@@ -50,7 +52,7 @@ as_selector <- function(x, name, label = name, all_terms,
 #' @rdname selector
 #' @export
 
-predict.selector <- function(object, newdata, scale = TRUE, ...) {
+predict.selector <- function(object, newdata, ...) {
 
   if(missing(newdata))
     stop("Please provide newdata")
@@ -87,7 +89,7 @@ predict.selector <- function(object, newdata, scale = TRUE, ...) {
 #' @importFrom broom tidy
 #' @importFrom dplyr left_join filter select mutate if_else
 #' @importFrom tibble tibble
-#'
+#' @importFrom rlang .data
 #' @rdname selector
 #'
 #' @export
@@ -118,7 +120,7 @@ tidy.selector <- function(x, scale_coef = TRUE, ...) {
   scale_step_idx <- which(tidy(rec_obj)$type == "scale")
   if(length(scale_step_idx)) {
     sds <- tidy(rec_obj, number = scale_step_idx) %>%
-      select(term = terms, sd = value)
+      select(term = .data$terms, sd = .data$value)
   } else {
     stop("a scaling step is required")
   }
@@ -126,24 +128,24 @@ tidy.selector <- function(x, scale_coef = TRUE, ...) {
   results <- base %>%
     left_join(sds, by = "term") %>%
     mutate(
-      coef_scaled = estimate,
+      coef_scaled = .data$estimate,
       coef_unscaled = if_else(
-        !is.na(sd),
-        coef_scaled / sd,
-        coef_scaled   ))
+        !is.na(.data$sd),
+        .data$coef_scaled / .data$sd,
+        .data$coef_scaled   ))
 
   if (scale_coef) {
     results <- results %>%
-      mutate(coef = ifelse(is.na(coef_scaled), 0, coef_scaled),
-            selected =ifelse(is.na(selected),0,selected))
+      mutate(coef = ifelse(is.na(.data$coef_scaled), 0, .data$coef_scaled),
+            selected =ifelse(is.na(.data$selected),0,.data$selected))
   } else {
     results <- results %>%
-     mutate(coef = ifelse(is.na(coef_unscaled), 0, coef_unscaled),
-              selected =ifelse(is.na(selected),0,selected))
+     mutate(coef = ifelse(is.na(.data$coef_unscaled), 0, .data$coef_unscaled),
+              selected =ifelse(is.na(.data$selected),0,.data$selected))
   }
 
   results %>%
-    select(term, selected, coef)
+    select(.data$term, .data$selected, .data$coef)
 
 }
 

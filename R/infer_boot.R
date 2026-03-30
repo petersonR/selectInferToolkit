@@ -69,7 +69,7 @@ infer_boot <- function(
 #' @importFrom forcats fct_inorder
 #' @importFrom stats as.formula glm coef formula median quantile sd terms
 #' @importFrom utils tail
-#'
+#' @importFrom rlang .data
 #' @return an `inferrer` object
 #'
 #' @rdname boot
@@ -90,7 +90,7 @@ boot <- function(object, data, B,
   family  <- attr(object, "meta")$family
   family <- if (is.character(family)) get(family,mode = "function")() else family
 
-  outcome_name <- rec_obj$var_info |> filter(role == "outcome") |> pull(variable)
+  outcome_name <- rec_obj$var_info |> filter(.data$role == "outcome") |> pull(.data$variable)
 
   # if cat var selected togther, expand them
   if (attr(object, "name") == "stepwise_ic" &&
@@ -112,7 +112,7 @@ boot <- function(object, data, B,
     term = tidy0$term
   ) |>
     mutate(
-      col = map(term, ~ intersect(.x, colnames(X_full)))
+      col = map(.data$term, ~ intersect(.x, colnames(X_full)))
     )
 
   # Uncomment after debug
@@ -147,7 +147,7 @@ boot <- function(object, data, B,
     }
 
     selected_terms <- val_boot$term[val_boot$selected == 1]
-    selected_cols <- term_to_col |>filter(term %in% selected_terms) |>pull(col) |>
+    selected_cols <- term_to_col |>filter(.data$term %in% selected_terms) |>pull(col) |>
       unlist()
 
     # debiasing for selected terms
@@ -165,7 +165,7 @@ boot <- function(object, data, B,
 
       sel_coefs <- tidy(  fit_sel_debias )[, c("term", "estimate")]
 
-      val_boot <- val_boot %>% left_join(sel_coefs %>% select(term, estimate),
+      val_boot <- val_boot %>% left_join(sel_coefs %>% select(.data$term, .data$estimate),
                                          by = "term",suffix = c("", "_new"))
       nonselected_terms <- val_boot$term[val_boot$selected == 0]
 
@@ -201,34 +201,34 @@ boot <- function(object, data, B,
 
   if(inference_target=="selections") {
     results <- boot_df  %>%
-      filter(term %in% names(coef(object))) %>%
-      select(term, coef, estimate) %>%
-      group_by(term)  %>%
+      filter(.data$term %in% names(coef(object))) %>%
+      select(.data$term, coef, .data$estimate) %>%
+      group_by(.data$term)  %>%
       summarise(
-        estimate_m = mean(estimate),
-        ci_low   = quantile(estimate, (1 - conf.level) / 2),
-        ci_high  = quantile(estimate, 1 - (1 - conf.level) / 2),
+        estimate_m = mean(.data$estimate),
+        ci_low   = quantile(.data$estimate, (1 - conf.level) / 2),
+        ci_high  = quantile(.data$estimate, 1 - (1 - conf.level) / 2),
         prop_selected = mean(coef != 0),
         .groups = "drop"
       )%>%
-      rename(estimate = estimate_m) %>%
+      rename(estimate = .data$estimate_m) %>%
       right_join(tidy(object)[,1], by = "term")%>%
-      arrange(match(term, unique(boot_df$term)))
+      arrange(match(.data$term, unique(boot_df$term)))
   }
 
   if(inference_target=="all") {
     results <- boot_df  %>%
-      select(term, coef, estimate) %>%
-      group_by(term)  %>%
+      select(.data$term, .data$coef, .data$estimate) %>%
+      group_by(.data$term)  %>%
       summarise(
-        estimate_m = mean(estimate),
-        ci_low   = quantile(estimate, (1 - conf.level) / 2),
-        ci_high  = quantile(estimate, 1 - (1 - conf.level) / 2),
+        estimate_m = mean(.data$estimate),
+        ci_low   = quantile(.data$estimate, (1 - conf.level) / 2),
+        ci_high  = quantile(.data$estimate, 1 - (1 - conf.level) / 2),
         prop_selected = mean(coef != 0),
         .groups = "drop"
       )%>%
-      rename(estimate = estimate_m) %>%
-      arrange(match(term, unique(boot_df$term)))
+      rename(estimate = .data$estimate_m) %>%
+      arrange(match(.data$term, unique(boot_df$term)))
   }
 
 

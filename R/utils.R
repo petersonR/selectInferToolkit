@@ -35,6 +35,8 @@ format_meta <- function(meta, digits = 3) {
   paste(fmt, collapse = ", ")
 }
 
+
+#' @importFrom rlang .data
 fill_in_nonselections <- function(inferences, selector_obj,
                                   nonselection, X, y, conf.level,
                                   term_to_col = NULL) {
@@ -88,7 +90,7 @@ fill_in_nonselections <- function(inferences, selector_obj,
     }
   }
 
-  if("term_clean" %in% colnames(val)){val %>% select(-term_clean)}
+  if("term_clean" %in% colnames(val)){val %>% select(-.data$term_clean)}
 
   val
 }

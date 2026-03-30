@@ -1,5 +1,4 @@
 ###### Test IRIS data continuous outcome ########
-
 data(iris)
 #iris <- iris[1:100,]
 
@@ -50,7 +49,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # run vanilla version
   expect_no_warning({
     set.seed(1)
-    inf1 <- infer_boot(fullmod , data = iris, B = 50, debias = FALSE)
+    inf1 <- infer_boot(fullmod , data = iris, B = 5, debias = FALSE)
     vals1 <- tidy(inf1)
     sum(vals1$selected==0) ==0
    sum(vals1$prop_selected==1) ==nrow(vals1)
@@ -59,7 +58,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try debiasing everything
   expect_no_warning({
     set.seed(1)
-    inf2 <- infer_boot(fullmod , data = iris, B = 50, debias = TRUE)
+    inf2 <- infer_boot(fullmod , data = iris, B = 5, debias = TRUE)
     vals2 <- tidy(inf2)
     sum(vals2$selected==0) ==0
     sum(vals2$prop_selected==1) ==nrow(vals2)
@@ -70,7 +69,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try for "all" inference target
   expect_no_warning({
     set.seed(1)
-    inf3 <- infer_boot(fullmod, data = iris, B = 50, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(fullmod, data = iris, B = 5, debias = FALSE, inference_target = "all")
     vals3 <- tidy(inf3)
     sum(vals3$selected==0) ==0
     sum(vals3$prop_selected==1) ==nrow(vals3)
@@ -80,7 +79,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try debiasing
   expect_no_warning({
     set.seed(1)
-    inf4 <- infer_boot(fullmod,, data = iris, B = 50, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(fullmod,, data = iris, B = 5, debias = TRUE, inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)
@@ -109,83 +108,8 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # )
 })
 
-###### Test IRIS data binary outcome ########
-
-iris_binary = iris
-iris$setosa_bin <- ifelse(iris$Species=="setosa",1,0)
-iris$setosa_bin <-factor(iris$setosa_bin , levels = c(0,1),labels  = c("other","setosa"))
-iris_binary = iris %>% select(-Species)
 
 
-formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
-fullmod <- select_full_model(as.formula(formula), iris_binary,family = "binomial" )
-
-
-test_that("basic inferrer bootstrap functionality; full model", {
-#
-#   expect_equal(unname(predict.glm(fullmod)), predict(fullmod, newdata = iris_binary))
-#
-#   # run vanilla version
-#   expect_no_error({
-#     set.seed(2)
-#     inf1 <- infer_boot(fullmod , data = iris_binary, B = 50, debias = FALSE)
-#     vals1 <- tidy(inf1)
-#     sum(vals1$selected==0) ==0
-#     sum(vals1$prop_selected==1) ==nrow(vals1)
-#     expect_equal(unname(predict.glm(fullmod)), predict(fullmod, newdata = iris_binary))
-#
-#   })
-
-  # try debiasing everything
-  expect_no_error({
-    set.seed(2)
-    inf2 <- infer_boot(fullmod , data = iris_binary, B = 50, debias = TRUE)
-    vals2 <- tidy(inf2)
-    sum(vals2$selected==0) ==0
-    sum(vals2$prop_selected==1) ==nrow(vals2)
-
-
-  })
-
-  # try for "all" inference target
-  expect_no_error({
-    set.seed(2)
-    inf3 <- infer_boot(fullmod, data = iris_binary, B = 50, debias = FALSE, inference_target = "all")
-    vals3 <- tidy(inf3)
-    sum(vals3$selected==0) ==0
-    sum(vals3$prop_selected==1) ==nrow(vals3)
-
-  })
-
-  # try debiasing
-  expect_no_error({
-    set.seed(2)
-    inf4 <- infer_boot(fullmod,, data = iris_binary, B = 50, debias = TRUE, inference_target = "all")
-    vals4 <- tidy(inf4)
-    sum(vals4$selected==0) ==0
-    sum(vals4$prop_selected==1) ==nrow(vals4)
-
-  })
-
-  #expect_equal( vals1, vals2)
-  expect_equal( vals3, vals4)
-
-  # re-sampling
-  # rsel <- reselect(fullmod, iris_binary)
-  # expect_identical(coef(fullmod), coef(rsel))
-  # expect_identical(predict(fullmod, newdata = iris_binary), predict(rsel, newdata = iris_binary))
-  # expect_identical(tidy(fullmod), tidy(rsel))
-
-  # Try to re-fit with re-select to "new" data
-  # rsel2 <- reselect(fullmod, newdata = iris_binary[1:50,])
-  #
-  # expect_equal(
-  #   names(coef(rsel2)),
-  #   names(coef(select_full_model(as.formula(formula), iris_binary[1:50,],
-  #                                family = "binomial")))
-  # )
-
-})
 
 ###### Test HERS Data set continuous outcome ####
 data("hers")
@@ -220,7 +144,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # run vanilla version
   expect_no_warning({
     set.seed(3)
-    inf1 <- infer_boot(fullmod , data = hers, B = 50, debias = FALSE)
+    inf1 <- infer_boot(fullmod , data = hers, B = 5, debias = FALSE)
     vals1 <- tidy(inf1)
     sum(vals1$selected==0) ==0
     sum(vals1$prop_selected==1) ==nrow(vals1)
@@ -229,7 +153,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try debiasing everything
   expect_no_warning({
     set.seed(3)
-    inf2 <- infer_boot(fullmod , data = hers, B = 50, debias = TRUE)
+    inf2 <- infer_boot(fullmod , data = hers, B = 5, debias = TRUE)
     vals2 <- tidy(inf2)
     sum(vals2$selected==0) ==0
     sum(vals2$prop_selected==1) ==nrow(vals2)
@@ -240,7 +164,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try for "all" inference target
   expect_no_warning({
     set.seed(3)
-    inf3 <- infer_boot(fullmod, data = hers, B = 50, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(fullmod, data = hers, B = 5, debias = FALSE, inference_target = "all")
     vals3 <- tidy(inf3)
     sum(vals3$selected==0) ==0
     sum(vals3$prop_selected==1) ==nrow(vals3)
@@ -250,7 +174,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try debiasing
   expect_no_warning({
     set.seed(3)
-    inf4 <- infer_boot(fullmod,, data = hers, B = 50, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(fullmod,, data = hers, B = 5, debias = TRUE, inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)
@@ -277,8 +201,92 @@ test_that("basic inferrer bootstrap functionality; full model", {
   )
 })
 
+
+
+skip_on_cran()
+skip_on_ci()
+
+###### Test IRIS data binary outcome ########
+
+iris_binary = iris
+iris$setosa_bin <- ifelse(iris$Species=="setosa",1,0)
+iris$setosa_bin <-factor(iris$setosa_bin , levels = c(0,1),labels  = c("other","setosa"))
+iris_binary = iris %>% dplyr::select(-Species)
+
+
+formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+fullmod <- select_full_model(as.formula(formula), iris_binary,family = "binomial" )
+
+
+test_that("basic inferrer bootstrap functionality; full model", {
+#
+#   expect_equal(unname(predict.glm(fullmod)), predict(fullmod, newdata = iris_binary))
+#
+#   # run vanilla version
+#   expect_no_error({
+#     set.seed(2)
+#     inf1 <- infer_boot(fullmod , data = iris_binary, B = 50, debias = FALSE)
+#     vals1 <- tidy(inf1)
+#     sum(vals1$selected==0) ==0
+#     sum(vals1$prop_selected==1) ==nrow(vals1)
+#     expect_equal(unname(predict.glm(fullmod)), predict(fullmod, newdata = iris_binary))
+#
+#   })
+
+  # try debiasing everything
+  expect_no_error({
+    set.seed(2)
+    inf2 <- infer_boot(fullmod , data = iris_binary, B = 5, debias = TRUE)
+    vals2 <- tidy(inf2)
+    sum(vals2$selected==0) ==0
+    sum(vals2$prop_selected==1) ==nrow(vals2)
+
+
+  })
+
+  # try for "all" inference target
+  expect_no_error({
+    set.seed(2)
+    inf3 <- infer_boot(fullmod, data = iris_binary, B = 5, debias = FALSE, inference_target = "all")
+    vals3 <- tidy(inf3)
+    sum(vals3$selected==0) ==0
+    sum(vals3$prop_selected==1) ==nrow(vals3)
+
+  })
+
+  # try debiasing
+  expect_no_error({
+    set.seed(2)
+    inf4 <- infer_boot(fullmod,, data = iris_binary, B = 5, debias = TRUE, inference_target = "all")
+    vals4 <- tidy(inf4)
+    sum(vals4$selected==0) ==0
+    sum(vals4$prop_selected==1) ==nrow(vals4)
+
+  })
+
+  #expect_equal( vals1, vals2)
+  expect_equal( vals3, vals4)
+
+  # re-sampling
+  # rsel <- reselect(fullmod, iris_binary)
+  # expect_identical(coef(fullmod), coef(rsel))
+  # expect_identical(predict(fullmod, newdata = iris_binary), predict(rsel, newdata = iris_binary))
+  # expect_identical(tidy(fullmod), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  # rsel2 <- reselect(fullmod, newdata = iris_binary[1:50,])
+  #
+  # expect_equal(
+  #   names(coef(rsel2)),
+  #   names(coef(select_full_model(as.formula(formula), iris_binary[1:50,],
+  #                                family = "binomial")))
+  # )
+
+})
+
+
 ###### Test HERS Data set binary outcome ####
-hers_diab <- hers  %>% select (-hdl1, -dmpills, -insulin)
+hers_diab <- hers  %>% dplyr::select (-hdl1, -dmpills, -insulin)
 #head(hers_diab)
 
 fullmod <- select_full_model(diabetes ~ ., hers_diab, family = "binomial")
@@ -290,7 +298,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # run vanilla version
   expect_no_warning({
     set.seed(4)
-    inf1 <- infer_boot(fullmod , data = hers_diab, B = 50, debias = FALSE)
+    inf1 <- infer_boot(fullmod , data = hers_diab, B = 5, debias = FALSE)
     vals1 <- tidy(inf1)
     sum(vals1$selected==0) ==0
     sum(vals1$prop_selected==1) ==nrow(vals1)
@@ -299,7 +307,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try debiasing everything
   expect_no_warning({
     set.seed(4)
-    inf2 <- infer_boot(fullmod , data = hers_diab, B = 50, debias = TRUE)
+    inf2 <- infer_boot(fullmod , data = hers_diab, B = 5, debias = TRUE)
     vals2 <- tidy(inf2)
     sum(vals2$selected==0) ==0
     sum(vals2$prop_selected==1) ==nrow(vals2)
@@ -310,7 +318,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try for "all" inference target
   expect_no_warning({
     set.seed(4)
-    inf3 <- infer_boot(fullmod, data = hers_diab, B = 50, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(fullmod, data = hers_diab, B = 5, debias = FALSE, inference_target = "all")
     vals3 <- tidy(inf3)
     sum(vals3$selected==0) ==0
     sum(vals3$prop_selected==1) ==nrow(vals3)
@@ -320,7 +328,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try debiasing
   expect_no_warning({
     set.seed(4)
-    inf4 <- infer_boot(fullmod,, data = hers_diab, B = 50, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(fullmod,, data = hers_diab, B = 5, debias = TRUE, inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)

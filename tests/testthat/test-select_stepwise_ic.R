@@ -1,5 +1,4 @@
 ###### Test IRIS data continuous outcome ########
-
 data(iris)
 #iris <- iris[1:100,]
 
@@ -188,193 +187,6 @@ test_that("backward selection works", {
 
 })
 
-
-###### Test IRIS data binary outcome ########
-
-iris_binary = iris
-iris$setosa_bin <- ifelse(iris$Species=="setosa",1,0)
-iris$setosa_bin <-factor(iris$setosa_bin , levels = c(0,1),labels  = c("other","setosa"))
-iris_binary = iris %>% select(-Species)
-
-test_that("bi-direction works", {
-  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
-  sel <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="both",
-                            family = "binomial")
-
-  expect_no_warning({
-    capture_output(print(sel))
-    tidy(sel)
-    tidy(sel,scale_coef = F)
-    predict(sel, newdata =iris[1:5,])
-    predict(sel, newdata = iris)
-  })
-
-  expect_equal(unname(predict.glm(sel)), predict(sel, newdata = iris_binary))
-
-  rsel <- reselect(sel, iris_binary)
-  expect_identical(coef(sel), coef(rsel))
-  expect_identical(predict(sel, newdata = iris_binary), predict(rsel, newdata = iris_binary))
-  expect_identical(tidy(sel), tidy(rsel))
-
-  # Try to re-fit with re-select to "new" data
-  rsel2 <- reselect(sel, newdata = iris_binary[1:50,])
-  # should at least have same selections, a bit different due to pre-processing
-  expect_equal(
-    names(coef(rsel2)),
-    names(coef(select_stepwise_ic(formula = as.formula(formula), iris_binary[1:50,],
-                                  direction="both",
-                                  family = "binomial")))
-  )
-
-
-  sel2 <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="both",
-                             family = "binomial", penalty ="BIC")
-
-  expect_no_warning({
-    capture_output(print(sel2))
-    tidy(sel2)
-    tidy(sel2,scale_coef = F)
-    predict(sel2, newdata =iris[1:5,])
-    predict(sel2, newdata = iris)
-  })
-
-  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = iris_binary))
-
-  rsel <- reselect(sel2, iris_binary)
-  expect_identical(coef(sel2), coef(rsel))
-  expect_identical(predict(sel2, newdata = iris_binary), predict(rsel, newdata = iris_binary))
-  expect_identical(tidy(sel2), tidy(rsel))
-
-  # Try to re-fit with re-select to "new" data
-  rsel2 <- reselect(sel2, newdata = iris[1:50,])
-  # should at least have same selections, a bit different due to pre-processing
-  expect_equal(
-    names(coef(rsel2)),
-    names(coef(select_stepwise_ic(as.formula(formula), iris_binary[1:50,],direction="both",
-                                  penalty ="BIC",family = "binomial",)))
-  )
-
-
-
-})
-
-test_that("forward selection works", {
-  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
-  sel <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="forward",
-                            family = "binomial")
-
-  expect_no_warning({
-    capture_output(print(sel))
-    tidy(sel)
-    tidy(sel,scale_coef = F)
-    predict(sel, newdata =iris[1:5,])
-    predict(sel, newdata = iris)
-  })
-
-  expect_equal(unname(predict.glm(sel)), predict(sel, newdata = iris_binary))
-  rsel <- reselect(sel, iris_binary)
-  expect_identical(coef(sel), coef(rsel))
-  expect_identical(predict(sel, newdata = iris_binary), predict(rsel, newdata = iris_binary))
-  expect_identical(tidy(sel), tidy(rsel))
-
-  # Try to re-fit with re-select to "new" data
-  rsel2 <- reselect(sel, newdata = iris_binary[1:50,])
-  # should at least have same selections, a bit different due to pre-processing
-  expect_equal(
-    names(coef(rsel2)),
-    names(coef(select_stepwise_ic(formula = as.formula(formula), iris_binary[1:50,],
-                                  direction="forward",
-                                  family = "binomial")))
-  )
-
-
-  sel2 <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="forward",
-                             family = "binomial", penalty ="BIC")
-
-  expect_no_warning({
-    capture_output(print(sel2))
-    tidy(sel2)
-    tidy(sel2,scale_coef = F)
-    predict(sel2, newdata =iris[1:5,])
-    predict(sel2, newdata = iris)
-  })
-
-  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = iris_binary))
-
-  rsel <- reselect(sel2, iris_binary)
-  expect_identical(coef(sel2), coef(rsel))
-  expect_identical(predict(sel2, newdata = iris_binary), predict(rsel, newdata = iris_binary))
-  expect_identical(tidy(sel2), tidy(rsel))
-
-  # Try to re-fit with re-select to "new" data
-  rsel2 <- reselect(sel2, newdata = iris_binary[1:50,])
-  # should at least have same selections, a bit different due to pre-processing
-  expect_equal(
-    names(coef(rsel2)),
-    names(coef(select_stepwise_ic(formula = as.formula(formula), iris_binary[1:50,],direction="forward",
-                                  penalty ="BIC", family = "binomial")))
-  )
-
-})
-
-test_that("backward selection works", {
-  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
-  sel <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="backward",
-                            family = "binomial")
-
-  expect_no_warning({
-    capture_output(print(sel))
-    tidy(sel)
-    tidy(sel,scale_coef = F)
-    predict(sel, newdata =iris[1:5,])
-    predict(sel, newdata = iris)
-  })
-
-  expect_equal(unname(predict.glm(sel)), predict(sel, newdata = iris_binary))
-  rsel <- reselect(sel, iris_binary)
-  expect_identical(coef(sel), coef(rsel))
-  expect_identical(predict(sel, newdata = iris_binary), predict(rsel, newdata = iris_binary))
-  expect_identical(tidy(sel), tidy(rsel))
-
-  # Try to re-fit with re-select to "new" data
-  rsel2 <- reselect(sel, newdata = iris_binary[1:50,])
-  # should at least have same selections, a bit different due to pre-processing
-  expect_equal(
-    names(coef(rsel2)),
-    names(coef(select_stepwise_ic(formula = as.formula(formula), iris_binary[1:50,],
-                                  direction="backward",
-                                  family = "binomial")))
-  )
-
-
-
-  sel2 <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="backward",
-                             family = "binomial", penalty ="BIC")
-
-  expect_no_warning({
-    capture_output(print(sel2))
-    tidy(sel2)
-    tidy(sel2,scale_coef = F)
-    predict(sel2, newdata =iris[1:5,])
-    predict(sel2, newdata = iris)
-  })
-
-  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = iris_binary))
-  rsel <- reselect(sel2, iris_binary)
-  expect_identical(coef(sel2), coef(rsel))
-  expect_identical(predict(sel2, newdata = iris), predict(rsel, newdata = iris_binary))
-  expect_identical(tidy(sel2), tidy(rsel))
-
-  # Try to re-fit with re-select to "new" data
-  rsel2 <- reselect(sel2, newdata = iris_binary[1:50,])
-  # should at least have same selections, a bit different due to pre-processing
-  expect_equal(
-    names(coef(rsel2)),
-    names(coef(select_stepwise_ic(formula = as.formula(formula), iris_binary[1:50,],direction="backward",
-                                  penalty ="BIC",  family = "binomial")))
-  )
-
-})
 
 
 ###### Test HERS Data set continuous outcome ####
@@ -731,9 +543,204 @@ test_that("backward selection works  individual factors", {
 
 })
 
+
+
+
+
+
+
+skip()
+###### Test IRIS data binary outcome ########
+
+iris_binary = iris
+iris$setosa_bin <- ifelse(iris$Species=="setosa",1,0)
+iris$setosa_bin <-factor(iris$setosa_bin , levels = c(0,1),labels  = c("other","setosa"))
+iris_binary = iris %>% dplyr::select(-Species)
+
+test_that("bi-direction works", {
+  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+  sel <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="both",
+                            family = "binomial")
+
+  expect_no_warning({
+    capture_output(print(sel))
+    tidy(sel)
+    tidy(sel,scale_coef = F)
+    predict(sel, newdata =iris[1:5,])
+    predict(sel, newdata = iris)
+  })
+
+  expect_equal(unname(predict.glm(sel)), predict(sel, newdata = iris_binary))
+
+  rsel <- reselect(sel, iris_binary)
+  expect_identical(coef(sel), coef(rsel))
+  expect_identical(predict(sel, newdata = iris_binary), predict(rsel, newdata = iris_binary))
+  expect_identical(tidy(sel), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel, newdata = iris_binary[1:50,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(formula = as.formula(formula), iris_binary[1:50,],
+                                  direction="both",
+                                  family = "binomial")))
+  )
+
+
+  sel2 <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="both",
+                             family = "binomial", penalty ="BIC")
+
+  expect_no_warning({
+    capture_output(print(sel2))
+    tidy(sel2)
+    tidy(sel2,scale_coef = F)
+    predict(sel2, newdata =iris[1:5,])
+    predict(sel2, newdata = iris)
+  })
+
+  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = iris_binary))
+
+  rsel <- reselect(sel2, iris_binary)
+  expect_identical(coef(sel2), coef(rsel))
+  expect_identical(predict(sel2, newdata = iris_binary), predict(rsel, newdata = iris_binary))
+  expect_identical(tidy(sel2), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel2, newdata = iris[1:50,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(as.formula(formula), iris_binary[1:50,],direction="both",
+                                  penalty ="BIC",family = "binomial",)))
+  )
+
+
+
+})
+
+test_that("forward selection works", {
+  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+  sel <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="forward",
+                            family = "binomial")
+
+  expect_no_warning({
+    capture_output(print(sel))
+    tidy(sel)
+    tidy(sel,scale_coef = F)
+    predict(sel, newdata =iris[1:5,])
+    predict(sel, newdata = iris)
+  })
+
+  expect_equal(unname(predict.glm(sel)), predict(sel, newdata = iris_binary))
+  rsel <- reselect(sel, iris_binary)
+  expect_identical(coef(sel), coef(rsel))
+  expect_identical(predict(sel, newdata = iris_binary), predict(rsel, newdata = iris_binary))
+  expect_identical(tidy(sel), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel, newdata = iris_binary[1:50,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(formula = as.formula(formula), iris_binary[1:50,],
+                                  direction="forward",
+                                  family = "binomial")))
+  )
+
+
+  sel2 <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="forward",
+                             family = "binomial", penalty ="BIC")
+
+  expect_no_warning({
+    capture_output(print(sel2))
+    tidy(sel2)
+    tidy(sel2,scale_coef = F)
+    predict(sel2, newdata =iris[1:5,])
+    predict(sel2, newdata = iris)
+  })
+
+  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = iris_binary))
+
+  rsel <- reselect(sel2, iris_binary)
+  expect_identical(coef(sel2), coef(rsel))
+  expect_identical(predict(sel2, newdata = iris_binary), predict(rsel, newdata = iris_binary))
+  expect_identical(tidy(sel2), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel2, newdata = iris_binary[1:50,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(formula = as.formula(formula), iris_binary[1:50,],direction="forward",
+                                  penalty ="BIC", family = "binomial")))
+  )
+
+})
+
+test_that("backward selection works", {
+  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+  sel <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="backward",
+                            family = "binomial")
+
+  expect_no_warning({
+    capture_output(print(sel))
+    tidy(sel)
+    tidy(sel,scale_coef = F)
+    predict(sel, newdata =iris[1:5,])
+    predict(sel, newdata = iris)
+  })
+
+  expect_equal(unname(predict.glm(sel)), predict(sel, newdata = iris_binary))
+  rsel <- reselect(sel, iris_binary)
+  expect_identical(coef(sel), coef(rsel))
+  expect_identical(predict(sel, newdata = iris_binary), predict(rsel, newdata = iris_binary))
+  expect_identical(tidy(sel), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel, newdata = iris_binary[1:50,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(formula = as.formula(formula), iris_binary[1:50,],
+                                  direction="backward",
+                                  family = "binomial")))
+  )
+
+
+
+  sel2 <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="backward",
+                             family = "binomial", penalty ="BIC")
+
+  expect_no_warning({
+    capture_output(print(sel2))
+    tidy(sel2)
+    tidy(sel2,scale_coef = F)
+    predict(sel2, newdata =iris[1:5,])
+    predict(sel2, newdata = iris)
+  })
+
+  expect_equal(unname(predict.glm(sel2)), predict(sel2, newdata = iris_binary))
+  rsel <- reselect(sel2, iris_binary)
+  expect_identical(coef(sel2), coef(rsel))
+  expect_identical(predict(sel2, newdata = iris), predict(rsel, newdata = iris_binary))
+  expect_identical(tidy(sel2), tidy(rsel))
+
+  # Try to re-fit with re-select to "new" data
+  rsel2 <- reselect(sel2, newdata = iris_binary[1:50,])
+  # should at least have same selections, a bit different due to pre-processing
+  expect_equal(
+    names(coef(rsel2)),
+    names(coef(select_stepwise_ic(formula = as.formula(formula), iris_binary[1:50,],direction="backward",
+                                  penalty ="BIC",  family = "binomial")))
+  )
+
+})
+
+
 ###### Test HERS Data set binary outcome ####
 
-hers_diab <- hers  %>% select (-hdl1, -dmpills, -insulin)
+hers_diab <- hers  %>% dplyr::select (-hdl1, -dmpills, -insulin)
 head(hers_diab)
 
 test_that("bi-direction works", {

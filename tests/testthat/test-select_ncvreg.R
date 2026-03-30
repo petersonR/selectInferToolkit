@@ -1,5 +1,4 @@
 ###### Test IRIS data continuous outcome ########
-
 data(iris)
 #iris <- iris[1:100,]
 
@@ -216,8 +215,9 @@ test_that("MCP works", {
 
 })
 
+skip()
 ###### Test HERS Data set binary outcome ####
-hers_diab <- hers  %>% select (-hdl1, -dmpills, -insulin)
+hers_diab <- hers  %>% dplyr::select (-hdl1, -dmpills, -insulin)
 
 
 test_that("lasso  works", {

@@ -9,6 +9,7 @@
 #' @rdname infer
 #' @importFrom tibble tibble
 #' @importFrom ncvreg intervals
+#' @importFrom rlang .data
 #' @export
 #'
 infer_pipe <- function(object, data, conf.level = .95, ...) {
@@ -24,7 +25,8 @@ infer_pipe <- function(object, data, conf.level = .95, ...) {
 
   pipe_results <- intervals(object, level = conf.level, X = as.matrix(X), ...)
   inferences <- pipe_results %>%
-    select(term = variable, estimate, ci_low = lower, ci_high = upper, p_value = p.value) %>%
+    select(term = .data$variable, .data$estimate, ci_low = .data$lower,
+           ci_high = .data$upper, p_value = .data$p.value) %>%
     tibble()
 
 

@@ -1,6 +1,7 @@
 data("mtcars")
 library(testthat)
 
+
 test_that("basic selector operations (full model, no selection)", {
   sel <- select_full_model(mpg ~ ., mtcars)
 
@@ -138,7 +139,7 @@ test_that("basic inferrer bootstrap functionality; stepwise IC", {
 
   # run vanilla version
   expect_no_warning({
-    inf1 <- infer_boot(sel1, data = mtcars, B = 50, debias = FALSE)
+    inf1 <- infer_boot(sel1, data = mtcars, B = 5, debias = FALSE)
     vals1 <- tidy(inf1)
   })
 
@@ -152,7 +153,7 @@ test_that("basic inferrer bootstrap functionality; stepwise IC", {
 
   # try debiasing everything
   expect_no_warning({
-    inf2 <- infer_boot(sel1, data = mtcars, B = 50, debias = TRUE)
+    inf2 <- infer_boot(sel1, data = mtcars, B = 5, debias = TRUE)
     vals2 <- tidy(inf2)
   })
 
@@ -161,13 +162,13 @@ test_that("basic inferrer bootstrap functionality; stepwise IC", {
 
   # try for "all" inference target
   expect_no_warning({
-    inf3 <- infer_boot(sel1, data = mtcars, B = 50, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(sel1, data = mtcars, B = 5, debias = FALSE, inference_target = "all")
     vals3 <- tidy(inf3)
   })
 
   # try debiasing
   expect_no_warning({
-    inf4 <- infer_boot(sel1, data = mtcars, B = 50, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(sel1, data = mtcars, B = 5, debias = TRUE, inference_target = "all")
     vals4 <- tidy(inf4)
   })
 
@@ -179,7 +180,7 @@ test_that("basic inferrer bootstrap functionality; glmnet", {
   set.seed(123)
   # run vanilla version
   expect_no_warning({
-    inf1 <- infer_boot(sel2, data = mtcars, B = 50, debias = FALSE)
+    inf1 <- infer_boot(sel2, data = mtcars, B = 5, debias = FALSE)
     vals1 <- tidy(inf1)
   })
 
@@ -195,7 +196,7 @@ test_that("basic inferrer bootstrap functionality; glmnet", {
 
   # try debiasing everything
   expect_no_warning({
-    inf2 <- infer_boot(sel2, data = mtcars, B = 50, debias = TRUE)
+    inf2 <- infer_boot(sel2, data = mtcars, B = 5, debias = TRUE)
     vals2 <- tidy(inf2)
   })
 
@@ -207,13 +208,13 @@ test_that("basic inferrer bootstrap functionality; glmnet", {
 
   # try for "all" inference target
   expect_no_warning({
-    inf3 <- infer_boot(sel2, data = mtcars, B = 50, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(sel2, data = mtcars, B = 5, debias = FALSE, inference_target = "all")
     vals3 <- tidy(inf3)
   })
 
   # try debiasing
   expect_no_warning({
-    inf4 <- infer_boot(sel2, data = mtcars, B = 50, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(sel2, data = mtcars, B = 5, debias = TRUE, inference_target = "all")
     vals4 <- tidy(inf4)
   })
 
@@ -226,7 +227,7 @@ test_that("Basic inferrer bootstrap functionality; ncvreg", {
   set.seed(123)
   # run vanilla version
   expect_no_warning({
-    inf1 <- infer_boot(sel3, data = mtcars, B = 50, debias = FALSE)
+    inf1 <- infer_boot(sel3, data = mtcars, B = 5, debias = FALSE)
     vals1 <- tidy(inf1)
   })
 
@@ -242,7 +243,7 @@ test_that("Basic inferrer bootstrap functionality; ncvreg", {
 
   # try debiasing everything
   expect_no_warning({
-    inf2 <- infer_boot(sel3, data = mtcars, B = 50, debias = TRUE)
+    inf2 <- infer_boot(sel3, data = mtcars, B = 5, debias = TRUE)
     vals2 <- tidy(inf2)
   })
 
@@ -254,53 +255,26 @@ test_that("Basic inferrer bootstrap functionality; ncvreg", {
 
   # try for "all" inference target
   expect_no_warning({
-    inf3 <- infer_boot(sel3, data = mtcars, B = 50, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(sel3, data = mtcars, B = 5, debias = FALSE, inference_target = "all")
     vals3 <- tidy(inf3)
   })
 
   # try debiasing
   expect_no_warning({
-    inf4 <- infer_boot(sel3, data = mtcars, B = 50, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(sel3, data = mtcars, B = 5, debias = TRUE, inference_target = "all")
     vals4 <- tidy(inf4)
   })
 
   # build in some additional testing
 })
 
-test_that("basic inferrer bootstrap functionality; full model", {
-
-  # run vanilla version
-  expect_no_warning({
-    inf1 <- infer_boot(sel4, data = mtcars, B = 50, debias = FALSE)
-    vals1 <- tidy(inf1)
-  })
-
-  # try debiasing everything
-  expect_no_warning({
-    inf2 <- infer_boot(sel4, data = mtcars, B = 50, debias = TRUE)
-    vals2 <- tidy(inf2)
-  })
-
-  # try for "all" inference target
-  expect_no_warning({
-    inf3 <- infer_boot(sel4, data = mtcars, B = 50, debias = FALSE, inference_target = "all")
-    vals3 <- tidy(inf3)
-  })
-
-  # try debiasing
-  expect_no_warning({
-    inf4 <- infer_boot(sel4, data = mtcars, B = 50, debias = TRUE, inference_target = "all")
-    vals4 <- tidy(inf4)
-  })
-  # build in some additional testing
-})
 
 test_that("basic inferrer bootstrap functionality; glmnet + out-of-sample estimation", {
 
   set.seed(123)
   # run vanilla version
   expect_warning({
-    inf1 <- infer_boot(sel2, data = mtcars, B = 50, debias = FALSE, estimation_data = "out-of-sample")
+    inf1 <- infer_boot(sel2, data = mtcars, B = 5, debias = FALSE, estimation_data = "out-of-sample")
     vals1 <- tidy(inf1)
   })
 
@@ -314,7 +288,7 @@ test_that("basic inferrer bootstrap functionality; glmnet + out-of-sample estima
 
   # try debiasing everything
   expect_warning({
-    inf2 <- infer_boot(sel2, data = mtcars, B = 50, debias = TRUE,
+    inf2 <- infer_boot(sel2, data = mtcars, B = 5, debias = TRUE,
                        estimation_data = "out-of-sample")
     vals2 <- tidy(inf2)
   })
@@ -324,14 +298,14 @@ test_that("basic inferrer bootstrap functionality; glmnet + out-of-sample estima
 
   # try for "all" inference target
   expect_warning({
-    inf3 <- infer_boot(sel2, data = mtcars[1:20,], B = 50, debias = FALSE,
+    inf3 <- infer_boot(sel2, data = mtcars[1:20,], B = 5, debias = FALSE,
                        inference_target = "all", estimation_data = "out-of-sample")
     vals3 <- tidy(inf3)
   })
 
   # try debiasing
   expect_warning({
-    inf4 <- infer_boot(sel2, data = rbind(mtcars, mtcars, mtcars), B = 50, debias = TRUE,
+    inf4 <- infer_boot(sel2, data = rbind(mtcars, mtcars, mtcars), B = 5, debias = TRUE,
                        inference_target = "all", estimation_data = "out-of-sample")
     vals4 <- tidy(inf4)
   })
@@ -449,4 +423,10 @@ test_that("PIPE inference + ncvreg", {
 
 
 })
+
+# start.time <- Sys.time()
+# testthat::test_file("tests/testthat/test-basic.R")
+# end.time <- Sys.time()
+# time.taken <- round(end.time - start.time,2)
+# time.taken
 

@@ -14,6 +14,7 @@
 #' @return `inferrer` object
 #'
 #' @importFrom dplyr right_join group_by summarize bind_rows pull filter if_else
+#' @importFrom rlang .data
 #'
 #' @rdname infer
 #' @export
@@ -35,8 +36,8 @@ infer_upsi <- function(
   rec_obj <- attr(object, "recipe_obj")
   meta <- attr(object, "meta")
   outcome_name <- rec_obj$var_info %>%
-    filter(role == "outcome") %>%
-    pull(variable)
+    filter(.data$role == "outcome") %>%
+    pull(.data$variable)
   all_terms <- attr(object, "all_terms")
 
   df <- bake(rec_obj, new_data = data)
@@ -44,7 +45,8 @@ infer_upsi <- function(
   selected_formula <- formula(paste0(outcome_name, "~", paste0(c(1, selected_vars), collapse = "+")))
   fit_selected <- glm(selected_formula, data = df, family = meta$family)
   results_selected <- tidy(fit_selected, conf.int = TRUE, conf.level = conf.level) %>%
-    select(term, estimate, ci_low = conf.low, ci_high = conf.high, p_value = p.value)
+    select(.data$term, .data$estimate, ci_low = .data$conf.low,
+           ci_high = .data$conf.high, p_value = .data$p.value)
   results_selected$term <- make.names(results_selected$term )
   if(results_selected$term[1] =="X.Intercept.") results_selected$term[1] = "(Intercept)"
 
@@ -55,10 +57,10 @@ infer_upsi <- function(
 
   if(nonselection == "confident_nulls") {
     results <- results %>%
-      mutate(estimate = ifelse(is.na(estimate), 0, estimate),
-             ci_low = ifelse(is.na(ci_low), 0, ci_low),
-             ci_high = ifelse(is.na(ci_high), 0, ci_high),
-             p_value = ifelse(is.na(p_value), 1, p_value)
+      mutate(estimate = ifelse(is.na(.data$estimate), 0, .data$estimate),
+             ci_low = ifelse(is.na(.data$ci_low), 0, .data$ci_low),
+             ci_high = ifelse(is.na(.data$ci_high), 0, .data$ci_high),
+             p_value = ifelse(is.na(.data$p_value), 1, .data$p_value)
       )
   }
   if(nonselection == "uncertain_nulls") {

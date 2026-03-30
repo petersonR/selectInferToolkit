@@ -1,5 +1,4 @@
 ###### Test IRIS data continuous outcome ########
-
 data(iris)
 #iris <- iris[1:100,]
 
@@ -118,7 +117,7 @@ test_that("elastic net works", {
 iris_binary = iris
 iris$setosa_bin <- ifelse(iris$Species=="setosa",1,0)
 iris$setosa_bin <-factor(iris$setosa_bin , levels = c(0,1),labels  = c("other","setosa"))
-iris_binary = iris %>% select(-Species)
+iris_binary = iris %>% dplyr::select(-Species)
 
 test_that("lasso  works", {
   formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
@@ -324,7 +323,7 @@ test_that("elastic net works", {
 })
 
 ###### Test HERS Data set binary outcome ####
-hers_diab <- hers  %>% select (-hdl1, -dmpills, -insulin)
+hers_diab <- hers  %>% dplyr::select (-hdl1, -dmpills, -insulin)
 
 
 test_that("lasso  works", {
