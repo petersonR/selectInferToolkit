@@ -8,24 +8,33 @@ inference using hybrid, bootstrap and selective inference
 
 ``` r
 ciratio(
-  x,
-  y,
-  nonselection = "ignored",
-  std = TRUE,
+  formula,
+  data,
+  family = c("gaussian", "binomial", "poisson"),
+  nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
+  conf.level = 0.95,
   B = 250,
-  direction = "forward"
+  direction = "forward",
+  select_factors_together = F,
+  debias = F,
+  inference_target = "selections",
+  ...
 )
 ```
 
 ## Arguments
 
-- x:
+- formula:
 
-  Dataframe/model matrix with predictors (without intercept)
+  a formula
 
-- y:
+- data:
 
-  outcome vector
+  data set
+
+- family:
+
+  outcome distributional family
 
 - nonselection:
 
@@ -33,18 +42,34 @@ ciratio(
   model selection procedure. One of "ignored", "confident_nulls" or
   "uncertain_nulls" supported
 
-- std:
+- conf.level:
 
-  if TRUE (default), standardize design matrix
+  .95 by default
 
 - B:
 
-  \#of bootstraps
+  Number of bootstraps
 
 - direction:
 
   the mode of step wise search, can be one of "both", "backward", or
   "forward", with a default of "forward"
+
+- select_factors_together:
+
+  should categorical variables be jointly selected?
+
+- debias:
+
+  should estimates be debiased in bootstrap
+
+- inference_target:
+
+  is inference requested on all or selected only
+
+- ...:
+
+  additional arguments
 
 ## Value
 

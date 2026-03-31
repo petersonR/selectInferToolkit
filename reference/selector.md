@@ -25,13 +25,15 @@ as_selector(
   label = name,
   all_terms,
   recipe_obj,
+  orig_formula,
+  selected_terms,
   selected_coefs,
   default_infer,
   meta = list()
 )
 
 # S3 method for class 'selector'
-predict(object, newdata = NULL, ...)
+predict(object, newdata, ...)
 
 # S3 method for class 'selector'
 tidy(x, scale_coef = TRUE, ...)
@@ -66,6 +68,14 @@ reselect(selector_obj, newdata)
 - recipe_obj:
 
   preprocessor trained from recipes package
+
+- orig_formula:
+
+  Original formula provided by user
+
+- selected_terms:
+
+  names of selected variables
 
 - selected_coefs:
 

@@ -69,13 +69,15 @@ instead uses the original preprocess recipe from <code>selector_obj</code>.</p>
 <span>  label <span class="op">=</span> <span class="va">name</span>,</span>
 <span>  <span class="va">all_terms</span>,</span>
 <span>  <span class="va">recipe_obj</span>,</span>
+<span>  <span class="va">orig_formula</span>,</span>
+<span>  <span class="va">selected_terms</span>,</span>
 <span>  <span class="va">selected_coefs</span>,</span>
 <span>  <span class="va">default_infer</span>,</span>
 <span>  meta <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'selector'</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">object</span>, newdata <span class="op">=</span> <span class="cn">NULL</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">object</span>, <span class="va">newdata</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'selector'</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">x</span>, scale_coef <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span>
@@ -111,6 +113,14 @@ instead uses the original preprocess recipe from <code>selector_obj</code>.</p>
 
 <dt id="arg-recipe-obj">recipe_obj<a class="anchor" aria-label="anchor" href="#arg-recipe-obj"></a></dt>
 <dd><p>preprocessor trained from recipes package</p></dd>
+
+
+<dt id="arg-orig-formula">orig_formula<a class="anchor" aria-label="anchor" href="#arg-orig-formula"></a></dt>
+<dd><p>Original formula provided by user</p></dd>
+
+
+<dt id="arg-selected-terms">selected_terms<a class="anchor" aria-label="anchor" href="#arg-selected-terms"></a></dt>
+<dd><p>names of selected variables</p></dd>
 
 
 <dt id="arg-selected-coefs">selected_coefs<a class="anchor" aria-label="anchor" href="#arg-selected-coefs"></a></dt>

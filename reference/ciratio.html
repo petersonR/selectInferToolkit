@@ -43,12 +43,17 @@ adjusting for post-selectino inference using hybrid, bootstrap and selective inf
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">ciratio</span><span class="op">(</span></span>
-<span>  <span class="va">x</span>,</span>
-<span>  <span class="va">y</span>,</span>
-<span>  nonselection <span class="op">=</span> <span class="st">"ignored"</span>,</span>
-<span>  std <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  <span class="va">formula</span>,</span>
+<span>  <span class="va">data</span>,</span>
+<span>  family <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gaussian"</span>, <span class="st">"binomial"</span>, <span class="st">"poisson"</span><span class="op">)</span>,</span>
+<span>  nonselection <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ignored"</span>, <span class="st">"confident_nulls"</span>, <span class="st">"uncertain_nulls"</span><span class="op">)</span>,</span>
+<span>  conf.level <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  B <span class="op">=</span> <span class="fl">250</span>,</span>
-<span>  direction <span class="op">=</span> <span class="st">"forward"</span></span>
+<span>  direction <span class="op">=</span> <span class="st">"forward"</span>,</span>
+<span>  select_factors_together <span class="op">=</span> <span class="cn">F</span>,</span>
+<span>  debias <span class="op">=</span> <span class="cn">F</span>,</span>
+<span>  inference_target <span class="op">=</span> <span class="st">"selections"</span>,</span>
+<span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -56,29 +61,50 @@ adjusting for post-selectino inference using hybrid, bootstrap and selective inf
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
 
 
-<dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>Dataframe/model matrix with predictors (without intercept)</p></dd>
+<dl><dt id="arg-formula">formula<a class="anchor" aria-label="anchor" href="#arg-formula"></a></dt>
+<dd><p>a formula</p></dd>
 
 
-<dt id="arg-y">y<a class="anchor" aria-label="anchor" href="#arg-y"></a></dt>
-<dd><p>outcome vector</p></dd>
+<dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
+<dd><p>data set</p></dd>
+
+
+<dt id="arg-family">family<a class="anchor" aria-label="anchor" href="#arg-family"></a></dt>
+<dd><p>outcome distributional family</p></dd>
 
 
 <dt id="arg-nonselection">nonselection<a class="anchor" aria-label="anchor" href="#arg-nonselection"></a></dt>
-<dd><p>A character string specifying how to handle variables not selected by model selection procedure. One of
-"ignored", "confident_nulls" or "uncertain_nulls" supported</p></dd>
+<dd><p>A character string specifying how to handle variables
+not selected by model selection procedure. One of "ignored",
+"confident_nulls" or "uncertain_nulls" supported</p></dd>
 
 
-<dt id="arg-std">std<a class="anchor" aria-label="anchor" href="#arg-std"></a></dt>
-<dd><p>if TRUE (default), standardize design matrix</p></dd>
+<dt id="arg-conf-level">conf.level<a class="anchor" aria-label="anchor" href="#arg-conf-level"></a></dt>
+<dd><p>.95 by default</p></dd>
 
 
 <dt id="arg-b">B<a class="anchor" aria-label="anchor" href="#arg-b"></a></dt>
-<dd><p>#of bootstraps</p></dd>
+<dd><p>Number of bootstraps</p></dd>
 
 
 <dt id="arg-direction">direction<a class="anchor" aria-label="anchor" href="#arg-direction"></a></dt>
 <dd><p>the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"</p></dd>
+
+
+<dt id="arg-select-factors-together">select_factors_together<a class="anchor" aria-label="anchor" href="#arg-select-factors-together"></a></dt>
+<dd><p>should categorical variables be jointly selected?</p></dd>
+
+
+<dt id="arg-debias">debias<a class="anchor" aria-label="anchor" href="#arg-debias"></a></dt>
+<dd><p>should estimates be debiased in bootstrap</p></dd>
+
+
+<dt id="arg-inference-target">inference_target<a class="anchor" aria-label="anchor" href="#arg-inference-target"></a></dt>
+<dd><p>is inference requested on all or selected only</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>additional arguments</p></dd>
 
 </dl></div>
     <div class="section level2">
