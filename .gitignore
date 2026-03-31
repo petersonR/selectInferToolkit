@@ -2,6 +2,14 @@
 .Rhistory
 .RData
 .Ruserdata
+
 .DS_Store
+*.tar.gz
+
 /Meta/
-docs
+/doc/
+/docs/
+
+
+
+*.log

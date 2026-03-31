@@ -5,27 +5,43 @@
 \title{Computing mean/median CI ratio and significant Discoveries}
 \usage{
 ciratio(
-  x,
-  y,
-  nonselection = "ignored",
-  std = TRUE,
+  formula,
+  data,
+  family = c("gaussian", "binomial", "poisson"),
+  nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
+  conf.level = 0.95,
   B = 250,
-  direction = "forward"
+  direction = "forward",
+  select_factors_together = F,
+  debias = F,
+  inference_target = "selections",
+  ...
 )
 }
 \arguments{
-\item{x}{Dataframe/model matrix with predictors (without intercept)}
+\item{formula}{a formula}
 
-\item{y}{outcome vector}
+\item{data}{data set}
 
-\item{nonselection}{A character string specifying how to handle variables not selected by model selection procedure. One of
-"ignored", "confident_nulls" or "uncertain_nulls" supported}
+\item{family}{outcome distributional family}
 
-\item{std}{if TRUE (default), standardize design matrix}
+\item{nonselection}{A character string specifying how to handle variables
+not selected by model selection procedure. One of "ignored",
+"confident_nulls" or "uncertain_nulls" supported}
 
-\item{B}{#of bootstraps}
+\item{conf.level}{.95 by default}
+
+\item{B}{Number of bootstraps}
 
 \item{direction}{the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"}
+
+\item{select_factors_together}{should categorical variables be jointly selected?}
+
+\item{debias}{should estimates be debiased in bootstrap}
+
+\item{inference_target}{is inference requested on all or selected only}
+
+\item{...}{additional arguments}
 }
 \value{
 A list with following data frames

@@ -75,6 +75,7 @@ infer_selective <- function(
       ...
     )
     names(res$vars) <- names(X)[res$vars]
+    bb <- res$sign* as.vector(res$vmat %*% y)
   }
 
   ## Run selective inference on glmnet
@@ -113,18 +114,21 @@ infer_selective <- function(
         ...
       )
     }
-
+    bb <- res$vmat %*% y
   }
 
-  bb <- res$vmat %*% y
   inferences <- data.frame(term = names(res$vars), selected = 1, estimate = bb,
                            ci_low = res$ci[,1], ci_high = res$ci[,2],
                            p_value = res$pv)
 
   # Handle non-selections
+  term_to_col <- tibble(
+    term =  colnames(X),
+    col  = colnames(X))
+
   results <- fill_in_nonselections(inferences, object,
                                    nonselection = nonselection, X = X, y = y,
-                                   conf.level = conf.level)
+                                   conf.level = conf.level, term_to_col = term_to_col )
 
   # Return inferrer class
   as_inferrer(

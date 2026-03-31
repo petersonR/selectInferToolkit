@@ -15,12 +15,14 @@ as_selector(
   label = name,
   all_terms,
   recipe_obj,
+  orig_formula,
+  selected_terms,
   selected_coefs,
   default_infer,
   meta = list()
 )
 
-\method{predict}{selector}(object, newdata = NULL, ...)
+\method{predict}{selector}(object, newdata, ...)
 
 \method{tidy}{selector}(x, scale_coef = TRUE, ...)
 
@@ -40,6 +42,10 @@ reselect(selector_obj, newdata)
 \item{all_terms}{a slot containing names of all terms}
 
 \item{recipe_obj}{preprocessor trained from recipes package}
+
+\item{orig_formula}{Original formula provided by user}
+
+\item{selected_terms}{names of selected variables}
 
 \item{selected_coefs}{a vector of only selected coefficients}
 

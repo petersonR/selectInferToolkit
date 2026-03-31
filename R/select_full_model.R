@@ -57,7 +57,11 @@ select_full_model <- function(
 
     # collect all terms
     formula_full <- as.formula(paste0(names(y1), " ~ ", paste0(names(X1), collapse = " + ")))
-    all_terms <- colnames(model.matrix(formula_full, data = df1))
+
+    mm <- model.matrix(formula, data = data)
+    all_terms <- make.names(colnames(mm))
+   if(all_terms[1] =="X.Intercept.") all_terms[1] = "(Intercept)"
+
 
     # add additional zero variance step
     rec_obj <- rec_obj %>%
@@ -65,14 +69,24 @@ select_full_model <- function(
       prep()
 
     attr(rec_obj, "prepped_selector_recipe") <- TRUE
-    attr(rec_obj, "formula_full") <- formula_full
 
   } else if(!attr(rec_obj, "prepped_selector_recipe")) {
     stop("custom recipes not yet supported")
   } else {
     # May need to read additional things here if this is re-called later
+    rec_obj <- rec_obj %>%
+      step_zv() %>%
+      prep()
+
+    y1 <- bake(rec_obj, new_data = data[1,,drop = FALSE], all_outcomes())
+    X1 <- bake(rec_obj, new_data = data[1,,drop=FALSE], all_predictors())
+    df1 <- bake(rec_obj, new_data = data[1,,drop = FALSE])
+
+    # collect all terms
+    formula_full <- as.formula(paste0(names(y1), " ~ ", paste0(names(X1), collapse = " + ")))
+
     all_terms <- attr(fitted_selector, "all_terms")
-    formula_full <- attr(rec_obj, "formula_full")
+
   }
 
   # Create model matrix
@@ -84,10 +98,16 @@ select_full_model <- function(
   fit <- glm(formula_full, data = df_for_fit, family = family,
              x = TRUE, y = TRUE, model = TRUE)
 
+
   meta_information <- list(family = family)
   selected_coefs <- coef(fit)
+  selected_terms <- rownames(fit[["coefficients"]])
 
   as_selector(fit, name = "full_model", label = "Full model (no selection)",
-              all_terms = all_terms, recipe_obj = rec_obj, default_infer = "upsi",
-              selected_coefs = selected_coefs, meta = meta_information)
+              all_terms = all_terms, recipe_obj = rec_obj,
+              orig_formula = formula,
+              selected_terms=selected_terms,
+              selected_coefs = selected_coefs,
+              default_infer = "upsi",
+              meta = meta_information)
 }

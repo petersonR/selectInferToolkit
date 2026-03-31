@@ -54,8 +54,9 @@ as_inferrer <- function(
 #'
 #' @importFrom tibble rownames_to_column
 #' @importFrom broom tidy
-#' @importFrom dplyr left_join transmute
+#' @importFrom dplyr left_join transmute case_when
 #' @importFrom tibble tibble
+#' @importFrom rlang .data
 #' @rdname inferrer
 #'
 #' @export
@@ -64,49 +65,60 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
   inferences <- attr(x, "inferences")
   selector_obj <- attr(x, "selector")
   results <- tidy(selector_obj, scale_coef = scale_coef)
-
   rec_obj <- attr(selector_obj, "recipe_obj")
 
   scale_step_idx <- which(tidy(rec_obj)$type == "scale")
 
   if(length(scale_step_idx)) {
     sds <- tidy(rec_obj, number = scale_step_idx) %>%
-      select(term = terms, sd = value)
+      select(term = .data$terms, sd = .data$value)
   } else {
     stop("a scaling step is required")
   }
 
   tidy_inferences <- inferences %>%
     left_join(sds, by = "term") %>%
-    transmute(
-      term = term,
-      sd= sd,
-      estimate_scaled = estimate,
-      ci_low_scaled = ci_low,
-      ci_high_scaled = ci_high
+    transmute(.data$term, .data$sd,
+              estimate_scaled = .data$estimate,
+              ci_low_scaled   = .data$ci_low,
+              ci_high_scaled  =  .data$ci_high
     ) %>%
     mutate(
-      estimate_unscaled = ifelse(term != "(Intercept)",
-                                               estimate_scaled/sd,
-                                 estimate_scaled),
-      ci_low_unscaled = ifelse(term != "(Intercept)", ci_low_scaled/sd,
-                               ci_low_scaled),
-      ci_high_unscaled = ifelse(term != "(Intercept)",
-                                ci_high_scaled/sd,
-                                ci_high_scaled),
+      estimate_unscaled = case_when(
+        .data$term == "(Intercept)"  ~ estimate_scaled,
+        is.na(.data$estimate_scaled) ~ NA_real_,
+        !is.na(.data$sd)             ~ estimate_scaled / sd,
+        # Below is case when selecting factors together in stepAIC fn, so their sd is NA
+        is.na(.data$sd)              ~ estimate_scaled
+      ),
+      ci_low_unscaled = case_when(
+        .data$term == "(Intercept)" ~ .data$ci_low_scaled,
+        is.na(ci_low_scaled)  ~ NA_real_,
+        !is.na(sd)           ~ .data$ci_low_scaled / .data$sd,
+        # Below is case when selecting factors together in stepAIC fn, so their sd is NA
+        is.na(sd)            ~ .data$ci_low_scaled
+      ),
+      ci_high_unscaled = case_when(
+        term == "(Intercept)"  ~ .data$ci_high_scaled,
+        is.na(ci_high_scaled)  ~ NA_real_,
+        !is.na(sd)             ~ .data$ci_high_scaled / .data$sd,
+        # Below is case when selecting factors together in stepAIC fn, so their sd is NA
+        is.na(sd)              ~ .data$ci_high_scaled
+      )
     )
+
 
   results <- results %>%
     left_join(tidy_inferences, by = c("term"))
 
   if(scale_coef) {
     results <- results %>%
-      select(term, selected, coef, estimate = estimate_scaled,
-             ci_low = ci_low_scaled, ci_high = ci_high_scaled)
+      select(.data$term, .data$selected, .data$coef, estimate = .data$estimate_scaled,
+             ci_low = .data$ci_low_scaled, ci_high = .data$ci_high_scaled)
   }  else {
     results <- results %>%
-      select(term, selected, coef, estimate = estimate_unscaled,
-             ci_low = ci_low_unscaled, ci_high = ci_high_unscaled)
+      select(.data$term, .data$selected, .data$coef, estimate = .data$estimate_unscaled,
+             ci_low = .data$ci_low_unscaled, ci_high = .data$ci_high_unscaled)
   }
 
   # Check for other goodies, add if available
@@ -120,7 +132,8 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
   results
 }
 
-#'
+#' @param x an `inferrer`
+#' @importFrom rlang .data
 #' @rdname inferrer
 #' @export
 print.inferrer <- function(x, ...) {
@@ -145,12 +158,12 @@ print.inferrer <- function(x, ...) {
 
   results <- tidy(x, scale_coef = TRUE)
   precision <- results %>%
-    mutate(ci_ln = ci_high - ci_low) %>%
-    summarize(med = median(ci_ln, na.rm = TRUE),
-              mean = mean(ci_ln, na.rm = TRUE),
-              iqr_low = quantile(ci_ln, .25, na.rm = TRUE),
-              iqr_high = quantile(ci_ln, .75, na.rm = TRUE),
-              max = max(ci_ln, na.rm = TRUE))
+    mutate(ci_ln =  .data$ci_high -  .data$ci_low) %>%
+    summarize(med = median( .data$ci_ln, na.rm = TRUE),
+              mean = mean( .data$ci_ln, na.rm = TRUE),
+              iqr_low = quantile( .data$ci_ln, .25, na.rm = TRUE),
+              iqr_high = quantile( .data$ci_ln, .75, na.rm = TRUE),
+              max = max( .data$ci_ln, na.rm = TRUE))
 
   pretty_median <- round(precision$med, 1)
   pretty_mean <- round(precision$mean, 1)
