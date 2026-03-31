@@ -63,7 +63,7 @@ infer_selective <- function(
     fs_result <- fs(as.matrix(X), y)
 
     # Get IC-based selection with confidence intervals
-    mult <- ifelse(meta$penalty == "AIC", 2, log(nrow(X )))
+    mult <- ifelse(meta$penalty == "AIC", 2, log(length(y)))
 
     res <- selectiveInference::fsInf(
       fs_result,
