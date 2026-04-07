@@ -50,6 +50,19 @@ select_stepwise_ic <- function(
     select_factors_together <- meta$select_factors_together
   }
 
+  # Check for outcome misspecification
+  outcome_var <- all.vars(formula)[1]
+  y <- data[[outcome_var]]
+  if (is.factor(y) || is.character(y)) {
+    if (family == "gaussian") {
+      stop("Outcome variable '", outcome_var, "' is a factor/character. ",
+           "Did you mean to specify family = \"binomial\"?")
+    }
+  } else if (is.numeric(y) && length(unique(y)) == 2 && family == "gaussian") {
+    message("Note: Outcome '", outcome_var, "' has only 2 unique values. ",
+            "Consider setting family = \"binomial\" if this is a binary outcome.")
+  }
+
   k_val <- if (penalty == "AIC") 2 else log(nrow(data))
 
   # build recipe

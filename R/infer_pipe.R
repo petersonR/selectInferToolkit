@@ -14,6 +14,10 @@
 #'
 infer_pipe <- function(object, data, conf.level = .95, ...) {
 
+  if (!inherits(object, "selector"))
+    stop("`object` must be a `selector`. ",
+         "Did you pass an `inferrer` by mistake? Use a select_* function first.")
+
   supported <- c("ncvreg")
   type <- attr(object, "name")
   if(!(type %in% supported))

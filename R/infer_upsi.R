@@ -26,6 +26,10 @@ infer_upsi <- function(
     nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
     conf.level = .95){
 
+  if (!inherits(object, "selector"))
+    stop("`object` must be a `selector`. ",
+         "Did you pass an `inferrer` by mistake? Use a select_* function first.")
+
   nonselection <- match.arg(nonselection)
 
   if( attr(object, "name") == "stepwise_ic"){
