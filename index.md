@@ -17,6 +17,7 @@ to facilitate post-selection inferential methods.
 You can install the development version of selectInferToolkit like so:
 
 ``` r
+
 devtools::install_github("petersonR/selectInferToolkit")
 ```
 
@@ -38,14 +39,14 @@ techniques:
 - **Penalized Regression:** Perform lasso, ridge, and elastic net
   regressions using the powerful `ncvreg` or `glmnet` packages.
   `selectInferToolkit` simplifies the process of obtaining models
-  associated with either $\lambda_{min}$ or $\lambda_{1se}$.
-  - $\lambda_{min}$ represents the regularization parameter $\lambda$
-    that minimizes the cross-validation error, aiming for the best
-    predictive performance.
-  - $\lambda_{1se}$ is a more conservative choice, selecting the largest
-    $\lambda$ where the cross-validation error is within one standard
-    error of $\lambda_{min}$. This often results in a sparser, more
-    parsimonious model.
+  associated with either $`\lambda_{min}`$ or $`\lambda_{1se}`$.
+  - $`\lambda_{min}`$ represents the regularization parameter
+    $`\lambda`$ that minimizes the cross-validation error, aiming for
+    the best predictive performance.
+  - $`\lambda_{1se}`$ is a more conservative choice, selecting the
+    largest $`\lambda`$ where the cross-validation error is within one
+    standard error of $`\lambda_{min}`$. This often results in a
+    sparser, more parsimonious model.
 
 ### Post-Selection Inference Methods
 
@@ -98,6 +99,7 @@ Let’s say you are wanting to predict gas mileage based on all variables
 in the `mtcars` data set.
 
 ``` r
+
 library(selectInferToolkit)
 #> Loading required package: broom
 library(dplyr)
@@ -143,7 +145,7 @@ summary(fit_full)
 #> F-statistic: 13.93 on 10 and 21 DF,  p-value: 3.793e-07
 ```
 
-Hmm, $R^{2}$ is high but nothing is “significant”. What is going on? The
+Hmm, $`R^2`$ is high but nothing is “significant”. What is going on? The
 model is probably over-specified. Let’s use `selectInferToolkit` to
 narrow in on what we think the most important factors are. The `step_ic`
 function can do forwards and backwards selection via AIC by default.
@@ -151,6 +153,7 @@ function can do forwards and backwards selection via AIC by default.
 ### Stepwise selection
 
 ``` r
+
 fit_aic <- select_stepwise_ic(mpg ~ ., data = mtcars, penalty = "AIC") 
 fit_aic
 #> Stepwise IC-based selector
@@ -164,6 +167,7 @@ can pass `selector` objects to `coef`, `predict`, and
 [`tidy()`](https://generics.r-lib.org/reference/tidy.html) functions:
 
 ``` r
+
 coef(fit_aic)
 #> (Intercept)          wt         cyl          hp 
 #>   20.090625   -3.098748   -1.681654   -1.236744
@@ -192,6 +196,7 @@ adjust for the selective process will be too small. Again, we call this
 “unadjusted post-selection inference” (or UPSI, for short).
 
 ``` r
+
 fit_aic_infer_upsi <- infer_upsi(fit_aic, data = mtcars)
 fit_aic_infer_upsi
 #> Unadjusted Post-Selection Inference (UPSI) inference applied post Stepwise IC-based Selection 
@@ -221,6 +226,7 @@ information criteria is bootstrapping. The code below is equivalent to
 calling `infer_boot`.
 
 ``` r
+
 set.seed(1)
 fit_aic_infer_boot <- infer(fit_aic, data = mtcars, B = 100)
 fit_aic_infer_boot
@@ -250,6 +256,7 @@ These results are less promising. Here we can also use a wrapper for
 `selectiveInference` method:
 
 ``` r
+
 fit_aic_SI <- infer_selective(fit_aic, data = mtcars)
 fit_aic_SI 
 #> Selective inference applied post Stepwise IC-based Selection 
@@ -296,6 +303,7 @@ i.e. `lambda.min`) or the most `compact` model that predicts about as
 well as the best model, i.e. `lambda.1se`.
 
 ``` r
+
 set.seed(12)
 fit_lso <- select_glmnet(mpg ~ ., data = mtcars) 
 fit_lso 
@@ -327,6 +335,7 @@ squares theory is used for inference as though we never used the data
 for selection.
 
 ``` r
+
 fit_lasso_infer_upsi <-infer_upsi(fit_lso, data = mtcars) 
 tidy(fit_lasso_infer_upsi)
 #> # A tibble: 11 × 7
@@ -352,6 +361,7 @@ identical; `wt` is still seemingly significant.
 *Selective inference*
 
 ``` r
+
 fit_lasso_infer_SI <- infer_selective(fit_lso, data = mtcars)
 tidy(fit_lasso_infer_SI)
 #> # A tibble: 11 × 7
@@ -383,19 +393,20 @@ non-selections as “uncertain nulls”.
 
 This may be the case if we’re interesting in making inferences for all
 variables, including those not selected by the prime model using full
-data. To obtain the bootstrap distribution of each
-${\widehat{\beta}}_{j}$ we proceed as follows: For each B iterations, we
-re sample the data with replacement, apply the same model selection
-method to the re sampled data, and save the coefficients of selected
-variables. For any variable not selected in a given bootstrap sample, we
-regress the model residuals on the each non-selected variables
-separately to get the beta estimates for non-selections. By doing so,
-we’re trying to explain the residual variance by variables that were not
-selected by model selection method. This process will produces a
-bootstrap distribution for all $p$ variables, allowing us to calculate
-CIs by using the quantiles of these distributions.
+data. To obtain the bootstrap distribution of each $`\hat{\beta}_j`$ we
+proceed as follows: For each B iterations, we re sample the data with
+replacement, apply the same model selection method to the re sampled
+data, and save the coefficients of selected variables. For any variable
+not selected in a given bootstrap sample, we regress the model residuals
+on the each non-selected variables separately to get the beta estimates
+for non-selections. By doing so, we’re trying to explain the residual
+variance by variables that were not selected by model selection method.
+This process will produces a bootstrap distribution for all $`p`$
+variables, allowing us to calculate CIs by using the quantiles of these
+distributions.
 
 ``` r
+
 set.seed(1)
 fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", debias = TRUE) 
 tidy(fit_lasso_infer_boot) 
@@ -421,6 +432,7 @@ intersect zero, indicating a significant effect.
 Compare these to the results if `debias = FALSE`:
 
 ``` r
+
 set.seed(1)
 fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", debias = FALSE) 
 tidy(fit_lasso_infer_boot) 
@@ -446,6 +458,7 @@ consult the package vignette.
 #### MCP via ncvreg
 
 ``` r
+
 set.seed(12)
 fit_mcp <- select_ncvreg(mpg ~ ., data = mtcars) 
 fit_mcp 
@@ -471,6 +484,7 @@ tidy(fit_mcp)
 ```
 
 ``` r
+
 fit_mcp_infer_upsi <- infer_upsi(fit_mcp, data = mtcars) 
 tidy(fit_mcp_infer_upsi)
 #> # A tibble: 11 × 7
@@ -492,6 +506,7 @@ tidy(fit_mcp_infer_upsi)
 *Bootstrapping*
 
 ``` r
+
 set.seed(12)
 fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, inference_target = "all", debias = FALSE) 
 tidy(fit_mcp_infer_boot) 
@@ -512,6 +527,7 @@ tidy(fit_mcp_infer_boot)
 ```
 
 ``` r
+
 set.seed(12)
 fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, inference_target = "all", debias = TRUE) 
 tidy(fit_mcp_infer_boot) 
@@ -534,6 +550,7 @@ tidy(fit_mcp_infer_boot)
 *PIPE*: available for `ncvreg` only
 
 ``` r
+
 fit_mcp_infer_pipe <- infer_pipe(fit_mcp, data = mtcars)
 tidy(fit_mcp_infer_pipe)
 #> # A tibble: 11 × 7

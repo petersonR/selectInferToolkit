@@ -36,7 +36,7 @@ Penalized regression methods aim to minimize the log-likelihood function
 under a constraint that penalizes large absolute values of coefficients
 and/or model complexity. The L1 penalty used in lasso (the sum of
 absolute values of regression coefficients multiplied by the penalty
-factor, $\lambda$), enables simultaneous variable selection and
+factor, $`\lambda`$), enables simultaneous variable selection and
 coefficient estimation, making it particularly useful for
 high-dimensional settings. However, one limitation of lasso is that, in
 the presence of multicollinearity, it tends to select one variable from
@@ -51,9 +51,10 @@ and allowing for more robust variable selection, particularly in the
 presence of multicollinearity. Finally, the minimax concave penalty
 (MCP) is an alternative method that produces less biased regression
 coefficients than sparse models. MCP includes an additional tuning
-parameter, $\gamma$, which controls the concavity of the penalty (i.e.,
-how quickly the penalty decreases). Many additional forms of penalized
-regression have been proposed, we focus on this set in our package.
+parameter, $`\gamma`$, which controls the concavity of the penalty
+(i.e., how quickly the penalty decreases). Many additional forms of
+penalized regression have been proposed, we focus on this set in our
+package.
 
 ### Target of Inference/Handling Non-selections
 
@@ -84,12 +85,12 @@ bootstrap based on target of inference.
 
 **Bootstrap CIs for the Selected Model**
 
-Let $s$ be a model selection procedure yielding the prime model
-${\widehat{M}}_{s} \subset \{ 1,\ldots,p\}$.  
-We estimate $\widehat{\beta} \mid {\widehat{M}}_{s}$, i.e., coefficients
+Let $`s`$ be a model selection procedure yielding the prime model
+$`\hat{M}_s \subset \{1, \dots, p\}`$.  
+We estimate $`\hat{\beta} \mid \hat{M}_s`$, i.e., coefficients
 conditional on the selected model.  
-For $j \in {\widehat{M}}_{s}$, the coefficient is
-${\widehat{\beta}}_{j}$; otherwise, NA.
+For $`j \in \hat{M}_s`$, the coefficient is $`\hat{\beta}_j`$;
+otherwise, NA.
 
     *Procedure:*
       - For each bootstrap iteration:  
@@ -100,15 +101,15 @@ ${\widehat{\beta}}_{j}$; otherwise, NA.
 
 **Bootstrap CIs for All Variables**
 
-If inference targets all $p$ variables:
+If inference targets all $`p`$ variables:
 
 1.  *Treating non-selections as confident nulls:*
     1.  Resample data with replacement.  
-    2.  Apply $s$ to the resample.  
+    2.  Apply $`s`$ to the resample.  
     3.  et coefficients of non-selections to zero.  
 2.  *Treating non-selections as uncertain nulls:*
     1.  Resample data with replacement.  
-    2.  Apply $s$ to the resample.  
+    2.  Apply $`s`$ to the resample.  
     3.  After selection, regress residuals on each non-selected variable
         individually.
 
