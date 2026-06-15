@@ -29,6 +29,10 @@ infer_boot <- function(
   n_cores = 4,
   ...) {
 
+  if (!inherits(object, "selector"))
+    stop("`object` must be a `selector`. ",
+         "Did you pass an `inferrer` by mistake? Use a select_* function first.")
+
   # A bit of argument checking
   inference_target <- match.arg(inference_target)
   estimation_data <- match.arg(estimation_data)
@@ -129,8 +133,8 @@ boot <- function(object, data, B,
   #   library(selectInferToolkit)
   # })
 
-  # boot_fits <- pbapply::pblapply(1:B, function(b) { uncomment after debug
-  boot_fits <- lapply(1:B, function(b) {
+  message("Bootstrapping with B = ", B, " replicates...")
+  boot_fits <- pbapply::pblapply(1:B, function(b) {
     boot_idx <- sample(1:nrow(data), replace = TRUE)
     data_boot <- data[boot_idx,]
 
@@ -192,11 +196,8 @@ boot <- function(object, data, B,
     }
 
     val_boot
-  }
-  # ,cl=cl uncomment after debug
-  )
+  })
 
-  # parallel::stopCluster(cl) # uncomment after debug
   boot_df<- bind_rows(boot_fits, .id = "bootstrap")
 
   if(inference_target=="selections") {

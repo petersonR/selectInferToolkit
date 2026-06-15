@@ -27,10 +27,19 @@
 #' @export
 infer <- function(object, data, nonselection=c("ignored", "uncertain_nulls", "confident_nulls"), ...){
 
+  if (!inherits(object, "selector"))
+    stop("`object` must be a `selector`. ",
+         "Did you pass an `inferrer` by mistake? Use a select_* function first.")
+
   method <- attr(object, "default_infer")
   nonselection <- match.arg(nonselection)
 
-  # this probably doesn't work
+  if (method == "boot") {
+    message("Default inference method is bootstrapping (infer_boot). ",
+            "This may take a moment. Set a seed for reproducibility, ",
+            "or use infer_upsi() / infer_selective() for faster alternatives.")
+  }
+
   infer_fn <- paste0("infer_", method)
 
   do.call(infer_fn, args = list(object = object, nonselection = nonselection, data = data, ...))

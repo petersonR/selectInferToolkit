@@ -29,6 +29,10 @@ infer_selective <- function(
     ...
   ){
 
+  if (!inherits(object, "selector"))
+    stop("`object` must be a `selector`. ",
+         "Did you pass an `inferrer` by mistake? Use a select_* function first.")
+
   # Check method supported
   supported <- c("glmnet", "stepwise_ic")
   type <- attr(object, "name")
