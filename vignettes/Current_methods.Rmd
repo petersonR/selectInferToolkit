@@ -1,0 +1,685 @@
+---
+title: "Available methods in selectInferToolkit Package"
+author: "Jinal Shah & Ryan A Peterson"
+date: "`r Sys.Date()`"
+output:   
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Available methods in selectInferToolkit Package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+```
+
+# Overview
+
+The `selectInferToolkit` package provides a unified interface for **post-selection inference** (PSI), statistical inference that accounts for model selection. Ignoring the model selection while performing inference leads to confidence intervals that are too narrow and p-values that are anti-conservative, even when the selection and inference are performed on the same dataset.
+
+This vignette is designed to document which combinations of selection method, inference
+method, and tuning options are currently supported by the package. Rather than maintaining a static table by hand, the vignette probes every combination
+automatically each time it is rendered: it fits a small synthetic dataset, attempts every pipeline, and records whether each combination succeeds, produces a warning, or fails.  The compatibility matrix and flow diagrams below therefore
+always aim to reflect the current state of the package.
+
+## Selection methods
+
+The package currently supports four families of variable/model selection, each
+configurable with tuning parameters:
+
+| Function | Method | Key options |
+|---|---|---|
+| `select_full_model()` | No selection and all variables retained | — |
+| `select_stepwise_ic()` | Forward / backward / bi-directional stepwise | `penalty` (AIC / BIC), `direction` |
+| `select_glmnet()` | Lasso / elastic net / ridge via `glmnet` | `alpha` (0 = ridge, between 0 and 1 = elastic net, 1 = lasso), `lambda` |
+| `select_ncvreg()` | MCP or lasso via `ncvreg` | `penalty` (MCP / lasso), `lambda` |
+
+## Inference methods
+
+Given a selected model object, the package offers four inference approaches:
+
+| Function | Method | Key options |
+|---|---|---|
+| `infer_upsi()` | Unajusted post-selection inference (UPSI)  | `nonselection` |
+| `infer_selective()` | Selective inference: exact conditioning on the selection event; currently requires lasso or forward stepwise selection | `nonselection` |
+| `infer_boot()` | Bootstrap-based inference: resamples the full selection + estimation pipeline | `inference_target`, `debias`, `estimation_data` |
+| `infer_pipe()` | | — |
+
+## The `nonselection` argument
+
+For `infer_upsi()` and `infer_selective()`, variables that were *not* selected
+present a choice about how to handle their inference:
+
+- **`"ignored"`** - only report CIs for selected variables; unselected variables are dropped from the output entirely.
+- **`"confident_nulls"`** - treat unselected variables as having point estiamtes and CI as exactly zero; report a point mass at zero with no uncertainty.
+- **`"uncertain_nulls"`** - aims to make inference on all variables but without the assumption that non-selections certainly have a null effect
+
+
+```{r packages}
+library(selectInferToolkit)
+library(DiagrammeR)
+library(DT)
+library(dplyr)
+library(tidyr)
+library(purrr)
+library(hdrm)
+```
+
+
+
+
+```{r candidates}
+####### Candidate space #######
+# ── Auto-discover any new select_* exports ────────────────────────────────────
+pkg_ns  <- tryCatch(getNamespace("selectInferToolkit"), error = function(e) NULL)
+base_sel <- c("select_full_model","select_stepwise_ic","select_glmnet","select_ncvreg")
+if (!is.null(pkg_ns)) {
+  base_sel <- union(base_sel, grep("^select_", ls(pkg_ns), value=TRUE))
+}
+
+# ── Selection option grids ────────────────────────────────────────────────────
+# One row = one "flavour" (function + specific tuning values).
+# sel_label always prefixes the function name so rows are unambiguous across
+# selectors, e.g. "select_glmnet | alpha=1" vs "select_ncvreg | penalty=lasso".
+sel_grids <- list(
+
+  select_full_model = data.frame(sel_params="", stringsAsFactors=FALSE),
+
+  select_stepwise_ic = expand.grid(
+    penalty   = c("AIC", "BIC"),
+    direction = c("forward", "backward", "both"),
+    stringsAsFactors = FALSE
+  ),
+
+  select_glmnet = expand.grid(
+    alpha  = c(0, 0.5, 1),   # 0=ridge, 0.5=elastic net, 1=lasso
+    lambda = c("best", "compact"),
+    stringsAsFactors = FALSE
+  ),
+
+  select_ncvreg = expand.grid(
+    penalty = c("MCP", "lasso"),
+    lambda  = c("best", "compact"),
+    stringsAsFactors = FALSE
+  )
+)
+
+sel_grids <- imap(sel_grids, function(g, nm) {
+  param_cols <- setdiff(names(g), c("sel_label","sel_fn","sel_params"))
+  if (length(param_cols) == 0 || (ncol(g)==1 && names(g)=="sel_params")) {
+    g$sel_label  <- nm          # no tuning: label = function name only
+    g$sel_params <- ""
+  } else {
+    g$sel_params <- apply(g[, param_cols, drop=FALSE], 1,
+                          function(r) paste(names(r), r, sep="=", collapse=" | "))
+    g$sel_label  <- paste0(nm, " | ", g$sel_params)
+  }
+  g$sel_fn <- nm
+  g
+})
+
+# ── Inference option spaces ───────────────────────────────────────────────────
+nonselection_values <- c("ignored", "confident_nulls", "uncertain_nulls")
+inf_fns_nonsel      <- c("infer_selective", "infer_upsi")
+
+boot_option_grid <- expand.grid(
+  inference_target = c("selections", "all"),
+  debias           = c(TRUE, FALSE),
+  estimation_data  = c("in-sample"),
+  stringsAsFactors = FALSE
+) %>%
+  mutate(boot_label = paste0("target=", inference_target,
+                             " | debias=", debias,
+                             " | est=", estimation_data))
+
+# ── Colour palettes ───────────────────────────────────────────────────────────
+inf_palette <- c(infer_boot="#F18F01", infer_selective="#2E86AB", infer_upsi="#A23B72", infer_pipe="#2D6A4F")
+sel_palette <- c(select_full_model="#546E7A", select_stepwise_ic="#6D4C41",
+                 select_glmnet="#2E7D32",    select_ncvreg="#4527A0")
+```
+
+
+
+
+```{r probe, cache=TRUE}
+####### Probe every combination #######
+
+
+set.seed(42)
+data <- hdrm::gen_data_abn(n=150, p=10, a=2, b = 2, rho = .8,
+                             beta = c(0.3, -0.4))
+x=data$X
+y= data$y
+df= data.frame(y=data$y, data$X)
+
+
+# ── probe_status: run expr_fn(), return supported/supported_with_warning/not_supported
+probe_status <- function(expr_fn) {
+  warn_msg <- NULL
+  result <- withCallingHandlers(
+    tryCatch(
+      { expr_fn(); list(status="supported", message=NA_character_) },
+      error = function(e) list(status="not_supported", message=conditionMessage(e))
+    ),
+    warning = function(w) { warn_msg <<- conditionMessage(w); invokeRestart("muffleWarning") }
+  )
+  if (result$status == "supported" && !is.null(warn_msg))
+    result <- list(status="supported_with_warning", message=warn_msg)
+  result
+}
+
+run_sel <- function(sel_fn, extra_args=list()) {
+  fn <- get(sel_fn, envir=getNamespace("selectInferToolkit"))
+  do.call(fn, c(list(y ~., data=df), extra_args))
+}
+
+# Flat tibble: one row per selector flavour, extra_args stored as list-column.
+# IMPORTANT: use split()+lapply() not apply() — apply() coerces the whole
+# data frame to a character matrix first, turning numeric alpha=0.5 into
+# the string "0.5". That lets select_glmnet silently accept alpha="0.5"
+# instead of erroring, so infer_selective fails to flag the incompatibility.
+all_sel_rows <- imap_dfr(sel_grids, function(g, sel_fn) {
+  param_cols <- setdiff(names(g), c("sel_label","sel_fn","sel_params"))
+  args_list  <- if (length(param_cols) == 0) {
+    vector("list", nrow(g))
+  } else {
+    # split() into 1-row data frames then as.list() preserves column types
+    lapply(split(g[, param_cols, drop=FALSE], seq_len(nrow(g))), as.list)
+  }
+  tibble(sel_fn=sel_fn, sel_label=g$sel_label, sel_params=g$sel_params,
+         extra_args=args_list)
+})
+
+#  Grid 2a: infer_selective / infer_upsi × selector flavours × nonselection 
+inf_nonsel_combos <- expand.grid(
+  inference=inf_fns_nonsel, nonselection=nonselection_values,
+  stringsAsFactors=FALSE
+)
+n_sel <- nrow(all_sel_rows); n_inf <- nrow(inf_nonsel_combos)
+
+grid_nonsel <- all_sel_rows[rep(seq_len(n_sel), each=n_inf), ] %>%
+  bind_cols(inf_nonsel_combos[rep(seq_len(n_inf), times=n_sel), ]) %>%
+  mutate(boot_label=NA_character_)
+
+probes_nonsel <- map(seq_len(nrow(grid_nonsel)), function(i) {
+  probe_status(function() {
+    sel <- run_sel(grid_nonsel$sel_fn[i], grid_nonsel$extra_args[[i]])
+    fn  <- get(grid_nonsel$inference[i], envir=getNamespace("selectInferToolkit"))
+    fn(sel, nonselection=grid_nonsel$nonselection[i], data=df)
+  })
+})
+
+results_nonsel <- grid_nonsel %>%
+  mutate(status  = map_chr(probes_nonsel, "status"),
+         message = map_chr(probes_nonsel, ~.x$message %||% NA_character_))
+
+#  Grid 2b: infer_boot × selector flavours × boot option grid 
+n_boot <- nrow(boot_option_grid)
+
+grid_boot <- all_sel_rows[rep(seq_len(n_sel), each=n_boot), ] %>%
+  bind_cols(boot_option_grid[rep(seq_len(n_boot), times=n_sel), ]) %>%
+  mutate(inference="infer_boot", nonselection=NA_character_)
+
+probes_boot <- map(seq_len(nrow(grid_boot)), function(i) {
+  probe_status(function() {
+    sel <- run_sel(grid_boot$sel_fn[i], grid_boot$extra_args[[i]])
+    infer_boot(sel, data=df,
+               inference_target=grid_boot$inference_target[i],
+               debias=grid_boot$debias[i],
+               estimation_data=grid_boot$estimation_data[i],
+               B=5)
+  })
+})
+
+results_boot <- grid_boot %>%
+  mutate(status  = map_chr(probes_boot, "status"),
+         message = map_chr(probes_boot, ~.x$message %||% NA_character_))
+
+# Grid 2c: infer_pipe × selector flavours (no nonselection, no option grid)
+# infer_pipe takes only the model object and data — no extra arguments.
+grid_pipe <- all_sel_rows %>%
+  mutate(inference="infer_pipe", nonselection=NA_character_, boot_label=NA_character_)
+
+probes_pipe <- map(seq_len(nrow(grid_pipe)), function(i) {
+  probe_status(function() {
+    sel <- run_sel(grid_pipe$sel_fn[i], grid_pipe$extra_args[[i]])
+    infer_pipe(sel, data=df)
+  })
+})
+
+results_pipe <- grid_pipe %>%
+  mutate(status  = map_chr(probes_pipe, "status"),
+         message = map_chr(probes_pipe, ~.x$message %||% NA_character_))
+
+# Combine all three probe grids
+results <- bind_rows(results_nonsel, results_boot, results_pipe) %>%
+  select(sel_fn, sel_params, sel_label, inference, nonselection, boot_label,
+         status, message) %>%
+  arrange(sel_fn, inference, sel_params, nonselection, boot_label)
+```
+
+
+
+
+# Compatibility matrix
+
+The table below summarises which pipelines are currently functional. Each row is one *selector flavor* - a specific model selection function with a
+particular combination of tuning parameters (e.g. `select_glmnet` with `alpha=1.0, lambda=best`).  Each column group is one inference method.
+
+**How to read the table:**
+
+- For `infer_selective` and `infer_upsi`, the cell shows the consensus result
+  across all three `nonselection` values.  If all three behave the same way the cell shows a single icon; if they differ a tally is shown (e.g. ✅×2 ❌×1).
+- For `infer_boot`, results are split by `estimation_data` (in-sample vs
+  out-of-sample) but collapsed across `inference_target` × `debias`, since
+  currently those options do not affect whether the method runs successfully.
+- For `infer_pipe`, there are no tuning options - the cell simply indicates
+  whether the method accepts output from that selector.
+  
+
+
+**Notable constraints visible in the table:**
+
+- `infer_selective` only works with lasso-penalised glmnet selection
+  (`alpha = 1.0`) and forward stepwsie selection.  
+- `infer_pipe` works with `select_ncvreg` but not with stepwise or glmnet
+  selectors.
+- `infer_upsi` and `infer_boot` are the most broadly compatible, working across all selector families.
+
+
+```{r matrix-combined}
+icon_of <- function(s) case_when(
+  s=="supported"              ~ "\u2705",
+  s=="supported_with_warning" ~ "\u26a0\ufe0f",
+  TRUE                        ~ "\u274c"
+)
+
+# Collapse helper: if all icons agree return that icon, else tally
+consensus_icon <- function(icons) {
+  icons <- icons[!is.na(icons)]
+  if (length(icons) == 0) return("\u274c")
+  tbl <- sort(table(icons), decreasing=TRUE)
+  if (length(tbl) == 1) return(names(tbl))
+  paste(paste0(names(tbl), "\u00d7", as.integer(tbl)), collapse=" ")
+}
+
+# ── Part 1: infer_selective & infer_upsi ─────────────────────────────────────
+# Collapse all 3 nonselection values into ONE column per inference method.
+# Almost always the same result for all three, shown as a single icon.
+# A footnote explains that all three nonselection values were tested.
+mat_nonsel <- results %>%
+  filter(inference %in% c("infer_selective", "infer_upsi")) %>%
+  mutate(icon = icon_of(status)) %>%
+  group_by(sel_fn, sel_params, inference) %>%
+  summarise(cell = consensus_icon(icon), .groups="drop") %>%
+  pivot_wider(names_from=inference, values_from=cell)
+
+# ── Part 2: infer_boot collapsed to 2 columns (in-sample / out-of-sample) ────
+# Each cell = consensus across all 4 inference_target × debias combos.
+mat_boot_wide <- results %>%
+  filter(inference == "infer_boot") %>%
+  mutate(
+    est_data = ifelse(grepl("out-of-sample", boot_label, fixed=TRUE),
+                      "infer_boot\n(out-of-sample)", "infer_boot\n(in-sample)"),
+    icon = icon_of(status)
+  ) %>%
+  group_by(sel_fn, sel_params, est_data) %>%
+  summarise(cell = consensus_icon(icon), .groups="drop") %>%
+  pivot_wider(names_from=est_data, values_from=cell)
+
+# ── Part 3: infer_pipe — single column, no options ───────────────────────────
+mat_pipe <- results %>%
+  filter(inference == "infer_pipe") %>%
+  mutate(icon = icon_of(status)) %>%
+  group_by(sel_fn, sel_params) %>%
+  summarise(infer_pipe = consensus_icon(icon), .groups="drop")
+
+# ── Join all parts ────────────────────────────────────────────────────────────
+mat_combined <- mat_nonsel %>%
+  left_join(mat_boot_wide, by=c("sel_fn","sel_params")) %>%
+  left_join(mat_pipe,      by=c("sel_fn","sel_params")) %>%
+  rename(`selector fn`=sel_fn, `selector params`=sel_params)
+
+datatable(
+  mat_combined,
+  rownames=FALSE, escape=FALSE,
+  caption=paste(
+    "\u2705 supported | \u26a0\ufe0f warning | \u274c not supported. |"
+  ),
+  options=list(
+    pageLength=30, dom="t", scrollX=TRUE,
+    columnDefs=list(list(className="dt-center", targets="_all"))
+  )
+)
+```
+
+
+Note: `infer_upsi` and `infer_selective` columns show consensus across all three `nonselection` values (`ignored`, `confident_nulls`, `uncertain_nulls`).`infer_boot` columns show consensus across all `inference_target` and `debias` combinations, split by estimation_data.
+
+## Flow diagrams
+
+The diagrams below visualise the same information as the compatibility matrix
+but as a directed graph, making it easier to trace which full pipelines are
+available for a given selector.
+
+**How to read the diagrams:**
+
+- **Left column** - selector flavours (specific function + tuning parameter
+  combination).  All nodes in this column share the same colour, indicating
+  they belong to the same selector family.
+- **Middle column** - inference methods.  Each method has its own colour,
+  carried through to its edges and terminal nodes.
+- **Right column** - supported option values for the chosen inference method
+  (nonselection values for `infer_upsi`/`infer_selective`; option dimensions
+  for `infer_boot`; "(no options)" for `infer_pipe`).
+- **Solid edges** - the combination is fully supported.
+- **Missing edges** - the combination is not supported and is excluded from
+  the diagram.
+
+One diagram is shown per selector family.  `select_full_model` is omitted.
+
+
+```{r diagram-helpers, include=FALSE}
+# ── status_rank: used to summarise across option variants ─────────────────────
+# Purpose: for each (selector flavour × inference method) pair there may be
+# multiple option variants (e.g. 3 nonselection values). We want to know the
+# *best* outcome across all those variants so we can decide whether to draw
+# an edge at all (any support = draw edge) and whether it should be solid or
+# dashed (solid if any variant is fully supported, dashed if only warnings).
+# Combinations where every variant fails get rank 1 and are excluded from the
+# diagram, but they remain visible in the full results table in §5.
+status_rank <- c(supported=3L, supported_with_warning=2L, not_supported=1L)
+
+pair_best <- results %>%
+  mutate(rank = status_rank[status]) %>%
+  group_by(sel_fn, sel_label, inference) %>%
+  summarise(best_rank=max(rank), .groups="drop") %>%
+  mutate(best_status = names(status_rank)[match(best_rank, status_rank)]) %>%
+  filter(best_rank >= 2L)   # keep only pairs where ≥1 variant works
+
+# ── Compute which specific option values are supported per (sel_fn × inference)
+# For nonselection methods: list supported nonselection values
+# For infer_boot: list supported combinations of inference_target, debias, est_data
+supported_nonsel_vals <- results %>%
+  filter(!inference %in% c("infer_boot","infer_pipe"), status %in% c("supported","supported_with_warning")) %>%
+  group_by(sel_fn, inference) %>%
+  summarise(vals = list(sort(unique(nonselection))), .groups="drop")
+# (kept for reference; make_diagram now queries `results` directly per value)
+
+
+supported_boot_vals <- results %>%
+  filter(inference == "infer_boot", status %in% c("supported","supported_with_warning")) %>%
+  separate_wider_delim(
+    boot_label,
+    delim = " | ",
+    names = c("target", "debias", "est")
+  ) %>%
+  mutate(
+    inference_target = sub("target=", "", target),
+    debias = sub("debias=", "", debias),
+    estimation_data  = sub("est=", "", est)
+  ) %>%
+  group_by(sel_fn) %>%
+  summarise(
+    targets  = list(sort(unique(inference_target))),
+    debiases = list(sort(unique(as.character(debias)))),
+    est_data = list(sort(unique(estimation_data))),
+    .groups  = "drop"
+  )
+
+# ── DOT helpers ───────────────────────────────────────────────────────────────
+safe_id <- function(x) gsub("[^a-zA-Z0-9_]", "_", x)
+
+node_def <- function(id, label, fill, fontcolor="white",
+                     fontsize=10, width=1.9, height=0.45, penwidth=0,
+                     border_col=fill) {
+  sprintf(
+    '  "%s" [label="%s", shape="rectangle", style="filled,rounded",
+             fillcolor="%s", fontcolor="%s", fontsize=%d,
+             width=%.2f, height=%.2f, penwidth=%.1f, color="%s"]',
+    safe_id(id), gsub('"', "'", label), fill, fontcolor,
+    fontsize, width, height, penwidth, border_col
+  )
+}
+
+edge_def <- function(from, to, col, dashed=FALSE, penwidth=1.5) {
+  sprintf('  "%s" -> "%s" [color="%s", style="%s", penwidth=%.1f, arrowsize=0.6]',
+          safe_id(from), safe_id(to), col,
+          if (dashed) "dashed" else "solid", penwidth)
+}
+
+# ── make_diagram ───────────────────────────────────────────────────────────────
+# Selector flavour nodes are coloured by their selector family (sel_palette).
+# Inference method nodes and edges use inf_palette — one colour per method.
+# Terminal option nodes use a faded version of their inference method colour.
+
+make_diagram <- function(sel_fn_filter, pair_best, inf_palette, sel_palette,
+                         results, supported_boot_vals,
+                         splines = "polyline") {
+  # splines="ortho" crashes Graphviz maze router (maze.c assertion) on dense
+  # graphs. "polyline" is stable at any size. Pass splines="curved" for a
+  # slightly prettier look on smaller diagrams if desired.
+
+  pb <- pair_best %>% filter(sel_fn == sel_fn_filter)
+  if (nrow(pb) == 0) return(invisible(NULL))
+
+  sel_flavours <- unique(pb$sel_label)
+  inf_shown    <- unique(pb$inference)
+  sel_col      <- sel_palette[[sel_fn_filter]]
+
+  lines <- c(
+    'digraph {',
+    sprintf('graph [layout="dot", rankdir="LR", splines="%s",', splines),
+    '       bgcolor="white", nodesep=0.35, ranksep=0.8]',
+    'node [fontname="Helvetica"]',
+    'edge [fontname="Helvetica", fontsize=8]',
+    '',
+    '// Column 1: selector flavour nodes (each its own colour)'
+  )
+
+  for (s in sel_flavours) {
+    disp <- sub(paste0("^", sel_fn_filter, "\\s*\\|\\s*"), "", s)
+    if (disp == s) disp <- s
+    lines <- c(lines, node_def(s, disp, fill=sel_col, fontcolor="white",
+                               width=2.2, penwidth=0))
+  }
+
+  # Inference nodes: coloured by inf_palette
+  lines <- c(lines, '', '// Column 2: inference method nodes (inf_palette colour)')
+  for (i in inf_shown) {
+    lines <- c(lines, node_def(i, i, fill=inf_palette[[i]], fontcolor="white",
+                               width=1.9, penwidth=0))
+  }
+
+  # Terminal nodes: one per nonselection value OR one per boot option dimension.
+  # These are shared across flavours — the colour story is told by the edges.
+  lines <- c(lines, '', '// Column 3: terminal option value nodes (neutral)')
+
+  for (i in inf_shown) {
+    # Terminal nodes use a faded version of the inference method's own colour
+    term_fill <- paste0(inf_palette[[i]], "BB")
+
+    if (i == "infer_boot") {
+      bv <- supported_boot_vals %>% filter(sel_fn == sel_fn_filter)
+      if (nrow(bv) == 0) next
+      dims <- list(
+        list(id    = paste0(safe_id(i), "_target"),
+             label = paste0("inference_target\n",
+                            paste(bv$targets[[1]], collapse=" | "))),
+        list(id    = paste0(safe_id(i), "_debias"),
+             label = paste0("debias\n",
+                            paste(bv$debiases[[1]], collapse=" | "))),
+        list(id    = paste0(safe_id(i), "_estdata"),
+             label = paste0("estimation_data\n",
+                            paste(bv$est_data[[1]], collapse=" | ")))
+      )
+      for (d in dims) {
+        lines <- c(lines, sprintf(
+          '  "%s" [label="%s", shape="rectangle", style="filled,rounded",
+                   fillcolor="%s", fontcolor="white", fontsize=8,
+                   width=2.1, height=0.55, penwidth=0]',
+          d$id, d$label, term_fill))
+      }
+
+    } else if (i == "infer_pipe") {
+      # infer_pipe has no option arguments — single terminal node
+      lines <- c(lines, sprintf(
+        '  "%s" [label="(no options)", shape="rectangle", style="filled,rounded",
+                 fillcolor="%s", fontcolor="white", fontsize=8,
+                 width=1.6, height=0.42, penwidth=0]',
+        paste0(safe_id(i), "_noopts"), term_fill))
+
+    } else {
+      # nonselection methods (infer_selective, infer_upsi)
+      supported_rows <- results %>%
+        filter(sel_fn==sel_fn_filter, inference==i,
+               status %in% c("supported","supported_with_warning"))
+      nonsel_vals_used <- sort(unique(supported_rows$nonselection))
+      if (length(nonsel_vals_used) == 0) next
+      for (v in nonsel_vals_used) {
+        nid <- paste0(safe_id(i), "_", safe_id(v))
+        lines <- c(lines, sprintf(
+          '  "%s" [label="%s", shape="rectangle", style="filled,rounded",
+                   fillcolor="%s", fontcolor="white", fontsize=8,
+                   width=1.9, height=0.42, penwidth=0]',
+          nid, v, term_fill))
+      }
+    }
+  }
+
+  # ── Edges: flavour → inference (coloured by inference method) ────────────────
+  lines <- c(lines, '', '// Flavour → inference edges (inf_palette colour)')
+  for (s in sel_flavours) {
+    infs_ok <- pb %>% filter(sel_label == s) %>% pull(inference) %>% unique()
+    for (i in infs_ok) {
+      best <- pb %>% filter(sel_label==s, inference==i) %>% pull(best_status)
+      dashed <- best == "supported_with_warning"
+      lines <- c(lines, edge_def(s, i, inf_palette[[i]], dashed, penwidth=1.6))
+    }
+  }
+
+  # ── Edges: inference → terminal (coloured by inference method)
+  # Drawn once per inference method (not per flavour) since colour is per-method.
+  lines <- c(lines, '', '// Inference → terminal edges (inf_palette colour)')
+  for (i in inf_shown) {
+    col <- inf_palette[[i]]
+
+    if (i == "infer_boot") {
+      bv <- supported_boot_vals %>% filter(sel_fn == sel_fn_filter)
+      if (nrow(bv) == 0) next
+      for (sfx in c("_target","_debias","_estdata")) {
+        lines <- c(lines, edge_def(i, paste0(safe_id(i), sfx), col, penwidth=1.0))
+      }
+
+    } else if (i == "infer_pipe") {
+      lines <- c(lines, edge_def(i, paste0(safe_id(i), "_noopts"), col, penwidth=1.0))
+
+    } else {
+      # nonselection methods: one edge per supported nonselection value
+      supported_rows <- results %>%
+        filter(sel_fn==sel_fn_filter, inference==i,
+               status %in% c("supported","supported_with_warning"))
+      for (v in sort(unique(supported_rows$nonselection))) {
+        lines <- c(lines, edge_def(i, paste0(safe_id(i),"_",safe_id(v)), col, penwidth=1.0))
+      }
+    }
+  }
+
+  lines <- c(lines, '}')
+  grViz(paste(lines, collapse="\n"))
+}
+```
+
+
+
+### `select_stepwise_ic`  (penalty × direction)
+
+```{r diag-stepwise, fig.width=11, fig.height=6}
+make_diagram("select_stepwise_ic", pair_best, inf_palette, sel_palette,
+             results, supported_boot_vals, splines = "ortho")
+```
+
+
+**Interpretation:** All six AIC/BIC × direction combinations support
+`infer_upsi` and `infer_boot`.  `infer_selective` is only available for
+`direction = "forward"` — this reflects the fact that the selective inference
+conditioning set is only tractable when the forward-stepwise path is used.
+`infer_pipe` is not available for stepwise selection.
+
+### `select_glmnet`  (alpha × lambda: ridge/elastic net/lasso × best/compact)
+
+```{r diag-glmnet, fig.width=11, fig.height=5}
+make_diagram("select_glmnet", pair_best, inf_palette, sel_palette,
+             results, supported_boot_vals,splines = "ortho")
+```
+
+
+**Interpretation:** `infer_selective` (shown in blue) is only connected for
+`alpha = 1.0` (lasso) flavours.  Ridge (`alpha = 0`) and elastic net
+(`alpha = 0.5`) can only be paired with `infer_upsi` or `infer_boot`.
+All `lambda` options work equivalently for supported inference methods.
+
+
+### `select_ncvreg`  (penalty × lambda)
+
+```{r diag-ncvreg, fig.width=11, fig.height=5}
+make_diagram("select_ncvreg", pair_best, inf_palette, sel_palette,
+             results, supported_boot_vals)
+```
+
+**Interpretation:** Both MCP and lasso penalties, and both `lambda` options,
+support `infer_upsi`and `infer_boot`.  `infer_selective` and `infer_pipe` is
+not available for `ncvreg` selectors.
+
+
+## For developers
+
+This vignette is designed to update itself automatically as new methods are
+added to the package.  The probing logic in the `probe` chunk calls each
+function via `get(fn_name, envir=getNamespace("selectInferToolkit"))`, so
+any newly exported `select_*` or `infer_*` function is discovered without
+editing this file.
+
+To add a **new selection method** with tuning parameters, add one entry to
+`sel_grids` in the `candidates` chunk:
+
+```r
+select_mymethod = expand.grid(
+  option1 = c("a", "b"),
+  option2 = c(TRUE, FALSE),
+  stringsAsFactors = FALSE
+)
+```
+
+To add a **new inference method that uses `nonselection=`**, add its name to
+`inf_fns_nonsel`.
+
+To add a **new inference method with its own option grid** (like `infer_boot`), add a dedicated probe block in the `probe` chunk following the pattern used for `grid_boot`.
+
+The compatibility matrix and flow diagrams will include the new method
+automatically on the next render.
+
+
+
+```{r full-table, include=FALSE}
+
+## Full results table
+datatable(
+  results %>%
+    rename(`selector fn`=sel_fn, `selector params`=sel_params,
+           `selector label`=sel_label, `boot options`=boot_label),
+  rownames=FALSE, filter="top",
+  options=list(pageLength=15, scrollX=TRUE),
+  caption="All probed combinations — filter by any column"
+)
+```
+
+
+
+
+
+

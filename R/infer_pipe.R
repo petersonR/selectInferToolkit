@@ -32,7 +32,7 @@ infer_pipe <- function(object, data, conf.level = .95, ...) {
 
   as_inferrer(
     pipe_results, "pipe", label = "PIPE",
-    nonselection = "uncertain",
+    nonselection = "uncertain_nulls",
     conf.level = conf.level,
     selector = object,
     meta = list(...),

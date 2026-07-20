@@ -37,6 +37,14 @@ infer_selective <- function(
   if(!(type %in% supported))
     stop("Currently SI only supported for stepwise IC or `glmnet`")
 
+  if (type == "glmnet") {
+    alpha <- object[["call"]]$alpha
+
+    if (is.null(alpha) || alpha != 1) {
+      stop("Currently SI only supported for glmnet with alpha = 1 (lasso penalty)")
+    }
+  }
+
   nonselection <- match.arg(nonselection)
 
   # grab useful components from model
@@ -54,16 +62,26 @@ infer_selective <- function(
     if(meta$family != "gaussian")
       stop("Only Gaussian supported for selective inference with stepwise IC (try glmnet?)")
 
-    if(use_cv_sigma) {
-      sig <- selectiveInference::estimateSigma(as.matrix(X), y)$sigmahat
-      warning("use_cv_sigma with stepwise_ic may yield unexpected results")
-    }
-
     ## Run stepwise IC for purpose of SI, using fs function
     fs_result <- fs(as.matrix(X), y)
 
+    # Determine sigma
+    p <- ncol(X)
+    n_obs <- length(y)
+
+    if(use_cv_sigma) {
+      sig <- selectiveInference::estimateSigma(as.matrix(X), y)$sigmahat
+      warning("use_cv_sigma with stepwise_ic may yield unexpected results")
+    } else if(p > n_obs / 2) {
+      sig <- selectiveInference::estimateSigma(as.matrix(X), y)$sigmahat
+      message("p > n/2: using estimateSigma() for sigma estimate in fsInf")
+    } else {
+      sig <- NULL  # let fsInf use its default (sd(y) is fine when p <= n/2)
+    }
+
     # Get IC-based selection with confidence intervals
     mult <- ifelse(meta$penalty == "AIC", 2, log(length(y)))
+
 
     res <- selectiveInference::fsInf(
       fs_result,
@@ -71,11 +89,29 @@ infer_selective <- function(
       type = "aic",
       mult = mult,
       alpha = (1 - conf.level) / 2,
-      ntimes = 1,
       ...
     )
     names(res$vars) <- names(X)[res$vars]
     bb <- res$sign* as.vector(res$vmat %*% y)
+
+    # if # of variables from fsInf is not same as one from select_stepwise_ic(),
+    # then set k manually
+    sel_vars_stepaic= names(beta)[names(beta) !="(Intercept)"]
+
+    if( length(sel_vars_stepaic) != length(res$vars)){
+      res <- selectiveInference::fsInf(
+        fs_result,
+        sigma = sig,
+        type = "active",
+        k=length(beta) - 1,
+        mult = mult,
+        alpha = (1 - conf.level) / 2,
+        ...
+      )
+      names(res$vars) <- names(X)[res$vars]
+      bb <- res$sign* as.vector(res$vmat %*% y)
+    }
+
   }
 
   ## Run selective inference on glmnet

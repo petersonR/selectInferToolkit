@@ -1,0 +1,599 @@
+---
+title: "Forward Stepwise AIC Simulation"
+author: "Jinal Shah & Ryan A Peterson"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Forward Stepwise AIC Simulation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+<style>
+.main-container {
+  max-width: 1600px;
+}
+
+table {
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+```
+
+# Overview
+
+This vignette evaluates the performance of every available inference method applied after
+**forward step wise AIC selection** (`select_stepwise_ic`) via simulation.
+
+# Simulation Design and methods compared
+
+- Selector: `select_stepwise_ic` (forward, AIC) - fixed throughout
+- Predictors: A = 2 true signal variables (A1 stronger effect size(ES) of $\beta =0.60$, A2 weaker ES of $\beta =0.15$),
+   
+    - B1–B3 correlated with A1, B4–B6 correlated with A2 where correlation $\rho=0.75$
+    
+    - N = remainder of noise variables (with p=30, 22 noise variables)
+    
+- **S = 100** simulations per scenario (trial run)
+
+**Inference methods compared:**
+
+| Method | Options |
+|---|---|
+| `infer_upsi` | nonselection: ignored / confident_nulls / uncertain_nulls |
+| `infer_selective` | nonselection: ignored / confident_nulls / uncertain_nulls |
+| `infer_boot` | inference_target × debias × estimation_data (8 combos) |
+
+- Specifically, in bootstrap for "inference_target", tested options are "selection" or "all"
+- For "debias",  tested options are TRUE/FALSE
+- For "estimation_data", tested options are "in-sample" or "out-of-sample"
+
+
+**Outcomes reported** (by term group: A1, A2, B1–B3, B4–B6, N):
+
+- **Coverage** - nominal 95%  
+- **Precision** - CI length relative to full-model CI  
+- **Power / Type I error** - % of simulations rejecting given variable 
+
+```{r}
+#### loading libraries  ####
+library(selectInferToolkit)
+library(hdrm)
+library(parallel)
+library(pbapply)
+library(tidyverse)
+library(kableExtra)
+```
+
+
+```{r parameters}
+#### Parameters ####
+# Fixed data-generating parameters 
+p <- 30
+a <- 2
+b <- 3
+beta_true <- c(0.60, 0.15)   # A1 stronger, A2 weaker
+S <- 100    # simulations per scenario
+B <- 100    # bootstrap replicates
+
+# Scenario grid: add rows here to expand the study
+# Any combination of N and rho (or other future parameters) will be run and
+# tabulated automatically — no other code changes needed.
+SCENARIOS <- expand.grid(
+  N   = c(150),         
+  rho = c(0.75),
+  stringsAsFactors = FALSE
+)
+
+# Inference option grids 
+nonsel_values <- c("ignored", "confident_nulls", "uncertain_nulls")
+
+boot_grid <- expand.grid(
+  inference_target = c("selections", "all"),
+  debias           = c(TRUE, FALSE),
+  estimation_data  = c("in-sample", "out-of-sample"),
+  stringsAsFactors = FALSE
+) %>%
+  mutate(
+    # Short label shown in table rows, e.g. "sel | T | in"
+    boot_short = paste0(
+      ifelse(inference_target=="selections","sel","all"), " | ",
+      ifelse(debias, "debias=T", "debias=F"), " | ",
+      ifelse(estimation_data=="in-sample","in","out")
+    ),
+    # Key used internally to match method names
+    boot_key = paste0(
+      "boot_", inference_target, "_", debias, "_",
+      gsub("-",".", gsub(" ",".", estimation_data))
+    )
+  )
+```
+
+
+
+
+```{r helpers}
+#### 2  Simulation ####
+# Stat extractors 
+get_coverage <- function(inf_object, beta) {
+  beta <=  inf_object$ci_high[inf_object$term!="(Intercept)"] &
+    beta >=  inf_object$ci_low[inf_object$term!="(Intercept)"]
+}
+
+get_length <- function(inf_obj) {
+  inf_obj$ci_high[inf_obj$term != "(Intercept)"] -
+  inf_obj$ci_low [inf_obj$term != "(Intercept)"]
+}
+
+get_rejected <- function(inf_obj) {
+  lo <- inf_obj$ci_low [inf_obj$term != "(Intercept)"]
+  hi <- inf_obj$ci_high[inf_obj$term != "(Intercept)"]
+  !(lo <= 0 & hi >= 0)
+}
+
+get_precision <- function(inf_obj, full_ln) {
+  model_ln <- get_length(inf_obj)
+    ifelse( model_ln / full_ln <= 1,1,0)
+}
+
+
+get_all_stats <- function(inf_obj, beta, full_model_ln, method_key) {
+  data.frame(
+    method   = method_key,
+    term     = names(beta),
+    beta     = beta,
+    coverage = get_coverage(inf_obj, beta),
+    length   = get_length(inf_obj),
+    rejected = get_rejected(inf_obj),
+    precision= get_precision(inf_obj, full_model_ln),
+    stringsAsFactors = FALSE
+  )
+}
+
+
+
+```
+
+```{r run-simulation, cache=F}
+# One simulation replicate for a given seed + scenario row 
+run_one <- function(seed, n, rho) {
+  set.seed(seed)
+  dat      <- hdrm::gen_data_abn(n=n, p=p, a=a, b=b, rho=rho, beta=beta_true)
+  df       <- data.frame(y=dat$y, dat$X)
+  beta_full <- dat$beta
+
+  full_tidy <- tidy(infer_upsi(select_full_model(y~., df), data=df),
+                    scale_coef=FALSE)
+  full_ln   <- get_length(full_tidy)
+  out <- list()
+  out[["full_model"]] <- get_all_stats(full_tidy, beta_full, full_ln, "full_model")
+
+  sel <- select_stepwise_ic(y~., df, direction="forward", penalty="AIC",
+                             select_factors_together=FALSE)
+
+  for (ns in nonsel_values) {
+    for (fn in c("upsi","si")) {
+      key    <- paste0(fn, "_", ns)
+      inf_fn <- if (fn=="upsi") infer_upsi else infer_selective
+      res    <- tryCatch({
+        tidy(inf_fn(sel, data=df, nonselection=ns), scale_coef=FALSE)
+      }, error=function(e) NULL)
+      if (!is.null(res)) out[[key]] <- get_all_stats(res, beta_full, full_ln, key)
+    }
+  }
+
+  for (i in seq_len(nrow(boot_grid))) {
+    key <- boot_grid$boot_key[i]
+    res <- tryCatch({
+      tidy(infer_boot(sel, data=df,
+                      inference_target = boot_grid$inference_target[i],
+                      debias           = boot_grid$debias[i],
+                      estimation_data  = boot_grid$estimation_data[i],
+                      B = B),
+           scale_coef=FALSE)
+    }, error=function(e) NULL)
+    if (!is.null(res)) out[[key]] <- get_all_stats(res, beta_full, full_ln, key)
+  }
+
+  bind_rows(out)
+}
+
+# Run all scenarios (cached to a single .rds) 
+cache_file <- "stepwise_aic_sim_results.rds"
+
+if (file.exists(cache_file)) {
+  all_results <- readRDS(cache_file)
+} else {
+  n_cores <- max(1L, parallel::detectCores() - 2L)
+  cl <- parallel::makeCluster(n_cores)
+  parallel::clusterExport(cl, varlist=c(
+    "run_one","get_all_stats","get_coverage","get_length",
+    "get_rejected","get_precision",
+    "p","a","b","beta_true","nonsel_values","boot_grid","B"
+  ))
+  parallel::clusterEvalQ(cl, {
+    library(selectInferToolkit); library(hdrm); library(broom); library(dplyr)
+  })
+
+  set.seed(2025)
+  seeds <- sample(1:999999, size=S)
+
+  # Iterate over every row of SCENARIOS automatically
+  all_results <- pmap_dfr(SCENARIOS, function(N, rho, ...) {
+    message(sprintf("N=%d  rho=%.2f", N, rho))
+    res <- pbapply::pblapply(seeds, run_one, n=N, rho=rho, cl=cl)
+    bind_rows(res, .id="simulation") %>% mutate(N=N, rho=rho)
+  })
+
+  parallel::stopCluster(cl)
+  saveRDS(all_results, cache_file)
+}
+```
+
+
+
+```{r preprocess}
+#### 3  Preprocessing ####
+
+
+# Detect variable names from a single dataset (robust to hdrm version)
+set.seed(1)
+.tmp     <- hdrm::gen_data_abn(n=50, p=p, a=a, b=b, rho=0.75, beta=beta_true)
+varnames <- colnames(.tmp$X)
+rm(.tmp)
+
+term_group_map <- tibble(
+  term = varnames,
+  term_group = case_when(
+    term == "A1"                   ~ "A1",
+    term == "A2"                   ~ "A2",
+    term %in% c("B1","B2","B3")   ~ "B1-B3",
+    term %in% c("B4","B5","B6")   ~ "B4-B6",
+    TRUE                           ~ "N1-N22"
+  )
+)
+
+# Row label: the short option string shown in the table
+# e.g.  "upsi_ignored"  →  inf_family="infer_upsi",  row_label="ignored"
+#       "boot_all_TRUE_in.sample"  →  "all | debias=T | in"
+make_row_label <- function(method) {
+  case_when(
+    method=="full_model" ~"Full Model",
+    startsWith(method, "upsi_") ~ sub("^upsi_", "", method),
+    startsWith(method, "si_")   ~ sub("^si_",   "", method),
+    method %in% boot_grid$boot_key ~
+      boot_grid$boot_short[match(method, boot_grid$boot_key)],
+    TRUE ~ method
+  )
+}
+
+summary_df <- all_results %>%
+  left_join(term_group_map, by="term") %>%
+  filter(!is.na(term_group)) %>%
+  mutate(
+    inf_family = case_when(
+      method == "full_model"     ~ "full_model", 
+      startsWith(method, "upsi") ~ "infer_upsi",
+      startsWith(method, "si")   ~ "infer_selective",
+      startsWith(method, "boot") ~ "infer_boot"
+    ),
+    row_label = case_when(
+    method == "full_model"     ~ "Full Model",   # ADD THIS LINE
+    startsWith(method, "upsi") ~ sub("^upsi_", "", method),
+    startsWith(method, "si")   ~ sub("^si_",   "", method),
+    method %in% boot_grid$boot_key ~
+      boot_grid$boot_short[match(method, boot_grid$boot_key)],
+    TRUE ~ method
+    )
+  ) %>%
+  group_by(N, rho, inf_family, row_label, term_group) %>%
+  summarise(
+    coverage  = mean(coverage,  na.rm=TRUE) * 100,
+    precision = mean(precision, na.rm=TRUE) * 100,
+    power_t1e = mean(rejected,  na.rm=TRUE) * 100,
+    .groups   = "drop"
+  ) %>%
+  mutate(term_group = factor(term_group, levels=c("A1","A2","B1-B3","B4-B6","N1-N22"))) %>%
+  arrange(N, rho, inf_family, row_label, term_group)
+```
+
+
+
+```{r make-table}
+#### 3   Results ####
+
+# make_table: wide kable with grouped rows, colour-coded coverage 
+#
+# Inputs: a pre-filtered slice of summary_df for ONE scenario (N+rho) and ONE
+# inference family (or both non-boot families together).
+# Rows    = row_label (short option string)
+# Columns = term_group × metric (Cov / Prec / Pwr)
+# Coverage cells are red when outside the nominal 95% CI [93.5, 96.5].
+
+make_table <- function(df, caption) {
+
+  tg_order  <- c("A1","A2","B1-B3","B4-B6","N1-N22")
+  present_groups <- tg_order[tg_order %in% unique(df$term_group)]
+  n_grp <- length(present_groups)
+
+  # Pivot wider — pivot_wider with names_glue groups ALL coverage cols first,
+  # then ALL precision, then ALL power (alphabetical by .value).
+  # We fix this by explicitly selecting columns in the desired interleaved order:
+  #   row_label | A1_cov A1_prec A1_pwr | A2_cov A2_prec A2_pwr | ...
+  wide <- df %>%
+    mutate(across(c(coverage, precision, power_t1e), ~round(.x, 1))) %>%
+    select(inf_family, row_label, term_group, coverage, precision, power_t1e) %>%
+    pivot_wider(
+      names_from  = term_group,
+      values_from = c(coverage, precision, power_t1e),
+      names_glue  = "{term_group}_{.value}"
+    )
+
+  # pivot_wider groups ALL coverage cols first, then ALL precision, then ALL power.
+  # Fix: vapply returns a 3×n_grp matrix; as.vector() reads column-by-column →
+  # A1_coverage, A1_precision, A1_power_t1e, A2_coverage, A2_precision, ...
+  metric_cols <- as.vector(
+    vapply(present_groups,
+           function(g) paste0(g, c("_coverage","_precision","_power_t1e")),
+           character(3))
+  )
+
+   wide_display <- wide %>% select(row_label, all_of(metric_cols))
+
+  # kable column names and header
+  col_names <- c("Options", rep(c("Coverage","Precision","Power/T1E"), n_grp))
+  hdr       <- setNames(c(1L, rep(3L, n_grp)), c(" ", present_groups))
+
+  # Coverage column positions: col 1 = Options, then groups of 3 per term_group.
+  # Coverage is always the 1st metric in each group → positions 2, 5, 8, 11, 14
+  cov_positions <- setNames(
+    2L + (seq_len(n_grp) - 1L) * 3L,   # 2, 5, 8, 11, 14
+    paste0(present_groups, "_coverage")
+  )
+
+  cov_color <- function(v) {
+  case_when(
+    is.na(v)                  ~ "black",   # missing
+    v >= 93.5 & v <= 96.5     ~ "black",   # nominal — within CI
+    v > 96.5                  ~ "blue",    # overcoverage
+    v < 93.5                  ~ "red"      # undercoverage
+  )
+  }
+
+  tbl <- wide_display %>%
+    kbl(caption=caption, col.names=col_names, digits=1) %>%
+    kable_styling(bootstrap_options=c("striped","hover","condensed"),
+                  font_size=12, full_width=F) %>%
+    add_header_above(hdr) %>%
+    column_spec(1,width = "16em", bold = TRUE, extra_css = "min-width:16em;")
+  
+
+  # Colour-code coverage columns (positions now correct after reorder)
+  for (cname in paste0(present_groups, "_coverage")) {
+    if (cname %in% names(wide_display)) {
+      tbl <- tbl %>% column_spec(cov_positions[[cname]],
+                                 color=cov_color(wide_display[[cname]]))
+    }
+  }
+
+  # pack_rows by inf_family
+  fam_seq <- wide$inf_family
+  rle_fam <- rle(fam_seq)
+  tbl %>% pack_rows(index=setNames(rle_fam$lengths, rle_fam$values))
+}
+```
+
+
+
+# Results and Practical Implications
+
+Table and figures below show the results of the simulation. Several clear patterns emerge from these simulations.
+
+The UPSI approach consistently produced confidence intervals that were narrower than those from the full model, indicating improved precision. However, this gain came at the cost of undercoverage and inflated Type I error rates across all non-selection strategies. The problem was most pronounced when non-selections were ignored, where coverage for correlated and noise variables was substantially below the nominal 95% level. Although UPSI achieved the highest power among the post-selection methods considered, users should be aware that this increased ability to detect effects is accompanied by a greater risk of false positive findings.
+
+
+```{r results, results="asis"}
+# Render one pair of tables per scenario automatically 
+# When you add rows to SCENARIOS, new sections appear with no other changes.
+
+for (sc in seq_len(nrow(SCENARIOS))) {
+  N_sc  <- SCENARIOS$N[sc]
+  rho_sc <- SCENARIOS$rho[sc]
+
+  cat(sprintf("\n\n### N = %d, ρ = %.2f\n\n", N_sc, rho_sc))
+
+  sc_df <- summary_df %>% filter(N==N_sc, rho==rho_sc)
+
+  # Table 1: infer_upsi + infer_selective together (nonselection options)
+  cat("\n\n#### UPSI & Selective Inference\n\n")
+  sc_df %>%
+    filter(inf_family %in% c("full_model","infer_upsi","infer_selective", "infer_boot")) %>%
+    make_table(sprintf("N=%d, ρ=%.2f — infer_upsi & infer_selective & infer_boot", N_sc, rho_sc)) %>%
+    print()
+}
+```
+
+
+Selective inference generally provided much stronger control of coverage and Type I error. When non-selections were ignored, coverage was near nominal for most variable groups as expected, and coverage remained acceptable when non-selections were treated as uncertain nulls. Across all non-selections methods, type-1 error was controlled at or under 5%. This improved error control came with a substantial reduction in power. Confidence intervals were also often wider than those from the full model when inference was restricted to selected variables.
+
+
+```{r fig.width=12, fig.height=7 }
+# Shared theme & colour scale 
+common_theme <- theme_bw() +
+  theme(
+    strip.text.x     = element_text(size=10),
+    strip.text.y     = element_text(size=9),
+    axis.text.x      = element_text(angle=45, hjust=1, size=8),
+    axis.text.y      = element_text(size=8),
+    strip.background = element_rect(fill="lightgray"),
+    panel.grid.major = element_line(color="gray90"),
+    legend.position  = "bottom",
+    legend.direction = "horizontal"
+  )
+
+prep_plot_df <- function(df) {
+  df %>%
+    pivot_longer(
+      cols      = c(coverage, precision, power_t1e),
+      names_to  = "measure",
+      values_to = "value"
+    ) %>%
+    mutate(
+      ref_line = case_when(
+        measure == "coverage"  ~ 95.0,
+        measure == "precision" ~ 50,
+        measure == "power_t1e" ~ 5.0,
+        TRUE                   ~ NA_real_
+      ),
+      measure = factor(
+        recode(measure,
+               coverage  = "Coverage",
+               precision = "Precision",
+               power_t1e = "Power / Type I Error"),
+        levels = c("Coverage","Precision","Power / Type I Error")
+      ),
+      term_group = factor(term_group,
+                          levels=c("A1","A2","B1-B3","B4-B6","N1-N22"))
+    )
+}
+
+# Separate full model as reference
+full_model_df <- summary_df %>%
+  filter(N==150, rho==0.75, inf_family=="full_model") %>%
+  prep_plot_df()
+
+# Figure 1: UPSI + Selective Inference, all nonselection values
+upsi_si_df <- summary_df %>%
+  filter(N==150, rho==0.75,
+         inf_family %in% c("infer_upsi","infer_selective")) %>%
+  mutate(row_label = factor(row_label,
+                            levels=c("ignored","confident_nulls","uncertain_nulls"))) %>%
+  mutate(method_label = paste0(inf_family, "\n", row_label)) %>%
+  prep_plot_df()
+
+
+# 6 methods (3 nonselection × 2 inference), colours from a 6-colour palette
+upsi_si_colors <- setNames(
+  RColorBrewer::brewer.pal(6, "Paired"),
+  unique(upsi_si_df$method_label)
+)
+
+coverage_band <- data.frame(
+  measure = factor("Coverage", levels = c("Coverage","Precision","Power / Type I Error")),
+  ymin = 93.46, ymax = 96.27
+)
+
+fig1 <- ggplot(upsi_si_df,
+               aes(x=term_group, y=value,
+                   color=inf_family, group=inf_family)) +
+  # Full model as grey dashed reference line repeated across all facet rows
+  geom_line(data=full_model_df %>%select(-row_label) %>%  
+              crossing(row_label=factor(c("ignored","confident_nulls","uncertain_nulls"),
+             levels=c("ignored","confident_nulls","uncertain_nulls"))),
+            aes(x=term_group, y=value, group=measure),
+            color="grey40", linetype="dashed", linewidth=0.7,
+            inherit.aes=FALSE) +
+  geom_rect(data=coverage_band,
+            aes(xmin=-Inf, xmax=Inf, ymin=ymin, ymax=ymax),
+            inherit.aes=FALSE,
+            fill="lightgreen", alpha=0.3) +
+  geom_point(size=2) +
+  geom_line() +
+  geom_hline(aes(yintercept=ref_line),
+             linetype="dashed", color="red", na.rm=TRUE) +
+  facet_grid(rows=vars(row_label), cols=vars(measure), scales="free_y") +
+  scale_color_manual(
+    values = c( "infer_upsi"      = "#2E86AB",
+               "infer_selective" = "#A23B72"),
+    labels = c( "infer_upsi"      = "UPSI",
+               "infer_selective" = "Selective Inference"),
+    name   = "Method"
+  ) +
+    annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=-Inf,
+           color="grey40", linetype="dashed") +
+  common_theme +
+  guides(color=guide_legend(nrow=1)) +
+  labs(x="Term group", y="Value",
+       title="UPSI & Selective Inference",
+       subtitle="N=150, rho=0.75 | Green band = nominal [93.5%, 96.5%]")
+
+fig1
+```
+
+
+```{r fig.width=12, fig.height=7}
+# Figure 2: Bootstrap, all 8 option combinations 
+boot_df <- summary_df %>%
+  filter(N==150, rho==0.75,
+         inf_family == "infer_boot") %>%
+  # Split row_label into components for cleaner faceting
+  mutate(
+    target  = ifelse(grepl("^all", row_label), "target=all", "target=sel"),
+    est     = ifelse(grepl("\\| in$", row_label), "in-sample", "out-of-sample"),
+    debias  = ifelse(grepl("debias=T", row_label), "debias=TRUE", "debias=FALSE"),
+    method_label = paste0(debias, "\n", est)
+  ) %>%
+  mutate(target= factor(target, levels = c("target=sel", "target=all"),labels = c("Selections", "All"))) %>%
+  prep_plot_df()
+
+coverage_band <- data.frame(
+  measure = factor("Coverage", levels = c("Coverage","Precision","Power / Type I Error")),
+  ymin = 93.46, ymax = 96.27
+)
+
+full_model_df_boot <- summary_df %>%
+  filter(N==150, rho==0.75, inf_family=="full_model") %>%
+  prep_plot_df() %>%
+  select(-row_label) %>%
+  crossing(target = factor(c("Selections","All"),
+                           levels = c("Selections","All")))
+
+
+fig2 <- ggplot(boot_df,
+               aes(x=term_group, y=value,
+                   color=method_label, group=method_label)) +
+  geom_line(data = full_model_df_boot,
+            aes(x=term_group, y=value, group=measure),
+            color="grey40", linetype="dashed", linewidth=0.7,
+            inherit.aes=FALSE) +
+  geom_rect(data=coverage_band,
+            aes(xmin=-Inf, xmax=Inf, ymin=ymin, ymax=ymax),
+            inherit.aes=FALSE, fill="lightgreen", alpha=0.3) +
+  geom_point(size=2) +
+  geom_line() +
+  geom_hline(aes(yintercept=ref_line),
+             linetype="dashed", color="red", na.rm=TRUE) +
+    geom_rect(data=coverage_band,
+            aes(xmin=-Inf, xmax=Inf, ymin=ymin, ymax=ymax),
+            inherit.aes=FALSE,
+            fill="lightgreen", alpha=0.3) +
+  # rows = inference_target, cols = measure
+  facet_grid(rows=vars(target), cols=vars(measure), scales="free_y") +
+  scale_color_manual(
+    values = c("debias=TRUE\nin-sample"    = "#F8766D",
+               "debias=TRUE\nout-of-sample"= "#00BFC4",
+               "debias=FALSE\nin-sample"   = "#7CAE00",
+               "debias=FALSE\nout-of-sample"="#C77CFF"),
+    name="debias × estimation_data"
+  ) +
+  common_theme +
+  guides(color=guide_legend(nrow=2)) +
+  labs(x="Term group", y="Value",
+       title="Bootstrap Inference",
+       subtitle="N=150, rho=0.75 | Facet rows = inference_target | Green band = nominal [93.5%, 96.5%]")
+
+fig2
+```
+Bootstrap-based inference exhibited the most stable performance overall. Across all combinations of debiasing and estimation strategies, coverage was consistently at or above the nominal level and Type I error remained well controlled. Bootstrap intervals were frequently as precise as or more precise than the full-model intervals. As with selective inference, however, this strong error control was accompanied by relatively low power.
+
+In practice, the choice of inference method following forward stepwise AIC depends on the analyst's priorities.Methods that aggressively control error rates (selective inference and bootstrap) tend to have very low power, whereas UPSI gains power through substantially weaker error-rate control. Thus, analysts should view stepwise-selected effects cautiously and choose an inference procedure based on whether minimizing false positives or maximizing detection is the primary goal.
+
+
