@@ -38,7 +38,7 @@ infer_selective <- function(
     stop("Currently SI only supported for stepwise IC or `glmnet`")
 
   if (type == "glmnet") {
-    alpha <- object[["call"]]$alpha
+    alpha <- attr(object, "meta")[["alpha"]]
 
     if (is.null(alpha) || alpha != 1) {
       stop("Currently SI only supported for glmnet with alpha = 1 (lasso penalty)")
@@ -60,7 +60,8 @@ infer_selective <- function(
       stop("Only forward stepwise with IC currently supported")
 
     if(meta$family != "gaussian")
-      stop("Only Gaussian supported for selective inference with stepwise IC (try glmnet?)")
+      stop("Only Gaussian supported for selective inference with stepwise IC (try glmnet?)"
+           )
 
     ## Run stepwise IC for purpose of SI, using fs function
     fs_result <- fs(as.matrix(X), y)
@@ -79,39 +80,59 @@ infer_selective <- function(
       sig <- NULL  # let fsInf use its default (sd(y) is fine when p <= n/2)
     }
 
-    # Get IC-based selection with confidence intervals
-    mult <- ifelse(meta$penalty == "AIC", 2, log(length(y)))
+    # Early exit if nothing was selected
+    sel_vars_stepaic <- names(beta)[names(beta) != "(Intercept)"]
+
+    if(length(sel_vars_stepaic) == 0) { # only intercept model
+      message("No variables selected: returning NA inferences")
+
+      empty_model=   infer_upsi(object, data = data) %>%
+        tidy()
+
+        inferences <- data.frame(term = empty_model$term, selected = 1, estimate = empty_model$estimate,
+                               ci_low = empty_model$ci_low,
+                               ci_high =  empty_model$ci_high,
+                               p_value = empty_model$p_value)
+        res<-NULL
 
 
-    res <- selectiveInference::fsInf(
-      fs_result,
-      sigma = sig,
-      type = "aic",
-      mult = mult,
-      alpha = (1 - conf.level) / 2,
-      ...
-    )
-    names(res$vars) <- names(X)[res$vars]
-    bb <- res$sign* as.vector(res$vmat %*% y)
+    } else{
+      # Get IC-based selection with confidence intervals
+      mult <- ifelse(meta$penalty == "AIC", 2, log(length(y)))
 
-    # if # of variables from fsInf is not same as one from select_stepwise_ic(),
-    # then set k manually
-    sel_vars_stepaic= names(beta)[names(beta) !="(Intercept)"]
-
-    if( length(sel_vars_stepaic) != length(res$vars)){
       res <- selectiveInference::fsInf(
         fs_result,
         sigma = sig,
-        type = "active",
-        k=length(beta) - 1,
+        type = "aic",
         mult = mult,
         alpha = (1 - conf.level) / 2,
         ...
       )
       names(res$vars) <- names(X)[res$vars]
       bb <- res$sign* as.vector(res$vmat %*% y)
-    }
 
+      # if # of variables from fsInf is not same as one from select_stepwise_ic(),
+      # then set k manually
+
+      if( length(sel_vars_stepaic) != length(res$vars)){
+        res <- selectiveInference::fsInf(
+          fs_result,
+          sigma = sig,
+          type = "active",
+          k=length(beta) - 1,
+          mult = mult,
+          alpha = (1 - conf.level) / 2,
+          ...
+        )
+        names(res$vars) <- names(X)[res$vars]
+        bb <- res$sign* as.vector(res$vmat %*% y)
+      }
+
+      inferences <- data.frame(term = names(res$vars), selected = 1, estimate = bb,
+                               ci_low = res$ci[,1], ci_high = res$ci[,2],
+                               p_value = res$pv)
+
+    }
   }
 
   ## Run selective inference on glmnet
@@ -151,11 +172,11 @@ infer_selective <- function(
       )
     }
     bb <- res$vmat %*% y
+    inferences <- data.frame(term = names(res$vars), selected = 1, estimate = bb,
+                             ci_low = res$ci[,1], ci_high = res$ci[,2],
+                             p_value = res$pv)
   }
 
-  inferences <- data.frame(term = names(res$vars), selected = 1, estimate = bb,
-                           ci_low = res$ci[,1], ci_high = res$ci[,2],
-                           p_value = res$pv)
 
   # Handle non-selections
   term_to_col <- tibble(

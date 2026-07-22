@@ -29,6 +29,7 @@ select_glmnet <- function(
   formula, data, family = c("gaussian", "binomial", "poisson"),
   lambda = c("best", "compact"),
   fitted_selector = NULL,
+  alpha=1,
   ...){
 
   family = match.arg(family)
@@ -94,7 +95,7 @@ select_glmnet <- function(
 
   if(is.character(lambda)) {
     fit <- cv.glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
-                     family = family, keep = TRUE, standardize = FALSE, ...)
+                     family = family, keep = TRUE, standardize = FALSE,alpha = alpha, ...)
     lambda_used <- if(lambda == "best") fit[["lambda.min"]] else fit[["lambda.1se"]]
     cv_used <- TRUE
     ll <- ifelse(lambda == "best", "lambda.min", "lambda.1se")
@@ -102,7 +103,7 @@ select_glmnet <- function(
 
   } else {
     fit <- glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
-                  family = family, lambda = lambda, standardize = FALSE, ...)
+                  family = family, lambda = lambda, standardize = FALSE,alpha = alpha, ...)
     lambda_used <- lambda
     cv_used <- FALSE
     b <- as.matrix(coef(fit, s = lambda))
@@ -116,7 +117,8 @@ select_glmnet <- function(
     lambda = lambda,
     lambda_used = lambda_used,
     cv_info = list(cv_used = cv_used, foldid = fit$foldid),
-    ellipses = list(...)
+    ellipses = list(...),
+    alpha=alpha
   )
 
   as_selector(fit, "glmnet", label = "Penalized `glmnet`-based",
