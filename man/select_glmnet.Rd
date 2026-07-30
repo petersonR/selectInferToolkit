@@ -25,7 +25,9 @@ select_glmnet(
 
 \item{fitted_selector}{a previously fit \code{selector}, used for resampling}
 
-\item{...}{Additional arguments that can be passed to \code{glmnet}, e.g. \code{alpha}}
+\item{alpha}{The elasticnet mixing parameter, passed to \code{glmnet}}
+
+\item{...}{Additional arguments that can be passed to \code{glmnet}}
 }
 \value{
 A \code{selector} object wrapping \code{glmnet} containing:

@@ -18,8 +18,6 @@ Encoding: UTF-8
 LazyData: true
 Imports:
   dplyr,
-  DT,
-  DiagrammeR,
   forcats,
   glmnet,
   magrittr,
@@ -34,7 +32,16 @@ Imports:
   stats,
   selectiveInference
 Suggests: 
-    testthat (>= 3.0.0),  knitr (>= 1.49), rmarkdown (>= 2.29)
+    testthat (>= 3.0.0),  knitr (>= 1.49), rmarkdown (>= 2.29), 
+    DT,
+    DiagrammeR,
+    hdrm,
+    RColorBrewer,
+    kableExtra,
+    tidyr,
+    tidyverse,
+    knitr,
+    rmarkdown
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

@@ -7,7 +7,8 @@
 #' @param data data set
 #' @param family outcome distributional family
 #' @param lambda can be `best`, `compact` (which use CV), or a numeric vector. See details.
-#' @param ... Additional arguments that can be passed to `glmnet`, e.g. `alpha`
+#' @param alpha The elasticnet mixing parameter, passed to `glmnet`
+#' @param ... Additional arguments that can be passed to `glmnet`
 #' @param fitted_selector a previously fit `selector`, used for resampling
 #'
 #' @importFrom magrittr %>%
