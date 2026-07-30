@@ -17,20 +17,22 @@ License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Imports:
-  tibble,
-  magrittr,
   dplyr,
-  stats,
+  DT,
+  DiagrammeR,
+  forcats,
+  glmnet,
+  magrittr,
   MASS,
   ncvreg,
-  selectiveInference,
-  glmnet,
   parallel,
   pbapply,
-  forcats,
+  purrr,
   recipes,
   rlang,
-  purrr
+  tibble,
+  stats,
+  selectiveInference
 Suggests: 
     testthat (>= 3.0.0),  knitr (>= 1.49), rmarkdown (>= 2.29)
 Config/testthat/edition: 3

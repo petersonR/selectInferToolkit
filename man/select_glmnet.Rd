@@ -10,6 +10,7 @@ select_glmnet(
   family = c("gaussian", "binomial", "poisson"),
   lambda = c("best", "compact"),
   fitted_selector = NULL,
+  alpha = 1,
   ...
 )
 }
