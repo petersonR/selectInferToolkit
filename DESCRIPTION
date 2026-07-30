@@ -20,6 +20,7 @@ Imports:
   dplyr,
   forcats,
   glmnet,
+  hdrm,
   magrittr,
   MASS,
   ncvreg,
