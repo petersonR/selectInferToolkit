@@ -60,8 +60,7 @@ infer_selective <- function(
       stop("Only forward stepwise with IC currently supported")
 
     if(meta$family != "gaussian")
-      stop("Only Gaussian supported for selective inference with stepwise IC (try glmnet?)"
-           )
+      stop("Only Gaussian supported for selective inference with stepwise IC (try glmnet?)")
 
     ## Run stepwise IC for purpose of SI, using fs function
     fs_result <- fs(as.matrix(X), y)
@@ -80,23 +79,27 @@ infer_selective <- function(
       sig <- NULL  # let fsInf use its default (sd(y) is fine when p <= n/2)
     }
 
-    # Early exit if nothing was selected
     sel_vars_stepaic <- names(beta)[names(beta) != "(Intercept)"]
 
-    if(length(sel_vars_stepaic) == 0) { # only intercept model
-      message("No variables selected: returning NA inferences")
+    if(length(sel_vars_stepaic) == 0) {
+      # Intercept-only model: there is no selection event to condition on, so
+      # there is nothing for fsInf() to do. Fall back to the unadjusted fit of
+      # the intercept-only model; the nonselection handling below then fills in
+      # every predictor according to `nonselection`.
+      message("No variables selected: falling back to unadjusted inference on the intercept-only model")
 
-      empty_model=   infer_upsi(object, data = data) %>%
-        tidy()
+      empty_model <- tidy(infer_upsi(object, data = data))
 
-        inferences <- data.frame(term = empty_model$term, selected = 1, estimate = empty_model$estimate,
+      inferences <- data.frame(term = empty_model$term, selected = 1,
+                               estimate = empty_model$estimate,
                                ci_low = empty_model$ci_low,
-                               ci_high =  empty_model$ci_high,
+                               ci_high = empty_model$ci_high,
                                p_value = empty_model$p_value)
-        res<-NULL
+      # list(), not NULL: as_inferrer() sets attributes on this object, and
+      # structure(NULL, ...) is deprecated in R.
+      res <- list()
 
-
-    } else{
+    } else {
       # Get IC-based selection with confidence intervals
       mult <- ifelse(meta$penalty == "AIC", 2, log(length(y)))
 
@@ -111,16 +114,18 @@ infer_selective <- function(
       names(res$vars) <- names(X)[res$vars]
       bb <- res$sign* as.vector(res$vmat %*% y)
 
-      # if # of variables from fsInf is not same as one from select_stepwise_ic(),
-      # then set k manually
-
-      if( length(sel_vars_stepaic) != length(res$vars)){
+      # fsInf(type = "aic") re-runs its own AIC/BIC stopping rule, which does not
+      # always terminate at the same step as MASS::stepAIC() did. When the two
+      # disagree, fall back to type = "active" and pin the step count to the
+      # number of variables select_stepwise_ic() actually kept, so the inference
+      # conditions on the model the user was given. (`mult` is not used by
+      # type = "active" and so is not passed here.)
+      if(length(sel_vars_stepaic) != length(res$vars)) {
         res <- selectiveInference::fsInf(
           fs_result,
           sigma = sig,
           type = "active",
-          k=length(beta) - 1,
-          mult = mult,
+          k = length(beta) - 1,
           alpha = (1 - conf.level) / 2,
           ...
         )

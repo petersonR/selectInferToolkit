@@ -30,7 +30,7 @@ select_glmnet <- function(
   formula, data, family = c("gaussian", "binomial", "poisson"),
   lambda = c("best", "compact"),
   fitted_selector = NULL,
-  alpha=1,
+  alpha = 1,
   ...){
 
   family = match.arg(family)
@@ -46,6 +46,10 @@ select_glmnet <- function(
     meta <- attr(fitted_selector, "meta")
     family <- meta$family
     lambda <- meta$lambda_used
+    # alpha must be carried over too, otherwise re-selection (e.g. every
+    # bootstrap replicate in infer_boot) silently reverts to the default
+    # alpha = 1 and refits a lasso in place of a ridge/elastic net.
+    if(!is.null(meta$alpha)) alpha <- meta$alpha
     if(missing(formula))
       formula <- attr(fitted_selector, "recipe_obj")
   }
@@ -96,7 +100,8 @@ select_glmnet <- function(
 
   if(is.character(lambda)) {
     fit <- cv.glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
-                     family = family, keep = TRUE, standardize = FALSE,alpha = alpha, ...)
+                     family = family, keep = TRUE, standardize = FALSE,
+                     alpha = alpha, ...)
     lambda_used <- if(lambda == "best") fit[["lambda.min"]] else fit[["lambda.1se"]]
     cv_used <- TRUE
     ll <- ifelse(lambda == "best", "lambda.min", "lambda.1se")
@@ -104,7 +109,8 @@ select_glmnet <- function(
 
   } else {
     fit <- glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
-                  family = family, lambda = lambda, standardize = FALSE,alpha = alpha, ...)
+                  family = family, lambda = lambda, standardize = FALSE,
+                  alpha = alpha, ...)
     lambda_used <- lambda
     cv_used <- FALSE
     b <- as.matrix(coef(fit, s = lambda))
@@ -119,7 +125,7 @@ select_glmnet <- function(
     lambda_used = lambda_used,
     cv_info = list(cv_used = cv_used, foldid = fit$foldid),
     ellipses = list(...),
-    alpha=alpha
+    alpha = alpha
   )
 
   as_selector(fit, "glmnet", label = "Penalized `glmnet`-based",

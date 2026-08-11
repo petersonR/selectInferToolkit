@@ -17,7 +17,7 @@ infer_pipe <- function(object, data, conf.level = .95, ...) {
   supported <- c("ncvreg")
   type <- attr(object, "name")
   if(!(type %in% supported))
-    stop("Currently SI only supported for `ncvreg`-based selectors")
+    stop("PIPE inference is currently only supported for `ncvreg`-based selectors")
 
   X <- bake(attr(object, "recipe_obj"), new_data = data, all_predictors())
   beta <- coef(object)

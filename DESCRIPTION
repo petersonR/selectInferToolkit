@@ -1,7 +1,7 @@
 Package: selectInferToolkit
 Type: Package
 Title: Tools for Variable Selection & Inference
-Version: 0.4.2
+Version: 0.4.3
 Authors@R: c(
     person("Jinal", "Shah", , "jinal.shah@cuanschutz.edu", role = c("aut"),
       comment = c()
@@ -20,7 +20,6 @@ Imports:
   dplyr,
   forcats,
   glmnet,
-  hdrm,
   magrittr,
   MASS,
   ncvreg,
@@ -32,24 +31,18 @@ Imports:
   tibble,
   stats,
   selectiveInference
-Suggests: 
-    testthat (>= 3.0.0),  knitr (>= 1.49), rmarkdown (>= 2.29), 
+Suggests:
+    testthat (>= 3.0.0),
+    knitr (>= 1.49),
+    rmarkdown (>= 2.29),
     DT,
     DiagrammeR,
-    hdrm,
-    RColorBrewer,
-    kableExtra,
-    tidyr,
-    tidyverse,
-    knitr,
-    rmarkdown
-Remotes:
-    pbreheny/hdrm
+    tidyr (>= 1.3.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Depends: 
     R (>= 3.5),
     broom
 VignetteBuilder: knitr
 URL: https://petersonr.github.io/selectInferToolkit/
+Config/roxygen2/version: 8.0.0

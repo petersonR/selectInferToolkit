@@ -18,7 +18,7 @@ iris$UBV <- rbinom(nrow(iris), 1, prob = .02)
 
 
 
-test_that("Stepwise AIC forward seelction works", {
+test_that("Stepwise AIC forward selection works", {
 
   expect_no_error({
     sel <- select_stepwise_ic(Sepal.Length ~ ., iris, direction = "forward",
