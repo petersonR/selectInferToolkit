@@ -1,6 +1,6 @@
 ---
 title: "Using the selectInferToolkit Package"
-author: "Jinal Shah & Ryan A Peterson"
+author: "Jinal Shah & Ryan Peterson"
 date: "`r Sys.Date()`"
 output:   
   rmarkdown::html_vignette:

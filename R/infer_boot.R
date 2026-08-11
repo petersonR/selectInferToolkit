@@ -21,7 +21,7 @@ infer_boot <- function(
   object,
   data,
   inference_target = c("selections", "all"),
-  debias = F,
+  debias = FALSE,
   estimation_data = c("in-sample", "out-of-sample"),
   conf.level = .95,
   type = c("paired", "residual"),
@@ -77,7 +77,7 @@ infer_boot <- function(
 
 boot <- function(object, data, B,
                  inference_target = c("selections", "all"),
-                 debias = TRUE,
+                 debias = FALSE,
                  estimation_data = c("in-sample", "out-of-sample"),
                  conf.level, n_cores, ...) {
   stopifnot(inherits(object, "selector"))

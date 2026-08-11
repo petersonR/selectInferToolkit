@@ -1,6 +1,6 @@
 ---
 title: "Available methods in selectInferToolkit Package"
-author: "Jinal Shah & Ryan A Peterson"
+author: "Jinal Shah & Ryan Peterson"
 date: "`r Sys.Date()`"
 output:   
   rmarkdown::html_vignette:
@@ -19,7 +19,7 @@ knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 
 # Overview
 
-The `selectInferToolkit` package provides a unified interface for **post-selection inference** (PSI), statistical inference that accounts for model selection. Ignoring the model selection while performing inference leads to confidence intervals that are too narrow and p-values that are anti-conservative, even when the selection and inference are performed on the same dataset.
+The `selectInferToolkit` package provides a unified interface for **post-selection inference** (PSI), statistical inference that accounts for model selection. Ignoring the model selection while performing inference leads to confidence intervals that are too narrow and p-values that are anti-conservative, as the selection and inference are performed on the same dataset.
 
 This vignette is designed to document which combinations of selection method, inference
 method, and tuning options are currently supported by the package. Rather than maintaining a static table by hand, the vignette probes every combination
@@ -44,7 +44,7 @@ Given a selected model object, the package offers four inference approaches:
 
 | Function | Method | Key options |
 |---|---|---|
-| `infer_upsi()` | Unajusted post-selection inference (UPSI)  | `nonselection` |
+| `infer_upsi()` | Unadjusted post-selection inference (UPSI)  | `nonselection` |
 | `infer_selective()` | Selective inference: exact conditioning on the selection event; currently requires lasso or forward stepwise selection | `nonselection` |
 | `infer_boot()` | Bootstrap-based inference: resamples the full selection + estimation pipeline | `inference_target`, `debias`, `estimation_data` |
 | `infer_pipe()` | | — |
@@ -54,9 +54,9 @@ Given a selected model object, the package offers four inference approaches:
 For `infer_upsi()` and `infer_selective()`, variables that were *not* selected
 present a choice about how to handle their inference:
 
-- **`"ignored"`** - only report CIs for selected variables; unselected variables are dropped from the output entirely.
-- **`"confident_nulls"`** - treat unselected variables as having point estiamtes and CI as exactly zero; report a point mass at zero with no uncertainty.
-- **`"uncertain_nulls"`** - aims to make inference on all variables but without the assumption that non-selections certainly have a null effect
+- **`"ignored"`** - only report CIs for selected variables; non-selected variables are dropped from the output entirely (still returned as NAs)
+- **`"confident_nulls"`** - treat non-selected variables as having point estimates and CI as exactly zero; report a point mass at zero with no uncertainty.
+- **`"uncertain_nulls"`** - aims to make inference on all variables, conditioning on the selected model and checking each non-selection against residuals of that model individually.
 
 
 ```{r packages}
@@ -145,7 +145,7 @@ sel_palette <- c(select_full_model="#546E7A", select_stepwise_ic="#6D4C41",
 
 
 
-```{r probe, cache=TRUE}
+```{r probe}
 ####### Probe every combination #######
 
 
@@ -284,8 +284,8 @@ particular combination of tuning parameters (e.g. `select_glmnet` with `alpha=1.
 
 **Notable constraints visible in the table:**
 
-- `infer_selective` only works with lasso-penalised glmnet selection
-  (`alpha = 1.0`) and forward stepwsie selection.  
+- `infer_selective` only works with lasso-penalized glmnet selection
+  (`alpha = 1.0`) and forward stepwise selection.  
 - `infer_pipe` works with `select_ncvreg` but not with stepwise or glmnet
   selectors.
 - `infer_upsi` and `infer_boot` are the most broadly compatible, working across all selector families.
@@ -358,7 +358,7 @@ datatable(
 ```
 
 
-Note: `infer_upsi` and `infer_selective` columns show consensus across all three `nonselection` values (`ignored`, `confident_nulls`, `uncertain_nulls`).`infer_boot` columns show consensus across all `inference_target` and `debias` combinations, split by estimation_data.
+Note: `infer_upsi` and `infer_selective` columns show consensus across all three `nonselection` values (`ignored`, `confident_nulls`, `uncertain_nulls`). The `infer_boot` columns show consensus across all `inference_target` and `debias` combinations, split by estimation_data.
 
 ## Flow diagrams
 
@@ -632,7 +632,7 @@ make_diagram("select_ncvreg", pair_best, inf_palette, sel_palette,
 ```
 
 **Interpretation:** Both MCP and lasso penalties, and both `lambda` options,
-support `infer_upsi`and `infer_boot`.  `infer_selective` and `infer_pipe` is
+support `infer_upsi` and `infer_boot`.  `infer_selective` is
 not available for `ncvreg` selectors.
 
 
@@ -642,7 +642,7 @@ This vignette is designed to update itself automatically as new methods are
 added to the package.  The probing logic in the `probe` chunk calls each
 function via `get(fn_name, envir=getNamespace("selectInferToolkit"))`, so
 any newly exported `select_*` or `infer_*` function is discovered without
-editing this file.
+editing this file, except for the following updates: 
 
 To add a **new selection method** with tuning parameters, add one entry to
 `sel_grids` in the `candidates` chunk:
@@ -656,14 +656,12 @@ select_mymethod = expand.grid(
 ```
 
 To add a **new inference method that uses `nonselection=`**, add its name to
-`inf_fns_nonsel`.
+`inf_fns_nonsel` in this vignette's Rmd.
 
 To add a **new inference method with its own option grid** (like `infer_boot`), add a dedicated probe block in the `probe` chunk following the pattern used for `grid_boot`.
 
 The compatibility matrix and flow diagrams will include the new method
 automatically on the next render.
-
-
 
 ```{r full-table, include=FALSE}
 
