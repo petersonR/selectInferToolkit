@@ -18,7 +18,7 @@ iris$UBV <- rbinom(nrow(iris), 1, prob = .02)
 
 
 
-test_that("Stepwise AIC forward seelction works", {
+test_that("Stepwise AIC forward selection works", {
 
   expect_no_error({
     sel <- select_stepwise_ic(Sepal.Length ~ ., iris, direction = "forward",
@@ -50,7 +50,7 @@ test_that("Stepwise AIC forward seelction works", {
     sum(inf_conf$select == 0)
   )
 
-  # Test 3: uncertain_nulls → estimate is NA or 0? (your logic said "not NA and not 0"?)
+  # Test 3: uncertain_nulls → estimate is NA or 0?
   expect_equal(
     sum(inf_un$select == 0 & !is.na(inf_un$estimate) & inf_un$estimate != 0),
     sum(inf_un$select == 0)

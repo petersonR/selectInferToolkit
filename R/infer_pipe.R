@@ -21,7 +21,7 @@ infer_pipe <- function(object, data, conf.level = .95, ...) {
   supported <- c("ncvreg")
   type <- attr(object, "name")
   if(!(type %in% supported))
-    stop("Currently SI only supported for `ncvreg`-based selectors")
+    stop("PIPE inference is currently only supported for `ncvreg`-based selectors")
 
   X <- bake(attr(object, "recipe_obj"), new_data = data, all_predictors())
   beta <- coef(object)
@@ -29,14 +29,14 @@ infer_pipe <- function(object, data, conf.level = .95, ...) {
 
   pipe_results <- intervals(object, level = conf.level, X = as.matrix(X), ...)
   inferences <- pipe_results %>%
-    select(term = .data$variable, .data$estimate, ci_low = .data$lower,
-           ci_high = .data$upper, p_value = .data$p.value) %>%
+    select(term = "variable", estimate = "estimate", ci_low = "lower",
+           ci_high = "upper", p_value = "p.value") %>%
     tibble()
 
 
   as_inferrer(
     pipe_results, "pipe", label = "PIPE",
-    nonselection = "uncertain",
+    nonselection = "uncertain_nulls",
     conf.level = conf.level,
     selector = object,
     meta = list(...),

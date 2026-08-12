@@ -120,7 +120,7 @@ tidy.selector <- function(x, scale_coef = TRUE, ...) {
   scale_step_idx <- which(tidy(rec_obj)$type == "scale")
   if(length(scale_step_idx)) {
     sds <- tidy(rec_obj, number = scale_step_idx) %>%
-      select(term = .data$terms, sd = .data$value)
+      select(term = "terms", sd = "value")
   } else {
     stop("a scaling step is required")
   }
@@ -145,7 +145,7 @@ tidy.selector <- function(x, scale_coef = TRUE, ...) {
   }
 
   results %>%
-    select(.data$term, .data$selected, .data$coef)
+    select("term", "selected", "coef")
 
 }
 

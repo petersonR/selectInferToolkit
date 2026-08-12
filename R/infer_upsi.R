@@ -41,7 +41,7 @@ infer_upsi <- function(
   meta <- attr(object, "meta")
   outcome_name <- rec_obj$var_info %>%
     filter(.data$role == "outcome") %>%
-    pull(.data$variable)
+    pull("variable")
   all_terms <- attr(object, "all_terms")
 
   df <- bake(rec_obj, new_data = data)
@@ -49,8 +49,8 @@ infer_upsi <- function(
   selected_formula <- formula(paste0(outcome_name, "~", paste0(c(1, selected_vars), collapse = "+")))
   fit_selected <- glm(selected_formula, data = df, family = meta$family)
   results_selected <- tidy(fit_selected, conf.int = TRUE, conf.level = conf.level) %>%
-    select(.data$term, .data$estimate, ci_low = .data$conf.low,
-           ci_high = .data$conf.high, p_value = .data$p.value)
+    select("term", "estimate", ci_low = "conf.low",
+           ci_high = "conf.high", p_value = "p.value")
   results_selected$term <- make.names(results_selected$term )
   if(results_selected$term[1] =="X.Intercept.") results_selected$term[1] = "(Intercept)"
 
