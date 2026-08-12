@@ -108,7 +108,9 @@ infer_selective <- function(
         sigma = sig,
         type = "aic",
         mult = mult,
-        alpha = (1 - conf.level) / 2,
+        # `alpha` in selectiveInference is the *total* miscoverage: the interval
+        # targets alpha/2 in each tail. So 1 - conf.level, not (1 - conf.level)/2.
+        alpha = 1 - conf.level,
         ...
       )
       names(res$vars) <- names(X)[res$vars]
@@ -126,7 +128,7 @@ infer_selective <- function(
           sigma = sig,
           type = "active",
           k = length(beta) - 1,
-          alpha = (1 - conf.level) / 2,
+          alpha = 1 - conf.level,
           ...
         )
         names(res$vars) <- names(X)[res$vars]
@@ -171,7 +173,8 @@ infer_selective <- function(
         beta = b,
         lambda = meta$lambda_used * n,
         family = meta$family,
-        alpha = (1 - conf.level) / 2,
+        # see note above: `alpha` is total miscoverage, split alpha/2 per tail
+        alpha = 1 - conf.level,
         sigma = sig,
         ...
       )

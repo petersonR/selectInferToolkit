@@ -18,6 +18,17 @@
   replicate in `infer_boot()` refit a lasso even when the original selector was
   a ridge or elastic net fit.
 
+- `infer_selective()` now produces intervals at the requested `conf.level`. It
+  passed `(1 - conf.level) / 2` as the `alpha` argument of
+  `selectiveInference::fsInf()` and `fixedLassoInf()`, but that `alpha` is the
+  total miscoverage rather than the per-tail miscoverage. The default
+  `conf.level = 0.95` therefore returned 97.5% intervals, which were
+  conservative: their false rejection rate under the null was roughly 2.5%
+  rather than 5%. Reported p-values are unaffected, as they never depended on
+  `alpha`. This also aligns selected terms with the non-selected terms filled in
+  under `nonselection = "uncertain_nulls"`, which were already using
+  `conf.level` directly.
+
 - `infer_selective()` no longer fails when `selectiveInference::fsInf()`'s own
   AIC/BIC stopping rule stops at a different step than `MASS::stepAIC()` did. In
   that case it now conditions on the model that `select_stepwise_ic()` actually
