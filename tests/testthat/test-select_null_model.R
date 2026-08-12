@@ -180,12 +180,15 @@ skip_on_ci()
 ###### Test IRIS data binary outcome ########
 
 iris_binary = iris
-iris$setosa_bin <- ifelse(iris$Species=="setosa",1,0)
-iris$setosa_bin <-factor(iris$setosa_bin , levels = c(0,1),labels  = c("other","setosa"))
+# versicolor, not setosa: setosa is perfectly separable from the other species
+# by Petal.Length, so a binomial fit diverges (coefficients -> +/-Inf) and every
+# glm() call warns. versicolor overlaps virginica, so the fit is well behaved.
+iris$versicolor_bin <- ifelse(iris$Species=="versicolor",1,0)
+iris$versicolor_bin <-factor(iris$versicolor_bin , levels = c(0,1),labels  = c("other","versicolor"))
 iris_binary = iris %>% dplyr::select(-Species)
 
 
-formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+formula = "versicolor_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
 nullmod <- select_null_model(as.formula(formula), iris_binary,family = "binomial" )
 
 test_that("basic inferrer UPSI functionality", {

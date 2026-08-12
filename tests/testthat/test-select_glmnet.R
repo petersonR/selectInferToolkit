@@ -115,12 +115,14 @@ test_that("elastic net works", {
 ###### Test IRIS data binary outcome ########
 
 iris_binary = iris
-iris$setosa_bin <- ifelse(iris$Species=="setosa",1,0)
-iris$setosa_bin <-factor(iris$setosa_bin , levels = c(0,1),labels  = c("other","setosa"))
+# versicolor, not setosa: setosa is perfectly separable from the other species
+# by Petal.Length, so a binomial fit diverges (coefficients -> +/-Inf).
+iris$versicolor_bin <- ifelse(iris$Species=="versicolor",1,0)
+iris$versicolor_bin <-factor(iris$versicolor_bin , levels = c(0,1),labels  = c("other","versicolor"))
 iris_binary = iris %>% dplyr::select(-Species)
 
 test_that("lasso  works", {
-  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+  formula = "versicolor_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
   set.seed(2)
   sel <- select_glmnet(formula = as.formula(formula), iris_binary,
                        family = "binomial")
@@ -171,7 +173,7 @@ test_that("lasso  works", {
 })
 
 test_that("elastic net works", {
-  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+  formula = "versicolor_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
   set.seed(3)
   sel <- select_glmnet(formula = as.formula(formula), iris_binary, alpha=0.5,
                        family = "binomial")
@@ -196,7 +198,7 @@ test_that("elastic net works", {
   expect_equal(tidy( sel_rep ), tidy(sel))
 
   set.seed(3)
-  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+  formula = "versicolor_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
   sel2 <- select_glmnet(formula = as.formula(formula), iris_binary, alpha=0.5,
                          family = "binomial",lambda = "compact")
 

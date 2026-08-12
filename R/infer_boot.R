@@ -90,7 +90,7 @@ boot <- function(object, data, B,
   family  <- attr(object, "meta")$family
   family <- if (is.character(family)) get(family,mode = "function")() else family
 
-  outcome_name <- rec_obj$var_info |> filter(.data$role == "outcome") |> pull(.data$variable)
+  outcome_name <- rec_obj$var_info |> filter(.data$role == "outcome") |> pull("variable")
 
   # if cat var selected togther, expand them
   if (attr(object, "name") == "stepwise_ic" &&
@@ -147,7 +147,7 @@ boot <- function(object, data, B,
     }
 
     selected_terms <- val_boot$term[val_boot$selected == 1]
-    selected_cols <- term_to_col |>filter(.data$term %in% selected_terms) |>pull(col) |>
+    selected_cols <- term_to_col |>filter(.data$term %in% selected_terms) |>pull("col") |>
       unlist()
 
     # debiasing for selected terms
@@ -165,10 +165,12 @@ boot <- function(object, data, B,
 
       sel_coefs <- tidy(  fit_sel_debias )[, c("term", "estimate")]
 
-      val_boot <- val_boot %>% left_join(sel_coefs %>% select(.data$term, .data$estimate),
+      val_boot <- val_boot %>% left_join(sel_coefs %>% select("term", "estimate"),
                                          by = "term",suffix = c("", "_new"))
-      nonselected_terms <- val_boot$term[val_boot$selected == 0]
 
+      # after the join `estimate` holds the debiased coefficient for every
+      # selected term and NA for the rest; the loop below fills those in.
+      nonselected_terms <- val_boot$term[val_boot$selected == 0]
 
       if(length(nonselected_terms) > 0) {
         # If debiased non-selections, set to "uncertain nulls"
@@ -183,9 +185,11 @@ boot <- function(object, data, B,
           if (nrow(tj) > 0) {
             val_boot$estimate[val_boot$term == t] <- tj$estimate[1]}
         }
-        # for weird cases where it's not possible to do ucnertain null
-        val_boot$estimate <- ifelse(is.na(val_boot$coef), 0, val_boot$coef)
       }
+
+      # for weird cases where it's not possible to do uncertain null.
+      val_boot$estimate <- ifelse(is.na(val_boot$estimate),
+                                  val_boot$coef, val_boot$estimate)
 
     } else {
       val_boot$estimate <- ifelse(is.na(val_boot$coef), 0, val_boot$coef)
@@ -202,7 +206,7 @@ boot <- function(object, data, B,
   if(inference_target=="selections") {
     results <- boot_df  %>%
       filter(.data$term %in% names(coef(object))) %>%
-      select(.data$term, coef, .data$estimate) %>%
+      select("term", "coef", "estimate") %>%
       group_by(.data$term)  %>%
       summarise(
         estimate_m = mean(.data$estimate),
@@ -211,14 +215,14 @@ boot <- function(object, data, B,
         prop_selected = mean(coef != 0),
         .groups = "drop"
       )%>%
-      rename(estimate = .data$estimate_m) %>%
+      rename(estimate = "estimate_m") %>%
       right_join(tidy(object)[,1], by = "term")%>%
       arrange(match(.data$term, unique(boot_df$term)))
   }
 
   if(inference_target=="all") {
     results <- boot_df  %>%
-      select(.data$term, .data$coef, .data$estimate) %>%
+      select("term", "coef", "estimate") %>%
       group_by(.data$term)  %>%
       summarise(
         estimate_m = mean(.data$estimate),
@@ -227,7 +231,7 @@ boot <- function(object, data, B,
         prop_selected = mean(coef != 0),
         .groups = "drop"
       )%>%
-      rename(estimate = .data$estimate_m) %>%
+      rename(estimate = "estimate_m") %>%
       arrange(match(.data$term, unique(boot_df$term)))
   }
 

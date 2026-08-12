@@ -35,6 +35,7 @@ infer_selective(
   nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
   conf.level = 0.95,
   use_cv_sigma = FALSE,
+  sigma = NULL,
   ...
 )
 
@@ -72,6 +73,13 @@ have confidence intervals (at least)}
 \item{...}{arguments passed to \code{selectiveInference} function(s)}
 
 \item{use_cv_sigma}{estimate Sigma via CV (if FALSE, uses SI defaults)}
+
+\item{sigma}{optional known or pre-computed residual standard deviation. When
+supplied it is passed straight through to the \code{selectiveInference} function
+and no sigma is estimated. The automatic estimate used when \code{p > n/2}
+calls \code{selectiveInference::estimateSigma()}, which runs its own unseeded
+cross-validation, so intervals will differ between calls on identical data
+unless you \code{set.seed()} first.}
 }
 \value{
 An S3 object (list) of class \code{inferrer}

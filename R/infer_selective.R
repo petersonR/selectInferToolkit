@@ -9,6 +9,12 @@
 #'   "confident_nulls" or "uncertain_nulls" supported
 #' @param conf.level .95 by default
 #' @param use_cv_sigma estimate Sigma via CV (if FALSE, uses SI defaults)
+#' @param sigma optional known or pre-computed residual standard deviation. When
+#'   supplied it is passed straight through to the `selectiveInference` function
+#'   and no sigma is estimated. The automatic estimate used when `p > n/2`
+#'   calls `selectiveInference::estimateSigma()`, which runs its own unseeded
+#'   cross-validation, so intervals will differ between calls on identical data
+#'   unless you `set.seed()` first.
 #' @param ... arguments passed to `selectiveInference` function(s)
 #'
 #' @importFrom broom tidy
@@ -26,6 +32,7 @@ infer_selective <- function(
     nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
     conf.level = .95,
     use_cv_sigma = FALSE,
+    sigma = NULL,
     ...
   ){
 
@@ -54,6 +61,9 @@ infer_selective <- function(
   meta <- attr(object, "meta")
 
   sig <- NULL
+  # recorded on the returned inferrer so callers can tell when the numbers are
+  # not actually selection-adjusted
+  si_meta <- list()
 
   if(type == "stepwise_ic") {
     if(meta$direction != "forward")
@@ -69,12 +79,15 @@ infer_selective <- function(
     p <- ncol(X)
     n_obs <- length(y)
 
-    if(use_cv_sigma) {
+    if(!is.null(sigma)) {
+      sig <- sigma
+    } else if(use_cv_sigma) {
       sig <- selectiveInference::estimateSigma(as.matrix(X), y)$sigmahat
       warning("use_cv_sigma with stepwise_ic may yield unexpected results")
     } else if(p > n_obs / 2) {
       sig <- selectiveInference::estimateSigma(as.matrix(X), y)$sigmahat
-      message("p > n/2: using estimateSigma() for sigma estimate in fsInf")
+      message(paste("p > n/2: sigma estimated using cross-validation, so set.seed()",
+                    "or supply `sigma` for reproducible intervals."))
     } else {
       sig <- NULL  # let fsInf use its default (sd(y) is fine when p <= n/2)
     }
@@ -86,9 +99,14 @@ infer_selective <- function(
       # there is nothing for fsInf() to do. Fall back to the unadjusted fit of
       # the intercept-only model; the nonselection handling below then fills in
       # every predictor according to `nonselection`.
-      message("No variables selected: falling back to unadjusted inference on the intercept-only model")
 
-      empty_model <- tidy(infer_upsi(object, data = data))
+      # warning(), not message(): knitr, suppressMessages() and simulation loops
+      # all swallow messages, and these numbers are NOT selection-adjusted.
+      warning(paste("No variables selected: falling back to unadjusted (non-selective)",
+                    "inference on the intercept-only model"))
+      si_meta$unadjusted_fallback <- TRUE
+
+      empty_model <- tidy(infer_upsi(object, data = data, conf.level = conf.level))
 
       inferences <- data.frame(term = empty_model$term, selected = 1,
                                estimate = empty_model$estimate,
@@ -108,8 +126,11 @@ infer_selective <- function(
         sigma = sig,
         type = "aic",
         mult = mult,
-        # `alpha` in selectiveInference is the *total* miscoverage: the interval
-        # targets alpha/2 in each tail. So 1 - conf.level, not (1 - conf.level)/2.
+        # stop at the first IC increase, which is what MASS::stepAIC() does.
+        # fsInf's default (ntimes = 2) walks past it
+        ntimes = 1,
+
+        # not to be confused with the other alpha...
         alpha = 1 - conf.level,
         ...
       )
@@ -122,7 +143,12 @@ infer_selective <- function(
       # number of variables select_stepwise_ic() actually kept, so the inference
       # conditions on the model the user was given. (`mult` is not used by
       # type = "active" and so is not passed here.)
+      si_meta$conditioning <- "aic"
       if(length(sel_vars_stepaic) != length(res$vars)) {
+        # type = "active" conditions on the first k steps as though k had been
+        # fixed in advance, so it does not adjust for the IC stopping rule.
+        # Record that so the weaker guarantee is visible on the result.
+        si_meta$conditioning <- "active"
         res <- selectiveInference::fsInf(
           fs_result,
           sigma = sig,
@@ -145,20 +171,30 @@ infer_selective <- function(
   ## Run selective inference on glmnet
   if(type == "glmnet") {
     n<- nrow(X)
+    p <- ncol(X)
     sig <- NULL
     b <- coef(object, use_native = TRUE, s=meta$lambda_used,
               exact = TRUE, x = X, y = y)[-1]
 
-    if(use_cv_sigma) {
-      # Similar to estimateSigma, but no new CV required
+    if(!is.null(sigma)) {
+      sig <- sigma
+    } else if(use_cv_sigma) {
+      # Similar to estimateSigma, but no new CV required.
       nz = sum(b != 0)
       rss <- min(object$cvm) * n
       sig <- sqrt(rss/(n - nz - 1))
+
+    } else if(p > n / 2) {
+
+      sig <- selectiveInference::estimateSigma(as.matrix(X), y)$sigmahat
+      message(paste("p > n/2: sigma estimated with cross-validation, so set.seed()",
+                    "or supply `sigma` for reproducible intervals."))
     }
 
     # fixed lasso function requires no intercept in beta vector
     if(all(b == 0)) {
       warning("No betas selected at that value of lambda")
+      si_meta$unadjusted_fallback <- TRUE
       res <- list(
         vmat = rbind(rep(NA, length(y))),
         vars = c(None = NA),
@@ -173,7 +209,6 @@ infer_selective <- function(
         beta = b,
         lambda = meta$lambda_used * n,
         family = meta$family,
-        # see note above: `alpha` is total miscoverage, split alpha/2 per tail
         alpha = 1 - conf.level,
         sigma = sig,
         ...
@@ -199,7 +234,7 @@ infer_selective <- function(
   as_inferrer(
     res, "selective", label = "Selective",
     nonselection = nonselection,
-    conf.level = conf.level, selector = object, meta = list(),
+    conf.level = conf.level, selector = object, meta = si_meta,
     inferences = results)
 }
 

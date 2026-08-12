@@ -553,12 +553,14 @@ skip()
 ###### Test IRIS data binary outcome ########
 
 iris_binary = iris
-iris$setosa_bin <- ifelse(iris$Species=="setosa",1,0)
-iris$setosa_bin <-factor(iris$setosa_bin , levels = c(0,1),labels  = c("other","setosa"))
+# versicolor, not setosa: setosa is perfectly separable from the other species
+# by Petal.Length, so a binomial fit diverges (coefficients -> +/-Inf).
+iris$versicolor_bin <- ifelse(iris$Species=="versicolor",1,0)
+iris$versicolor_bin <-factor(iris$versicolor_bin , levels = c(0,1),labels  = c("other","versicolor"))
 iris_binary = iris %>% dplyr::select(-Species)
 
 test_that("bi-direction works", {
-  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+  formula = "versicolor_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
   sel <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="both",
                             family = "binomial")
 
@@ -620,7 +622,7 @@ test_that("bi-direction works", {
 })
 
 test_that("forward selection works", {
-  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+  formula = "versicolor_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
   sel <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="forward",
                             family = "binomial")
 
@@ -679,7 +681,7 @@ test_that("forward selection works", {
 })
 
 test_that("backward selection works", {
-  formula = "setosa_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
+  formula = "versicolor_bin ~ Sepal.Length + Sepal.Width + Petal.Length +Petal.Width"
   sel <- select_stepwise_ic(formula = as.formula(formula), iris_binary,  direction="backward",
                             family = "binomial")
 

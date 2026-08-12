@@ -71,7 +71,7 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
 
   if(length(scale_step_idx)) {
     sds <- tidy(rec_obj, number = scale_step_idx) %>%
-      select(term = .data$terms, sd = .data$value)
+      select(term = "terms", sd = "value")
   } else {
     stop("a scaling step is required")
   }
@@ -88,21 +88,24 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
         .data$term == "(Intercept)"  ~ estimate_scaled,
         is.na(.data$estimate_scaled) ~ NA_real_,
         !is.na(.data$sd)             ~ estimate_scaled / sd,
-        # Below is case when selecting factors together in stepAIC fn, so their sd is NA
+        # sd is NA whenever a term never went through the scale step, i.e. a
+        # factor kept whole by select_factors_together. Unscaled == scaled there.
         is.na(.data$sd)              ~ estimate_scaled
       ),
       ci_low_unscaled = case_when(
         .data$term == "(Intercept)" ~ .data$ci_low_scaled,
         is.na(ci_low_scaled)  ~ NA_real_,
         !is.na(sd)           ~ .data$ci_low_scaled / .data$sd,
-        # Below is case when selecting factors together in stepAIC fn, so their sd is NA
+        # sd is NA whenever a term never went through the scale step, i.e. a
+        # factor kept whole by select_factors_together. Unscaled == scaled there.
         is.na(sd)            ~ .data$ci_low_scaled
       ),
       ci_high_unscaled = case_when(
         term == "(Intercept)"  ~ .data$ci_high_scaled,
         is.na(ci_high_scaled)  ~ NA_real_,
         !is.na(sd)             ~ .data$ci_high_scaled / .data$sd,
-        # Below is case when selecting factors together in stepAIC fn, so their sd is NA
+        # sd is NA whenever a term never went through the scale step, i.e. a
+        # factor kept whole by select_factors_together. Unscaled == scaled there.
         is.na(sd)              ~ .data$ci_high_scaled
       )
     )
@@ -113,12 +116,12 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
 
   if(scale_coef) {
     results <- results %>%
-      select(.data$term, .data$selected, .data$coef, estimate = .data$estimate_scaled,
-             ci_low = .data$ci_low_scaled, ci_high = .data$ci_high_scaled)
+      select("term", "selected", "coef", estimate = "estimate_scaled",
+             ci_low = "ci_low_scaled", ci_high = "ci_high_scaled")
   }  else {
     results <- results %>%
-      select(.data$term, .data$selected, .data$coef, estimate = .data$estimate_unscaled,
-             ci_low = .data$ci_low_unscaled, ci_high = .data$ci_high_unscaled)
+      select("term", "selected", "coef", estimate = "estimate_unscaled",
+             ci_low = "ci_low_unscaled", ci_high = "ci_high_unscaled")
   }
 
   # Check for other goodies, add if available

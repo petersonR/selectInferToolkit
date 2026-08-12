@@ -52,7 +52,13 @@ select_stepwise_ic <- function(
 
   k_val <- if (penalty == "AIC") 2 else log(nrow(data))
 
-  # build recipe
+  # Build recipe: zv -> center -> dummy -> zv -> scale.
+  #
+  # step_center() deliberately runs before step_dummy(), so indicators are left
+  # uncentered and the intercept stays interpretable at "every indicator = 0",
+  # i.e. at the reference level of each factor. step_scale() runs after, so
+  # indicators are still divided by their standard deviation and
+  # tidy(scale_coef = TRUE) reports every coefficient on a common per-SD metric
   rec_spec <- recipe(formula, data = data) %>%
     step_zv(all_predictors()) %>%
     step_center(all_numeric_predictors())
@@ -63,7 +69,9 @@ select_stepwise_ic <- function(
                  naming = function(...) dummy_names(..., sep = ""))
   }
 
-  rec_spec <-  rec_spec  %>% step_scale(all_numeric_predictors())
+  rec_spec <- rec_spec %>%
+    step_zv(all_predictors()) %>%
+    step_scale(all_numeric_predictors())
 
 
   ## prep on current data (important for reffiting)

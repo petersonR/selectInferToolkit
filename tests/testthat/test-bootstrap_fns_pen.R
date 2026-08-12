@@ -12,7 +12,7 @@ run_inference_suite <- function(sel, data) {
 
   for (cfg in configs) {
 
-    inf <- infer_boot(
+    run <- function() infer_boot(
       sel,
       data = data,
       B = 5,
@@ -20,6 +20,18 @@ run_inference_suite <- function(sel, data) {
       inference_target = cfg$inf_target,
       estimation_data = cfg$est
     )
+
+    # infer_boot() deliberately warns that out-of-sample estimation is
+    # experimental. Assert that warning where it is expected rather than
+    # letting it accumulate as noise in the test output.
+    inf <- if (cfg$est == "out-of-sample") {
+      # expect_warning() returns the condition, not the value, so capture the
+      # result by assigning inside the expectation.
+      expect_warning(res <- run(), "experimental")
+      res
+    } else {
+      run()
+    }
 
     expect_no_error(tidy(inf))
   }

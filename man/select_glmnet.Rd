@@ -21,7 +21,8 @@ select_glmnet(
 
 \item{family}{outcome distributional family}
 
-\item{lambda}{can be \code{best}, \code{compact} (which use CV), or a numeric vector. See details.}
+\item{lambda}{can be \code{best}, \code{compact} (which use CV), or a single numeric
+value giving a fixed penalty. See details.}
 
 \item{fitted_selector}{a previously fit \code{selector}, used for resampling}
 
@@ -39,7 +40,7 @@ A \code{selector} object wrapping \code{glmnet} containing:
 \item{fold}{Which fold each observation belongs to. By default the observations are randomly assigned.}
 \item{x}{ the model dataframe used}
 \item{y}{repsonse used}
-\item{alpha}{selected alpha for model fitting}
+\item{alpha}{The elasticnet mixing parameter passed to \code{glmnet}}
 }
 \description{
 A wrapper for \code{glmnet} and \code{cv.glmnet}. It runs CV by default so remember to

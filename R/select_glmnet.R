@@ -6,7 +6,8 @@
 #' @param formula a formula
 #' @param data data set
 #' @param family outcome distributional family
-#' @param lambda can be `best`, `compact` (which use CV), or a numeric vector. See details.
+#' @param lambda can be `best`, `compact` (which use CV), or a single numeric
+#'   value giving a fixed penalty. See details.
 #' @param alpha The elasticnet mixing parameter, passed to `glmnet`
 #' @param ... Additional arguments that can be passed to `glmnet`
 #' @param fitted_selector a previously fit `selector`, used for resampling
@@ -23,7 +24,7 @@
 #' \item{fold}{Which fold each observation belongs to. By default the observations are randomly assigned.}
 #' \item{x}{ the model dataframe used}
 #' \item{y}{repsonse used}
-#' \item{alpha}{selected alpha for model fitting}
+#' \item{alpha}{The elasticnet mixing parameter passed to `glmnet`}
 #' @export
 
 select_glmnet <- function(
@@ -34,11 +35,18 @@ select_glmnet <- function(
   ...){
 
   family = match.arg(family)
+  dots <- list(...)
 
   # If this has never been fit before, check args
   if(is.null(fitted_selector)) {
     family = match.arg(family)
-    lambda <- match.arg(lambda)
+    # `lambda` is either a keyword ("best"/"compact", both of which run CV) or a
+    # single numeric penalty.
+    if(is.character(lambda)) {
+      lambda <- match.arg(lambda)
+    } else if(!(is.numeric(lambda) && length(lambda) == 1)) {
+      stop('`lambda` must be "best", "compact", or a single numeric value')
+    }
     if(missing(formula))
       stop("Must supply formula")
 
@@ -46,10 +54,17 @@ select_glmnet <- function(
     meta <- attr(fitted_selector, "meta")
     family <- meta$family
     lambda <- meta$lambda_used
-    # alpha must be carried over too, otherwise re-selection (e.g. every
-    # bootstrap replicate in infer_boot) silently reverts to the default
-    # alpha = 1 and refits a lasso in place of a ridge/elastic net.
-    if(!is.null(meta$alpha)) alpha <- meta$alpha
+
+    # alpha must be carried over too for re-selection
+    if(!is.null(meta$alpha))
+      alpha <- meta$alpha
+
+    # Same for `...`: anything originally passed through `...`
+    # (penalty.factor, weights, nlambda, intercept, ...) must be replayed from
+    # meta or every bootstrap replicate quietly fits a different estimator.
+    if(!length(dots) && length(meta$ellipses))
+      dots <- meta$ellipses
+
     if(missing(formula))
       formula <- attr(fitted_selector, "recipe_obj")
   }
@@ -99,18 +114,20 @@ select_glmnet <- function(
   df <- bake(rec_obj, new_data = data)
 
   if(is.character(lambda)) {
-    fit <- cv.glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
-                     family = family, keep = TRUE, standardize = FALSE,
-                     alpha = alpha, ...)
+    fit <- do.call(cv.glmnet, c(
+      list(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
+           family = family, keep = TRUE, standardize = FALSE, alpha = alpha),
+      dots))
     lambda_used <- if(lambda == "best") fit[["lambda.min"]] else fit[["lambda.1se"]]
     cv_used <- TRUE
     ll <- ifelse(lambda == "best", "lambda.min", "lambda.1se")
     b <- as.matrix(coef(fit, s = ll))
 
   } else {
-    fit <- glmnet(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
-                  family = family, lambda = lambda, standardize = FALSE,
-                  alpha = alpha, ...)
+    fit <- do.call(glmnet, c(
+      list(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
+           family = family, lambda = lambda, standardize = FALSE, alpha = alpha),
+      dots))
     lambda_used <- lambda
     cv_used <- FALSE
     b <- as.matrix(coef(fit, s = lambda))
@@ -124,7 +141,7 @@ select_glmnet <- function(
     lambda = lambda,
     lambda_used = lambda_used,
     cv_info = list(cv_used = cv_used, foldid = fit$foldid),
-    ellipses = list(...),
+    ellipses = dots,
     alpha = alpha
   )
 

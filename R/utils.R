@@ -90,8 +90,6 @@ fill_in_nonselections <- function(inferences, selector_obj,
     }
   }
 
-  if("term_clean" %in% colnames(val)){val %>% select(-.data$term_clean)}
-
   val
 }
 
