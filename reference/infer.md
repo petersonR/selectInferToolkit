@@ -44,6 +44,7 @@ infer_selective(
   nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
   conf.level = 0.95,
   use_cv_sigma = FALSE,
+  sigma = NULL,
   ...
 )
 
@@ -107,6 +108,17 @@ infer_upsi(
 - use_cv_sigma:
 
   estimate Sigma via CV (if FALSE, uses SI defaults)
+
+- sigma:
+
+  optional known or pre-computed residual standard deviation. When
+  supplied it is passed straight through to the `selectiveInference`
+  function and no sigma is estimated. The automatic estimate used when
+  `p > n/2` calls
+  [`selectiveInference::estimateSigma()`](https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html),
+  which runs its own unseeded cross-validation, so intervals will differ
+  between calls on identical data unless you
+  [`set.seed()`](https://rdrr.io/r/base/Random.html) first.
 
 ## Value
 

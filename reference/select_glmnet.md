@@ -12,6 +12,7 @@ select_glmnet(
   family = c("gaussian", "binomial", "poisson"),
   lambda = c("best", "compact"),
   fitted_selector = NULL,
+  alpha = 1,
   ...
 )
 ```
@@ -32,16 +33,20 @@ select_glmnet(
 
 - lambda:
 
-  can be `best`, `compact` (which use CV), or a numeric vector. See
-  details.
+  can be `best`, `compact` (which use CV), or a single numeric value
+  giving a fixed penalty. See details.
 
 - fitted_selector:
 
   a previously fit `selector`, used for resampling
 
+- alpha:
+
+  The elasticnet mixing parameter, passed to `glmnet`
+
 - ...:
 
-  Additional arguments that can be passed to `glmnet`, e.g. `alpha`
+  Additional arguments that can be passed to `glmnet`
 
 ## Value
 
@@ -82,4 +87,4 @@ A `selector` object wrapping `glmnet` containing:
 
 - alpha:
 
-  selected alpha for model fitting
+  The elasticnet mixing parameter passed to `glmnet`

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">selectInferToolkit</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -17,6 +17,10 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/selectInferToolkit.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/Current_methods.html">Available methods in selectInferToolkit Package</a></li>
+  </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -32,6 +36,40 @@
 
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.4.3" id="selectinfertoolkit-043">selectInferToolkit 0.4.3<a class="anchor" aria-label="anchor" href="#selectinfertoolkit-043"></a></h2>
+<div class="section level3">
+<h3 id="new-features-0-4-3">New features<a class="anchor" aria-label="anchor" href="#new-features-0-4-3"></a></h3>
+<ul><li><p>New vignette, “Available methods in selectInferToolkit Package”, documenting which selection method / inference method / tuning option combinations are currently supported. The vignette probes every combination when it is built, so its compatibility matrix and flow diagrams reflect the package as of the build rather than a hand-maintained table.</p></li>
+<li><p><code><a href="../reference/select_glmnet.html">select_glmnet()</a></code> gains an explicit <code>alpha</code> argument. It was previously reachable only through <code>...</code>, and is now recorded on the fitted selector.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_selective()</a></code> gains a <code>sigma</code> argument for supplying a known or pre-computed residual standard deviation. Since the automatic estimate calls <code><a href="https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html" class="external-link">selectiveInference::estimateSigma()</a></code>, which runs its own unseeded cross-validation, this is the way to get reproducible intervals without relying on <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-4-3">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-4-3"></a></h3>
+<ul><li><p><code><a href="../reference/select_glmnet.html">select_glmnet()</a></code> now carries <code>alpha</code> through re-selection. Previously <code><a href="../reference/selector.html">reselect()</a></code> fell back to the default <code>alpha = 1</code>, so every bootstrap replicate in <code><a href="../reference/boot.html">infer_boot()</a></code> refit a lasso even when the original selector was a ridge or elastic net fit.</p></li>
+<li><p><code><a href="../reference/select_glmnet.html">select_glmnet()</a></code> now replays the arguments originally passed through <code>...</code> on re-selection. <code><a href="../reference/selector.html">reselect()</a></code> calls the selector with only <code>data</code> and <code>fitted_selector</code>, so <code>penalty.factor</code>, <code>weights</code>, <code>nlambda</code>, <code>intercept</code> and friends were silently dropped and every <code><a href="../reference/boot.html">infer_boot()</a></code> replicate fit a plain unweighted model rather than the estimator the user selected with.</p></li>
+<li><p><code><a href="../reference/select_glmnet.html">select_glmnet()</a></code> accepts a numeric <code>lambda</code> again. <code><a href="https://rdrr.io/r/base/match.arg.html" class="external-link">match.arg()</a></code> ran unconditionally on the fresh-fit path, so the documented fixed-penalty option failed with <code>'arg' must be NULL or a character vector</code>. A <code>lambda</code> of length greater than one now gives an explicit error rather than failing downstream.</p></li>
+<li><p><code><a href="../reference/select_stepwise_ic.html">select_stepwise_ic()</a></code> drops indicator columns that are constant. A factor level that is declared but never observed (for example <code>Species</code> on <code>iris[1:100, ]</code>) produces an all-zero indicator, and <code>step_zv()</code> ran before <code>step_dummy()</code>, so it only ever saw the factor column. The indicator survived into the design matrix, reached <code><a href="https://rdrr.io/pkg/MASS/man/stepAIC.html" class="external-link">MASS::stepAIC()</a></code> as a degenerate predictor, and made <code>step_scale()</code> warn about dividing by zero. A second <code>step_zv()</code> now sits between <code>step_dummy()</code> and <code>step_scale()</code>. Centering still precedes dummification, so indicators remain uncentered and the intercept stays interpretable at the reference level of every factor, while scaling still follows it so <code>tidy(scale_coef = TRUE)</code> keeps reporting a common per-SD metric. Coefficients, intercepts and selected variables are otherwise unchanged.</p></li>
+<li><p><code>infer_boot(debias = TRUE)</code> now has an effect. A blanket assignment overwrote every debiased estimate with the raw selector coefficient whenever a replicate had at least one non-selected term, so <code>debias = TRUE</code> matched <code>debias = FALSE</code> in essentially every realistic case. The assignment now only patches terms that are still missing, which is what it was meant to do.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_selective()</a></code> passes <code>ntimes = 1</code> to <code><a href="https://rdrr.io/pkg/selectiveInference/man/fsInf.html" class="external-link">selectiveInference::fsInf()</a></code> again. Without it fsInf uses its default of 2 and no longer stops where <code><a href="https://rdrr.io/pkg/MASS/man/stepAIC.html" class="external-link">MASS::stepAIC()</a></code> stopped, which tripped the step-count check more often and rerouted inference to <code>type = "active"</code> — an event that conditions on the first <em>k</em> steps as if <em>k</em> were fixed in advance and so does not adjust for the IC stopping rule at all. The chosen conditioning event is now recorded as <code>attr(x, "meta")$conditioning</code>.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_selective()</a></code> estimates sigma with <code><a href="https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html" class="external-link">selectiveInference::estimateSigma()</a></code> when <code>p &gt; n/2</code> for <code>glmnet</code> selectors as well, not just stepwise ones. The <code>glmnet</code> branch previously let <code>fixedLassoInf()</code> fall back to <code>sd(y)</code>, which contains the signal variance and produced badly over-covered intervals.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_selective()</a></code> forwards <code>conf.level</code> to the intercept-only fallback. When no variables were selected the interval was always computed at the 95% default while the returned object still reported the level the user asked for.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_selective()</a></code> now signals the no-selection fallback with a warning rather than a message, and records <code>attr(x, "meta")$unadjusted_fallback</code>. Messages are swallowed by knitr, <code><a href="https://rdrr.io/r/base/message.html" class="external-link">suppressMessages()</a></code> and simulation loops, so unadjusted intervals could be collected under a “Selective” label without any visible signal.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_selective()</a></code> now produces intervals at the requested <code>conf.level</code>. It passed <code>(1 - conf.level) / 2</code> as the <code>alpha</code> argument of <code><a href="https://rdrr.io/pkg/selectiveInference/man/fsInf.html" class="external-link">selectiveInference::fsInf()</a></code> and <code>fixedLassoInf()</code>, but that <code>alpha</code> is the total miscoverage rather than the per-tail miscoverage. The default <code>conf.level = 0.95</code> therefore returned 97.5% intervals, which were conservative: their false rejection rate under the null was roughly 2.5% rather than 5%. Reported p-values are unaffected, as they never depended on <code>alpha</code>. This also aligns selected terms with the non-selected terms filled in under <code>nonselection = "uncertain_nulls"</code>, which were already using <code>conf.level</code> directly.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_selective()</a></code> no longer fails when <code><a href="https://rdrr.io/pkg/selectiveInference/man/fsInf.html" class="external-link">selectiveInference::fsInf()</a></code>’s own AIC/BIC stopping rule stops at a different step than <code><a href="https://rdrr.io/pkg/MASS/man/stepAIC.html" class="external-link">MASS::stepAIC()</a></code> did. In that case it now conditions on the model that <code><a href="../reference/select_stepwise_ic.html">select_stepwise_ic()</a></code> actually returned.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_selective()</a></code> handles selectors that chose no variables, returning unadjusted inference for the intercept-only model instead of erroring.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_selective()</a></code> now rejects <code>glmnet</code> selectors with <code>alpha != 1</code> up front. Selective inference is only valid for the lasso here, and these fits previously produced invalid intervals rather than an error.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_selective()</a></code> estimates sigma with <code><a href="https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html" class="external-link">selectiveInference::estimateSigma()</a></code> when <code>p &gt; n/2</code>, where the <code>fsInf()</code> default is unsuitable.</p></li>
+<li><p><code><a href="../reference/infer.html">infer_pipe()</a></code> records its nonselection mode as <code>"uncertain_nulls"</code>; it previously recorded <code>"uncertain"</code>, which is not one of the supported values.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="other-changes-0-4-3">Other changes<a class="anchor" aria-label="anchor" href="#other-changes-0-4-3"></a></h3>
+<ul><li><p>The default for <code>debias</code> in <code><a href="../reference/boot.html">infer_boot()</a></code> is now <code>FALSE</code> (was <code>TRUE</code>).</p></li>
+<li><p>The package no longer depends on <code>hdrm</code>, which is not available on CRAN.</p></li>
+<li><p>Clearer error message from <code><a href="../reference/infer.html">infer_pipe()</a></code> when given an unsupported selector.</p></li>
+<li><p>Fixed a warning showing up in tests due to deprecation in tidyselect 1.2.0.</p></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4.2" id="selectinfertoolkit-042">selectInferToolkit 0.4.2<a class="anchor" aria-label="anchor" href="#selectinfertoolkit-042"></a></h2>
 <ul><li>Changed <code>select_factors_together = FALSE</code> by default in stepwise selection (currently a warning is created when this is set to <code>TRUE</code>)</li>
@@ -49,7 +87,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
