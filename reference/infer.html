@@ -27,7 +27,7 @@ same data to fit the model. It is common, easy, and ill-advised."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">selectInferToolkit</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -100,6 +100,7 @@ same data to fit the model. It is common, easy, and ill-advised.</p>
 <span>  conf.level <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  use_cv_sigma <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  sigma <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  on_mismatch <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"warn-fall-back"</span>, <span class="st">"silent-fall-back"</span>, <span class="st">"stop"</span><span class="op">)</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span>
 <span></span>
@@ -170,9 +171,22 @@ have confidence intervals (at least)</p></dd>
 <dd><p>optional known or pre-computed residual standard deviation. When
 supplied it is passed straight through to the <code>selectiveInference</code> function
 and no sigma is estimated. The automatic estimate used when <code>p &gt; n/2</code>
-calls <code><a href="https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html" class="external-link">selectiveInference::estimateSigma()</a></code>, which runs its own unseeded
-cross-validation, so intervals will differ between calls on identical data
-unless you <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> first.</p></dd>
+calls <code><a href="https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html" class="external-link">selectiveInference::estimateSigma()</a></code> (for <code>glmnet</code>), which runs
+cross-validation, thus important to <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code>.</p></dd>
+
+
+<dt id="arg-on-mismatch">on_mismatch<a class="anchor" aria-label="anchor" href="#arg-on-mismatch"></a></dt>
+<dd><p>what to report when the selector's stopping point and
+<code>selectiveInference</code>'s disagree. For <code>stepwise_ic</code> selectors the two
+minimize <strong>slightly</strong> different criteria and can disagree. Inference falls
+back to the model the selector returned, by conditioning on a fixed number
+of steps; this argument controls how loudly that is reported:</p><ul><li><p><code>"warn-fall-back"</code> (default) warns and points at
+<code>select_stepwise_ic(criterion = "cp")</code>, which makes the two rules agree.</p></li>
+<li><p><code>"silent-fall-back"</code> falls back quietly.</p></li>
+<li><p><code>"stop"</code> errors instead.</p></li>
+</ul><p>The fallback does not account for uncertainty in how many variables were
+selected, proceeding as though the number of steps had been pre-ordained;
+the effect of this appears to be minor.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -45,6 +45,7 @@ infer_selective(
   conf.level = 0.95,
   use_cv_sigma = FALSE,
   sigma = NULL,
+  on_mismatch = c("warn-fall-back", "silent-fall-back", "stop"),
   ...
 )
 
@@ -115,10 +116,30 @@ infer_upsi(
   supplied it is passed straight through to the `selectiveInference`
   function and no sigma is estimated. The automatic estimate used when
   `p > n/2` calls
-  [`selectiveInference::estimateSigma()`](https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html),
-  which runs its own unseeded cross-validation, so intervals will differ
-  between calls on identical data unless you
-  [`set.seed()`](https://rdrr.io/r/base/Random.html) first.
+  [`selectiveInference::estimateSigma()`](https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html)
+  (for `glmnet`), which runs cross-validation, thus important to
+  [`set.seed()`](https://rdrr.io/r/base/Random.html).
+
+- on_mismatch:
+
+  what to report when the selector's stopping point and
+  `selectiveInference`'s disagree. For `stepwise_ic` selectors the two
+  minimize **slightly** different criteria and can disagree. Inference
+  falls back to the model the selector returned, by conditioning on a
+  fixed number of steps; this argument controls how loudly that is
+  reported:
+
+  - `"warn-fall-back"` (default) warns and points at
+    `select_stepwise_ic(criterion = "cp")`, which makes the two rules
+    agree.
+
+  - `"silent-fall-back"` falls back quietly.
+
+  - `"stop"` errors instead.
+
+  The fallback does not account for uncertainty in how many variables
+  were selected, proceeding as though the number of steps had been
+  pre-ordained; the effect of this appears to be minor.
 
 ## Value
 
