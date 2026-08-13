@@ -12,8 +12,8 @@
 #' @param sigma optional known or pre-computed residual standard deviation. When
 #'   supplied it is passed straight through to the `selectiveInference` function
 #'   and no sigma is estimated. The automatic estimate used when `p > n/2`
-#'   calls `selectiveInference::estimateSigma()`, which runs
-#'   cross-validation, important to `set.seed()`.
+#'   calls `selectiveInference::estimateSigma()` (for `glmnet`), which runs
+#'   cross-validation, thus important to `set.seed()`.
 #' @param on_mismatch what to report when the selector's stopping point and
 #'   `selectiveInference`'s disagree. For `stepwise_ic` selectors the two
 #'   minimize **slightly** different criteria and can disagree. Inference falls

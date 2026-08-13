@@ -78,8 +78,8 @@ have confidence intervals (at least)}
 \item{sigma}{optional known or pre-computed residual standard deviation. When
 supplied it is passed straight through to the \code{selectiveInference} function
 and no sigma is estimated. The automatic estimate used when \code{p > n/2}
-calls \code{selectiveInference::estimateSigma()}, which runs
-cross-validation, important to \code{set.seed()}.}
+calls \code{selectiveInference::estimateSigma()} (for \code{glmnet}), which runs
+cross-validation, thus important to \code{set.seed()}.}
 
 \item{on_mismatch}{what to report when the selector's stopping point and
 \code{selectiveInference}'s disagree. For \code{stepwise_ic} selectors the two

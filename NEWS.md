@@ -23,6 +23,17 @@
   match the inferrer's structural conditions (e.g. adding `criterion = "cp"` to
   `select_stepwise_ic`). 
 
+- `infer_selective()` no longer estimates sigma with
+  `selectiveInference::estimateSigma()` for `stepwise_ic` selectors when
+  `p > n/2`, reverting a 0.4.3 change. Neither `fs()` nor `fsInf()` does this by
+  default -- `fsInf()` uses the full-model OLS estimate when `n >= 2p` and
+  `sd(y)` otherwise -- and the automatic switch changed inferences in ways that
+  are not obvious. It also runs an unseeded cross-validation, so it
+  advanced the RNG stream and broke `set.seed()` reproducibility across package
+  versions. `estimateSigma()` is now reached only via `use_cv_sigma = TRUE`,
+  which warns that its effect on inferences is unclear. `glmnet` selectors are
+  unchanged, where the same caveat about `set.seed()` still applies.
+
 - `%||%` is now imported from `rlang`. It was used in `R/utils.R` but never
   imported, so the package relied on the base R 4.4 definition despite
   declaring `R (>= 3.5)`.
