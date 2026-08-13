@@ -48,6 +48,24 @@
   same caveat about [`set.seed()`](https://rdrr.io/r/base/Random.html)
   still applies.
 
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  restates `selectiveInference`’s “p \> n/2, and sd(y) used as an
+  estimate of sigma” warning in terms of this package’s arguments. The
+  original points at
+  [`selectiveInference::estimateSigma()`](https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html),
+  which users of this package reach through `use_cv_sigma = TRUE` rather
+  than calling directly; the replacement says so, and notes that `sd(y)`
+  is biased upward whenever a predictor is genuinely associated with the
+  outcome. Other warnings from `selectiveInference` pass through
+  unchanged.
+
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  no longer emits that warning twice on the fallback path. It called
+  `fsInf()` a second time with `sigma = NULL`, so the sigma was
+  re-derived and re-warned about; the second call now reuses the value
+  the first one reported. Results are unchanged – the derivation is
+  deterministic.
+
 - `%||%` is now imported from `rlang`. It was used in `R/utils.R` but
   never imported, so the package relied on the base R 4.4 definition
   despite declaring `R (>= 3.5)`.
