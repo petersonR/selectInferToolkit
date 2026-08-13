@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   Current_methods: Current_methods.html
   selectInferToolkit: selectInferToolkit.html
-last_built: 2026-08-13T21:05Z
+last_built: 2026-08-13T21:09Z
 urls:
   reference: https://petersonr.github.io/selectInferToolkit/reference
   article: https://petersonr.github.io/selectInferToolkit/articles
