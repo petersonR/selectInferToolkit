@@ -37,6 +37,32 @@ format_meta <- function(meta, digits = 3) {
 }
 
 
+# selectiveInference's fsInf()/fixedLassoInf() warn when they fall back to
+# sd(y) for sigma, and point at estimateSigma() -- a function this package calls
+# on the user's behalf rather than expecting them to call directly. Restate it
+# in terms of the arguments infer_selective() actually exposes.
+#
+# Use as: withCallingHandlers(<si call>, warning = si_sigma_warning)
+# The rewritten message deliberately avoids the phrase matched below, so
+# re-signalling it here does not re-enter this handler.
+si_sigma_warning <- function(w) {
+  msg <- conditionMessage(w)
+  if (!grepl("you may want to use the estimateSigma function", msg, fixed = TRUE))
+    return(invisible(NULL))   # anything else passes through untouched
+
+  sd_val <- sub(".*sd\\(y\\) = ([0-9.eE+-]+).*", "\\1", msg)
+
+  warning(paste0(
+    "p > n/2, so selectiveInference fell back to sd(y) = ", sd_val,
+    " for sigma. That is biased upward whenever a predictor is genuinely ",
+    "associated with the outcome, which widens intervals and makes p-values ",
+    "conservative. Supply `sigma` if you have a better estimate, or set ",
+    "`use_cv_sigma = TRUE` to estimate it by cross-validation."),
+    call. = FALSE)
+
+  invokeRestart("muffleWarning")
+}
+
 #' @importFrom rlang .data
 fill_in_nonselections <- function(inferences, selector_obj,
                                   nonselection, X, y, conf.level,

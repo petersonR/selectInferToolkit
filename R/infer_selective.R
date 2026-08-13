@@ -139,7 +139,7 @@ infer_selective <- function(
       # Get IC-based selection with confidence intervals
       mult <- ifelse(meta$penalty == "AIC", 2, log(length(y)))
 
-      res <- selectiveInference::fsInf(
+      res <- withCallingHandlers(selectiveInference::fsInf(
         fs_result,
         sigma = sig,
         type = "aic",
@@ -149,7 +149,7 @@ infer_selective <- function(
         # not to be confused with the other alpha.
         alpha = 1 - conf.level,
         ...
-      )
+      ), warning = si_sigma_warning)
       names(res$vars) <- names(X)[res$vars]
       bb <- res$sign* as.vector(res$vmat %*% y)
 
@@ -161,12 +161,17 @@ infer_selective <- function(
 
       if(length(sel_vars_stepaic) != length(res$vars)) {
 
+        # The sigma the type = "aic" call above used, including the one it
+        # derived (and warned about) when `sig` was NULL. Captured before `res`
+        # is overwritten below.
+        sig_used <- res$sigma
+
         # Shared preamble; the two paths differ in what they then do about it,
         # so don't describe the fallback in text the "stop" path also prints.
         msg <- paste0(
           "Selective inference stopped at ", length(res$vars), " variable(s) ",
           "where the selector kept ", length(sel_vars_stepaic),
-          " (sigma = ", format(res$sigma, digits = 3), ").\n",
+          " (sigma = ", format(sig_used, digits = 3), ").\n",
           "To make the two rules agree, re-run selection with the matching ",
           "criterion:\n",
           "  select_stepwise_ic(..., criterion = \"cp\")"
@@ -183,10 +188,16 @@ infer_selective <- function(
 
         # type = "active" conditions on the first k steps as though k had been
         # fixed in advance.
+        #
+        # Pass `sig_used` rather than `sig`: when `sig` is NULL fsInf derives a
+        # sigma and warns while doing so, and a second NULL would repeat that
+        # warning verbatim. The derivation is deterministic, so this is the same
+        # number either way, and reusing it makes explicit that both
+        # conditioning events are built on one sigma.
         si_meta$conditioning <- "active"
         res <- selectiveInference::fsInf(
           fs_result,
-          sigma = sig,
+          sigma = sig_used,
           type = "active",
           k = length(sel_vars_stepaic),
           alpha = 1 - conf.level,
@@ -238,7 +249,7 @@ infer_selective <- function(
       )
 
     } else {
-      res <- selectiveInference::fixedLassoInf(
+      res <- withCallingHandlers(selectiveInference::fixedLassoInf(
         x = as.matrix(X),
         y = y,
         beta = b,
@@ -247,7 +258,7 @@ infer_selective <- function(
         alpha = 1 - conf.level,
         sigma = sig,
         ...
-      )
+      ), warning = si_sigma_warning)
     }
     bb <- res$vmat %*% y
     inferences <- data.frame(term = names(res$vars), selected = 1, estimate = bb,

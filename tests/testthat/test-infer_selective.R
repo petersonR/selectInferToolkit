@@ -348,3 +348,48 @@ test_that("on_mismatch controls how the fallback is reported", {
     expect_identical(attr(ii, "meta")$conditioning, "aic")
   }
 })
+
+test_that("selectiveInference's sigma-fallback warning is restated for this package", {
+  skip_if_not_installed("selectiveInference")
+
+  # p > n/2 so fsInf() falls back to sd(y) and warns, pointing at
+  # estimateSigma() -- a function users reach through use_cv_sigma, not directly
+  set.seed(3)
+  n <- 40; p <- 30
+  d <- data.frame(y = rnorm(n), matrix(rnorm(n * p), n, p))
+  fit <- select_stepwise_ic(y ~ ., data = d, direction = "forward",
+                            penalty = "AIC")
+
+  ws <- character(0)
+  withCallingHandlers(
+    try(infer_selective(fit, data = d, on_mismatch = "silent-fall-back"),
+        silent = TRUE),
+    warning = function(w) { ws <<- c(ws, conditionMessage(w))
+                            invokeRestart("muffleWarning") })
+
+  sigma_ws <- grep("sd\\(y\\)", ws, value = TRUE)
+  skip_if_not(length(sigma_ws) > 0, "fsInf did not hit its sigma fallback here")
+
+  # restated in terms of this package's arguments...
+  expect_match(sigma_ws[1], "use_cv_sigma", fixed = TRUE)
+  # ...and upstream's "call estimateSigma yourself" phrasing is gone
+  expect_false(any(grepl("you may want to use the estimateSigma function",
+                         ws, fixed = TRUE)))
+  # exactly once, not once per internal fsInf call
+  expect_length(sigma_ws, 1L)
+
+  # unrelated warnings still pass through: a cp selector given a conflicting
+  # sigma warns about that, and si_sigma_warning must not swallow it.
+  # selectiveInference also warns that the polyhedral constraint no longer
+  # holds -- which is the point -- so collect rather than expect_warning().
+  cp <- select_stepwise_ic(y ~ ., data = d, direction = "forward",
+                           penalty = "AIC", criterion = "cp")
+  ws2 <- character(0)
+  withCallingHandlers(
+    invisible(infer_selective(cp, data = d, sigma = 2,
+                              on_mismatch = "silent-fall-back")),
+    warning = function(w) { ws2 <<- c(ws2, conditionMessage(w))
+                            invokeRestart("muffleWarning") })
+  expect_true(any(grepl("differs from the value this selector selected", ws2)))
+  expect_true(any(grepl("Constraint not satisfied", ws2)))
+})
