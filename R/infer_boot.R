@@ -94,7 +94,9 @@ boot <- function(object, data, B,
   family  <- attr(object, "meta")$family
   family <- if (is.character(family)) get(family,mode = "function")() else family
 
-  outcome_name <- rec_obj$var_info |> filter(.data$role == "outcome") |> pull("variable")
+  outcome_name <- rec_obj$var_info |>
+    filter(.data$role == "outcome") |>
+    pull("variable")
 
   # if cat var selected togther, expand them
   if (attr(object, "name") == "stepwise_ic" &&
