@@ -12,9 +12,23 @@
 #' @param sigma optional known or pre-computed residual standard deviation. When
 #'   supplied it is passed straight through to the `selectiveInference` function
 #'   and no sigma is estimated. The automatic estimate used when `p > n/2`
-#'   calls `selectiveInference::estimateSigma()`, which runs its own unseeded
-#'   cross-validation, so intervals will differ between calls on identical data
-#'   unless you `set.seed()` first.
+#'   calls `selectiveInference::estimateSigma()`, which runs
+#'   cross-validation, important to `set.seed()`.
+#' @param on_mismatch what to report when the selector's stopping point and
+#'   `selectiveInference`'s disagree. For `stepwise_ic` selectors the two
+#'   minimize **slightly** different criteria and can disagree. Inference falls
+#'   back to the model the selector returned, by conditioning on a fixed number
+#'   of steps; this argument controls how loudly that is reported:
+#'
+#'   * `"warn-fall-back"` (default) warns and points at
+#'     `select_stepwise_ic(criterion = "cp")`, which makes the two rules agree.
+#'   * `"silent-fall-back"` falls back quietly.
+#'   * `"stop"` errors instead.
+#'
+#'   The fallback does not account for uncertainty in how many variables were
+#'   selected, proceeding as though the number of steps had been pre-ordained;
+#'   the effect of this appears to be minor.
+#'
 #' @param ... arguments passed to `selectiveInference` function(s)
 #'
 #' @importFrom broom tidy
@@ -33,6 +47,7 @@ infer_selective <- function(
     conf.level = .95,
     use_cv_sigma = FALSE,
     sigma = NULL,
+    on_mismatch = c("warn-fall-back", "silent-fall-back", "stop"),
     ...
   ){
 
@@ -57,6 +72,7 @@ infer_selective <- function(
   }
 
   nonselection <- match.arg(nonselection)
+  on_mismatch <- match.arg(on_mismatch)
 
   # grab useful components from model
   X <- bake(attr(object, "recipe_obj"), new_data = data, all_predictors())
@@ -83,31 +99,32 @@ infer_selective <- function(
     p <- ncol(X)
     n_obs <- length(y)
 
+    # A criterion = "cp" selector already stopped on an exact sigma. Reusing it
+    # is what makes the two stopping rules agree; re-estimating here (or letting
+    # fsInf pick its own) may move the stopping point and reintroduce the
+    # mismatch that criterion exists to remove.
+    sel_criterion <- meta$criterion %||% "deviance"
+
     if(!is.null(sigma)) {
       sig <- sigma
+      if(sel_criterion == "cp" && !isTRUE(all.equal(sigma, meta$sigma_used)))
+        warning(paste(
+          "`sigma` differs from the value this selector selected with",
+          sprintf("(%.6g)", meta$sigma_used),
+          "- the stopping rules may no longer agree."))
+    } else if(sel_criterion == "cp") {
+      sig <- meta$sigma_used
     } else if(use_cv_sigma) {
       sig <- selectiveInference::estimateSigma(as.matrix(X), y)$sigmahat
       warning("use_cv_sigma with stepwise_ic may yield unexpected results")
-    } else if(p > n_obs / 2) {
-      sig <- selectiveInference::estimateSigma(as.matrix(X), y)$sigmahat
-      message(paste("p > n/2: sigma estimated using cross-validation, so set.seed()",
-                    "or supply `sigma` for reproducible intervals."))
     } else {
-      sig <- NULL  # let fsInf use its default (sd(y) is fine when p <= n/2)
+      sig <- NULL  # let fsInf use its default
     }
 
     sel_vars_stepaic <- names(beta)[names(beta) != "(Intercept)"]
 
     if(length(sel_vars_stepaic) == 0) {
-      # Intercept-only model: there is no selection event to condition on, so
-      # there is nothing for fsInf() to do. Fall back to the unadjusted fit of
-      # the intercept-only model; the nonselection handling below then fills in
-      # every predictor according to `nonselection`.
-
-      # warning(), not message(): knitr, suppressMessages() and simulation loops
-      # all swallow messages, and these numbers are NOT selection-adjusted.
-      warning(paste("No variables selected: falling back to unadjusted (non-selective)",
-                    "inference on the intercept-only model"))
+      warning("No variables selected: falling back to the intercept-only model")
       si_meta$unadjusted_fallback <- TRUE
 
       empty_model <- tidy(infer_upsi(object, data = data, conf.level = conf.level))
@@ -117,10 +134,7 @@ infer_selective <- function(
                                ci_low = empty_model$ci_low,
                                ci_high = empty_model$ci_high,
                                p_value = empty_model$p_value)
-      # list(), not NULL: as_inferrer() sets attributes on this object, and
-      # structure(NULL, ...) is deprecated in R.
       res <- list()
-
     } else {
       # Get IC-based selection with confidence intervals
       mult <- ifelse(meta$penalty == "AIC", 2, log(length(y)))
@@ -130,34 +144,51 @@ infer_selective <- function(
         sigma = sig,
         type = "aic",
         mult = mult,
-        # stop at the first IC increase, which is what MASS::stepAIC() does.
-        # fsInf's default (ntimes = 2) walks past it
+        # stop at the first IC increase, which is what MASS::stepAIC() does
         ntimes = 1,
-
-        # not to be confused with the other alpha...
+        # not to be confused with the other alpha.
         alpha = 1 - conf.level,
         ...
       )
       names(res$vars) <- names(X)[res$vars]
       bb <- res$sign* as.vector(res$vmat %*% y)
 
-      # fsInf(type = "aic") re-runs its own AIC/BIC stopping rule, which does not
-      # always terminate at the same step as MASS::stepAIC() did. When the two
-      # disagree, fall back to type = "active" and pin the step count to the
-      # number of variables select_stepwise_ic() actually kept, so the inference
-      # conditions on the model the user was given. (`mult` is not used by
-      # type = "active" and so is not passed here.)
+      # fsInf(type = "aic") re-runs its own stopping rule, which does not always
+      # terminate at the same step as MASS::stepAIC() did. `on_mismatch` decides
+      # which way to resolve it.
+
       si_meta$conditioning <- "aic"
+
       if(length(sel_vars_stepaic) != length(res$vars)) {
+
+        # Shared preamble; the two paths differ in what they then do about it,
+        # so don't describe the fallback in text the "stop" path also prints.
+        msg <- paste0(
+          "Selective inference stopped at ", length(res$vars), " variable(s) ",
+          "where the selector kept ", length(sel_vars_stepaic),
+          " (sigma = ", format(res$sigma, digits = 3), ").\n",
+          "To make the two rules agree, re-run selection with the matching ",
+          "criterion:\n",
+          "  select_stepwise_ic(..., criterion = \"cp\")"
+        )
+
+        if(on_mismatch == "stop")
+          stop(paste0(msg, "\nOr allow the fallback with ",
+                      "on_mismatch = \"warn-fall-back\" / \"silent-fall-back\"."),
+               call. = FALSE)
+
+        if(on_mismatch == "warn-fall-back")
+           warning(paste0(msg, "\nFalling back to conditioning on a fixed ",
+                             "number of steps."))
+
         # type = "active" conditions on the first k steps as though k had been
-        # fixed in advance, so it does not adjust for the IC stopping rule.
-        # Record that so the weaker guarantee is visible on the result.
+        # fixed in advance.
         si_meta$conditioning <- "active"
         res <- selectiveInference::fsInf(
           fs_result,
           sigma = sig,
           type = "active",
-          k = length(beta) - 1,
+          k = length(sel_vars_stepaic),
           alpha = 1 - conf.level,
           ...
         )

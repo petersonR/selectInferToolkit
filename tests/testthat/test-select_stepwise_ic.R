@@ -1091,3 +1091,65 @@ test_that("backward selection works indiviudal factors", {
 #testthat::test_file("tests/testthat/test-select_stepwise_ic.R")
 
 
+
+test_that("criterion = 'cp' removes the stopping-rule mismatch entirely", {
+  skip_if_not_installed("selectiveInference")
+
+  mismatched <- 0L
+  for (sd in 1:20) {
+    set.seed(sd)
+    n <- 100; p <- 20
+    d <- data.frame(y = rnorm(n), matrix(rnorm(n * p), n, p))
+
+    fit <- select_stepwise_ic(y ~ ., data = d, direction = "forward",
+                              penalty = "AIC", criterion = "cp")
+    inf <- suppressWarnings(suppressMessages(infer_selective(fit, data = d)))
+
+    # never falls back: the selector and the inference minimize the same thing
+    expect_identical(attr(inf, "meta")$conditioning, "aic")
+
+    # and the inference covers exactly the selected variables
+    expect_setequal(tidy(inf)$term[tidy(inf)$selected == 1],
+                    names(coef(fit)))
+
+    # sanity: the default criterion does reroute on this grid
+    dev <- select_stepwise_ic(y ~ ., data = d, direction = "forward",
+                              penalty = "AIC")
+    dinf <- suppressWarnings(suppressMessages(infer_selective(dev, data = d)))
+    if (identical(attr(dinf, "meta")$conditioning, "active")) mismatched <- mismatched + 1L
+  }
+  expect_gt(mismatched, 0L)
+})
+
+test_that("criterion = 'cp' records sigma and replays it through reselect()", {
+  skip_if_not_installed("selectiveInference")
+
+  set.seed(11)
+  n <- 100; p <- 20
+  d <- data.frame(y = rnorm(n), matrix(rnorm(n * p), n, p))
+
+  auto <- select_stepwise_ic(y ~ ., data = d, direction = "forward",
+                             penalty = "AIC", criterion = "cp")
+  Xb <- as.matrix(recipes::bake(attr(auto, "recipe_obj"), new_data = d,
+                                recipes::all_predictors()))
+  yb <- recipes::bake(attr(auto, "recipe_obj"), new_data = d,
+                      recipes::all_outcomes())[[1]]
+  ref <- suppressWarnings(selectiveInference::fsInf(
+    selectiveInference::fs(Xb, yb), sigma = NULL, type = "aic",
+    mult = 2, ntimes = 1))
+  expect_equal(attr(auto, "meta")$sigma_used, ref$sigma)
+  # and the selector stopped exactly where selectiveInference says it should
+  expect_equal(sum(names(coef(auto)) != "(Intercept)"), ref$khat)
+
+  # a supplied sigma is what gets replayed; NULL means re-estimate per resample
+  pinned <- select_stepwise_ic(y ~ ., data = d, direction = "forward",
+                               penalty = "AIC", criterion = "cp", sigma = 1)
+  expect_equal(attr(pinned, "meta")$sigma_used, 1)
+  expect_equal(attr(reselect(pinned, d), "meta")$sigma_used, 1)
+  expect_identical(attr(reselect(auto, d), "meta")$criterion, "cp")
+  expect_null(attr(auto, "meta")$sigma_arg)
+
+  # cp is forward gaussian only
+  expect_error(select_stepwise_ic(y ~ ., data = d, direction = "backward",
+                                  criterion = "cp"), "forward")
+})

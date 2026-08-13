@@ -1,5 +1,6 @@
 #' @importFrom broom tidy
 #' @importFrom magrittr %>%
+#' @importFrom rlang %||%
 NULL
 
 format_meta <- function(meta, digits = 3) {

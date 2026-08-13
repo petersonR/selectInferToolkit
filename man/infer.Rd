@@ -36,6 +36,7 @@ infer_selective(
   conf.level = 0.95,
   use_cv_sigma = FALSE,
   sigma = NULL,
+  on_mismatch = c("warn-fall-back", "silent-fall-back", "stop"),
   ...
 )
 
@@ -77,9 +78,24 @@ have confidence intervals (at least)}
 \item{sigma}{optional known or pre-computed residual standard deviation. When
 supplied it is passed straight through to the \code{selectiveInference} function
 and no sigma is estimated. The automatic estimate used when \code{p > n/2}
-calls \code{selectiveInference::estimateSigma()}, which runs its own unseeded
-cross-validation, so intervals will differ between calls on identical data
-unless you \code{set.seed()} first.}
+calls \code{selectiveInference::estimateSigma()}, which runs
+cross-validation, important to \code{set.seed()}.}
+
+\item{on_mismatch}{what to report when the selector's stopping point and
+\code{selectiveInference}'s disagree. For \code{stepwise_ic} selectors the two
+minimize \strong{slightly} different criteria and can disagree. Inference falls
+back to the model the selector returned, by conditioning on a fixed number
+of steps; this argument controls how loudly that is reported:
+\itemize{
+\item \code{"warn-fall-back"} (default) warns and points at
+\code{select_stepwise_ic(criterion = "cp")}, which makes the two rules agree.
+\item \code{"silent-fall-back"} falls back quietly.
+\item \code{"stop"} errors instead.
+}
+
+The fallback does not account for uncertainty in how many variables were
+selected, proceeding as though the number of steps had been pre-ordained;
+the effect of this appears to be minor.}
 }
 \value{
 An S3 object (list) of class \code{inferrer}

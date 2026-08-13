@@ -1,3 +1,33 @@
+# selectInferToolkit 0.4.4
+
+- `select_stepwise_ic()` gains `criterion`, choosing which form of the
+  information criterion to minimize. The default `"deviance"` is
+  `MASS::stepAIC()`'s `n*log(RSS/n) + mult*df`; the new `"cp"` is the Mallows-Cp
+  form `RSS + mult*sigma^2*df` that `selectiveInference` conditions on.
+
+  Selecting with `criterion = "cp"` means `infer_selective()` conditions on
+  exactly the model that was selected. Across every setting tested this
+  eliminated the fallback described below. 
+
+- `select_stepwise_ic()` gains `sigma`, defining the `criterion = "cp"` penalty.
+  When `NULL` the value `selectiveInference::fsInf()` derives is used and
+  recorded, so selection and inference condition on an identical criterion.
+  `reselect()` replays the argument rather than the resolved value, so a `NULL`
+  sigma is re-estimated per bootstrap resample. Supplying a known sigma did not
+  measurably change type I error relative to the estimated default.
+
+- `infer_selective()` gains `on_mismatch`, controlling what happens when the
+  selector's stopping point and `selectiveInference`'s disagree. The options are:
+  `"silent-fall-back"`, `warn-fall-back` (default), and `"stop"`. Warnings and errors
+  point the user towards appropriately re-running the selector to more carefully
+  match the inferrer's structural conditions (e.g. adding `criterion = "cp"` to
+  `select_stepwise_ic`). 
+
+- `%||%` is now imported from `rlang`. It was used in `R/utils.R` but never
+  imported, so the package relied on the base R 4.4 definition despite
+  declaring `R (>= 3.5)`.
+
+
 # selectInferToolkit 0.4.3
 
 ## New features

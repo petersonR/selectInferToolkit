@@ -309,3 +309,42 @@ test_that("HERS Lasso min works (ncvreg,glmnet) ", {
 
 
 
+
+test_that("on_mismatch controls how the fallback is reported", {
+  skip_if_not_installed("selectiveInference")
+
+  # seed 36: stepAIC keeps 3 variables, the Cp-form rule stops at 2
+  set.seed(36)
+  n <- 100; p <- 20
+  d <- data.frame(y = rnorm(n), matrix(rnorm(n * p), n, p))
+  fit <- select_stepwise_ic(y ~ ., data = d, direction = "forward",
+                            penalty = "BIC")
+  k_sel <- sum(names(coef(fit)) != "(Intercept)")
+
+  # every setting reports the selector's model; only the messaging differs
+  quiet <- infer_selective(fit, data = d, sigma = 1,
+                           on_mismatch = "silent-fall-back")
+  expect_identical(attr(quiet, "meta")$conditioning, "active")
+  expect_equal(sum(tidy(quiet)$selected), k_sel + 1L)
+  expect_no_warning(infer_selective(fit, data = d, sigma = 1,
+                                    on_mismatch = "silent-fall-back"))
+
+  # "stop" errors, and names the fix
+  expect_error(
+    infer_selective(fit, data = d, sigma = 1, on_mismatch = "stop"),
+    'criterion = "cp"', fixed = TRUE)
+
+  # the default warns and points at criterion = "cp"
+  expect_identical(eval(formals(infer_selective)$on_mismatch)[1],
+                   "warn-fall-back")
+
+  # no mismatch -> no fallback, no warning, under every setting
+  set.seed(11)
+  d2 <- data.frame(y = rnorm(n), matrix(rnorm(n * p), n, p))
+  cp <- select_stepwise_ic(y ~ ., data = d2, direction = "forward",
+                           penalty = "AIC", criterion = "cp")
+  for (om in c("warn-fall-back", "silent-fall-back", "stop")) {
+    ii <- expect_no_warning(infer_selective(cp, data = d2, on_mismatch = om))
+    expect_identical(attr(ii, "meta")$conditioning, "aic")
+  }
+})

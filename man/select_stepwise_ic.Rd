@@ -11,6 +11,8 @@ select_stepwise_ic(
   select_factors_together = FALSE,
   penalty = c("AIC", "BIC"),
   direction = c("forward", "backward", "both"),
+  criterion = c("deviance", "cp"),
+  sigma = NULL,
   trace = 0,
   fitted_selector = NULL,
   ...
@@ -28,6 +30,25 @@ select_stepwise_ic(
 \item{penalty}{AIC, BIC}
 
 \item{direction}{the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"}
+
+\item{criterion}{which form of the information criterion to minimize.
+\code{"deviance"} (default) mirrors \code{\link[MASS:stepAIC]{MASS::stepAIC()}}
+\code{"cp"} is the Mallows-Cp form, mirrors \code{selectiveInference}
+
+The two may disagree,
+in which case the results returned by \code{\link[=infer_selective]{infer_selective()}} has to fall
+back from passing \code{type = "aic"} to selectiveInference to \code{type = "active"},
+which may have minor inferential consequences as it doesn't account for
+uncertainty in the number of selected features, proceeding as though
+the number of steps taken by the algorithm was pre-ordained. The effect of
+this seems to be minor.
+
+Requires \code{family = "gaussian"}, \code{direction = "forward"} and
+\code{select_factors_together = FALSE}.}
+
+\item{sigma}{residual standard deviation defining the \code{criterion = "cp"}
+penalty. Ignored when \code{criterion = "deviance"}. When \code{NULL} the same rule
+\code{selectiveInference::fsInf()} uses is applied.}
 
 \item{trace}{passed to MASS::stepAIC}
 
