@@ -141,6 +141,14 @@ infer_upsi(
   were selected, proceeding as though the number of steps had been
   pre-ordained; the effect of this appears to be minor.
 
+  For `glmnet` selectors, inference always conditions on a refit of the
+  lasso at the selected lambda with a tight convergence tolerance
+  (`thresh = 1e-14`), since glmnet's default tolerance can leave the
+  active set or signs slightly off on correlated designs, which makes
+  intervals undercover. If the refit's active set or signs differ from
+  the selector's, the same three options control whether this is
+  reported with a warning, silently, or as an error.
+
 ## Value
 
 An S3 object (list) of class `inferrer`
