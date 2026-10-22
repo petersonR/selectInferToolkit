@@ -219,8 +219,9 @@ infer_selective <- function(
     n<- nrow(X)
     p <- ncol(X)
     sig <- NULL
-    b <- coef(object, use_native = TRUE, s=meta$lambda_used,
-              exact = TRUE, x = X, y = y)[-1]
+    b_full <- coef(object, use_native = TRUE, s=meta$lambda_used,
+                   exact = TRUE, x = X, y = y)
+    b <- b_full[-1]
 
     if(!is.null(sigma)) {
       sig <- sigma
@@ -252,7 +253,8 @@ infer_selective <- function(
       res <- withCallingHandlers(selectiveInference::fixedLassoInf(
         x = as.matrix(X),
         y = y,
-        beta = b,
+        # binomial requires the intercept in beta; gaussian requires it absent
+        beta = if (meta$family == "binomial") c(b_full[1], b) else b,
         lambda = meta$lambda_used * n,
         family = meta$family,
         alpha = 1 - conf.level,
@@ -260,7 +262,8 @@ infer_selective <- function(
         ...
       ), warning = si_sigma_warning)
     }
-    bb <- res$vmat %*% y
+    # fixedLogitLassoInf returns no vmat; its debiased estimates are in coef0
+    bb <- if (is.null(res$vmat)) res$coef0 else res$vmat %*% y
     inferences <- data.frame(term = names(res$vars), selected = 1, estimate = bb,
                              ci_low = res$ci[,1], ci_high = res$ci[,2],
                              p_value = res$pv)

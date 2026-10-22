@@ -1,5 +1,11 @@
 # selectInferToolkit 0.4.4
 
+- `infer_selective()` now works for `select_glmnet()` selectors with
+  `family = "binomial"` (#19). `selectiveInference::fixedLassoInf()` requires
+  the intercept in `beta` for the binomial family (and its absence for
+  gaussian), and the binomial result has no `vmat`, so estimates are taken from
+  its debiased `coef0` instead.
+
 - `select_stepwise_ic()` gains `criterion`, choosing which form of the
   information criterion to minimize. The default `"deviance"` is
   `MASS::stepAIC()`'s `n*log(RSS/n) + mult*df`; the new `"cp"` is the Mallows-Cp

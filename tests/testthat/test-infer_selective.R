@@ -393,3 +393,20 @@ test_that("selectiveInference's sigma-fallback warning is restated for this pack
   expect_true(any(grepl("differs from the value this selector selected", ws2)))
   expect_true(any(grepl("Constraint not satisfied", ws2)))
 })
+
+test_that("Lasso works for binomial family (glmnet) (#19)", {
+  set.seed(19)
+  n <- 200
+  X <- matrix(rnorm(n * 6), n, dimnames = list(NULL, paste0("x", 1:6)))
+  d <- data.frame(X, y = rbinom(n, 1, plogis(X[, 1] - X[, 2])))
+  sel <- select_glmnet(y ~ ., data = d, family = "binomial")
+
+  for (ns in c("ignored", "confident_nulls", "uncertain_nulls")) {
+    expect_no_error(inf <- infer_selective(sel, data = d, nonselection = ns))
+    expect_no_error(capture_output(print(inf)))
+    res <- tidy(inf)
+    sel_terms <- res$term[res$selected == 1 & res$term != "(Intercept)"]
+    expect_true(all(!is.na(res$estimate[res$term %in% sel_terms])))
+  }
+  expect_true(all(c("x1", "x2") %in% sel_terms))
+})
