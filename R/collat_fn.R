@@ -53,7 +53,7 @@ ciratio <- function(formula, data,
 
 
   ##  Full model bootstrap no model selection bootstrap
-  nosel_boot <- infer_boot(fullmod , data=data, B=B, family="gaussian",parallel = FALSE)
+  nosel_boot <- infer_boot(fullmod , data=data, B=B)
   nosel_bootsum <- tidy( nosel_boot)
   nosel_boot_ci_avg <- mean(nosel_bootsum$ci_high[nosel_bootsum $term != "(Intercept)"] -
                               nosel_bootsum$ci_low[nosel_bootsum $term != "(Intercept)"])

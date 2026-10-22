@@ -2,7 +2,6 @@
 % Please edit documentation in R/infer_boot.R
 \name{infer_boot}
 \alias{infer_boot}
-\alias{boot}
 \title{Inference for \code{selector} via bootstrapping}
 \usage{
 infer_boot(
@@ -14,17 +13,6 @@ infer_boot(
   type = c("paired", "residual"),
   B = 250,
   n_cores = 4,
-  ...
-)
-
-boot(
-  object,
-  data,
-  B,
-  inference_target = c("selections", "all"),
-  pad = c("zero_side", "none", "all"),
-  conf.level,
-  n_cores,
   ...
 )
 }
@@ -65,21 +53,24 @@ other families warn.}
 
 \item{conf.level}{.95 by default}
 
-\item{type}{what type of bootstrap (currently only \code{paired} supported)}
+\item{type}{the bootstrap type. Only \code{"paired"} (resampling rows) is
+implemented; \code{"residual"} is reserved and currently an error.}
 
-\item{B}{The number of bootstrap replicates.}
+\item{B}{number of bootstrap resamples}
 
-\item{n_cores}{number of cores for parallel computation}
+\item{n_cores}{reserved for parallel bootstrapping (see GitHub issue #5).
+Resampling is currently sequential, so this has no effect, and
+supplying it warns.}
 
-\item{...}{any additional arguments to that can be passed to fitting engine}
+\item{...}{not used. Any argument passed here is an error, so that a
+misspelled or removed argument (such as \code{debias}) can't be silently
+ignored.}
 }
 \value{
-\code{inferrer} s3 class with things like...
-
-an \code{inferrer} object
+an \code{inferrer} object; see \code{\link[=tidy.inferrer]{tidy.inferrer()}}. Its inferences include
+\code{prop_selected} (the proportion of resamples in which each term was
+selected) and \code{null_radius} (the padding radius; see \code{pad}).
 }
 \description{
 Inference for \code{selector} via bootstrapping
-
-Bootstrapping selection process
 }

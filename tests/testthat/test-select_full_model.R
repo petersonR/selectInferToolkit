@@ -79,7 +79,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try uniform padding, all terms
   expect_no_warning({
     set.seed(1)
-    inf4 <- infer_boot(fullmod,, data = iris, B = 5, pad = "all", inference_target = "all")
+    inf4 <- infer_boot(fullmod, data = iris, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)
@@ -174,7 +174,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try uniform padding, all terms
   expect_no_warning({
     set.seed(3)
-    inf4 <- infer_boot(fullmod,, data = hers, B = 5, pad = "all", inference_target = "all")
+    inf4 <- infer_boot(fullmod, data = hers, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)
@@ -260,7 +260,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try uniform padding, all terms
   expect_no_error({
     set.seed(2)
-    inf4 <- infer_boot(fullmod,, data = iris_binary, B = 5, pad = "all", inference_target = "all")
+    inf4 <- infer_boot(fullmod, data = iris_binary, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)
@@ -331,7 +331,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try uniform padding, all terms
   expect_no_warning({
     set.seed(4)
-    inf4 <- infer_boot(fullmod,, data = hers_diab, B = 5, pad = "all", inference_target = "all")
+    inf4 <- infer_boot(fullmod, data = hers_diab, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)

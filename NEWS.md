@@ -1,5 +1,13 @@
 # selectInferToolkit 0.4.4
 
+- `infer_boot()` now errors on any unrecognized argument instead of silently
+  ignoring it through `...`. `type = "residual"` errors as not yet implemented,
+  and supplying `n_cores` warns that it currently has no effect (it is reserved
+  for #5) (#25).
+
+- `boot()`, the worker behind `infer_boot()`, is no longer exported, so it no
+  longer masks `boot::boot()` (#25).
+
 - `select_ncvreg()` selectors now default to `infer_boot()` in `infer()`
   (was the experimental `infer_pipe()`), since zero-side padding targets MCP
   (#24). `infer_pipe()` is still available directly.
