@@ -1,5 +1,17 @@
 # selectInferToolkit 0.4.4
 
+- `infer_selective()` for `glmnet` selectors now conditions on a refit of the
+  lasso at the selected lambda with a tight convergence tolerance (`thresh =
+  1e-14`) (#18). With glmnet's default tolerance, the active set and signs on
+  correlated designs can be slightly off, and the polyhedral intervals
+  silently undercovered (false coverage rate 0.076 vs. a 0.05 target in the
+  issue's example; 0.044 after this change). The previous "exact" refit via
+  `coef(..., exact = TRUE)` never actually refit, because glmnet skips it when
+  lambda is already on the path. When the refit's active set or signs differ
+  from the selector's, `on_mismatch` controls whether this warns (default),
+  is silent, or errors; the warning suggests re-selecting with
+  `control = list(thresh = 1e-14)`.
+
 - `infer_selective()` now works for `select_glmnet()` selectors with
   `family = "binomial"` (#19). `selectiveInference::fixedLassoInf()` requires
   the intercept in `beta` for the binomial family (and its absence for
