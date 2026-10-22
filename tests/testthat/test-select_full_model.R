@@ -49,16 +49,16 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # run vanilla version
   expect_no_warning({
     set.seed(1)
-    inf1 <- infer_boot(fullmod , data = iris, B = 5, debias = FALSE)
+    inf1 <- infer_boot(fullmod , data = iris, B = 5)
     vals1 <- tidy(inf1)
     sum(vals1$selected==0) ==0
    sum(vals1$prop_selected==1) ==nrow(vals1)
   })
 
-  # try debiasing everything
+  # try uniform padding
   expect_no_warning({
     set.seed(1)
-    inf2 <- infer_boot(fullmod , data = iris, B = 5, debias = TRUE)
+    inf2 <- infer_boot(fullmod , data = iris, B = 5, pad = "all")
     vals2 <- tidy(inf2)
     sum(vals2$selected==0) ==0
     sum(vals2$prop_selected==1) ==nrow(vals2)
@@ -69,17 +69,17 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try for "all" inference target
   expect_no_warning({
     set.seed(1)
-    inf3 <- infer_boot(fullmod, data = iris, B = 5, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(fullmod, data = iris, B = 5, inference_target = "all")
     vals3 <- tidy(inf3)
     sum(vals3$selected==0) ==0
     sum(vals3$prop_selected==1) ==nrow(vals3)
 
   })
 
-  # try debiasing
+  # try uniform padding, all terms
   expect_no_warning({
     set.seed(1)
-    inf4 <- infer_boot(fullmod,, data = iris, B = 5, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(fullmod,, data = iris, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)
@@ -144,16 +144,16 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # run vanilla version
   expect_no_warning({
     set.seed(3)
-    inf1 <- infer_boot(fullmod , data = hers, B = 5, debias = FALSE)
+    inf1 <- infer_boot(fullmod , data = hers, B = 5)
     vals1 <- tidy(inf1)
     sum(vals1$selected==0) ==0
     sum(vals1$prop_selected==1) ==nrow(vals1)
   })
 
-  # try debiasing everything
+  # try uniform padding
   expect_no_warning({
     set.seed(3)
-    inf2 <- infer_boot(fullmod , data = hers, B = 5, debias = TRUE)
+    inf2 <- infer_boot(fullmod , data = hers, B = 5, pad = "all")
     vals2 <- tidy(inf2)
     sum(vals2$selected==0) ==0
     sum(vals2$prop_selected==1) ==nrow(vals2)
@@ -164,17 +164,17 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try for "all" inference target
   expect_no_warning({
     set.seed(3)
-    inf3 <- infer_boot(fullmod, data = hers, B = 5, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(fullmod, data = hers, B = 5, inference_target = "all")
     vals3 <- tidy(inf3)
     sum(vals3$selected==0) ==0
     sum(vals3$prop_selected==1) ==nrow(vals3)
 
   })
 
-  # try debiasing
+  # try uniform padding, all terms
   expect_no_warning({
     set.seed(3)
-    inf4 <- infer_boot(fullmod,, data = hers, B = 5, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(fullmod,, data = hers, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)
@@ -228,7 +228,7 @@ test_that("basic inferrer bootstrap functionality; full model", {
 #   # run vanilla version
 #   expect_no_error({
 #     set.seed(2)
-#     inf1 <- infer_boot(fullmod , data = iris_binary, B = 50, debias = FALSE)
+#     inf1 <- infer_boot(fullmod , data = iris_binary, B = 50)
 #     vals1 <- tidy(inf1)
 #     sum(vals1$selected==0) ==0
 #     sum(vals1$prop_selected==1) ==nrow(vals1)
@@ -236,10 +236,10 @@ test_that("basic inferrer bootstrap functionality; full model", {
 #
 #   })
 
-  # try debiasing everything
+  # try uniform padding
   expect_no_error({
     set.seed(2)
-    inf2 <- infer_boot(fullmod , data = iris_binary, B = 5, debias = TRUE)
+    inf2 <- infer_boot(fullmod , data = iris_binary, B = 5, pad = "all")
     vals2 <- tidy(inf2)
     sum(vals2$selected==0) ==0
     sum(vals2$prop_selected==1) ==nrow(vals2)
@@ -250,17 +250,17 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try for "all" inference target
   expect_no_error({
     set.seed(2)
-    inf3 <- infer_boot(fullmod, data = iris_binary, B = 5, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(fullmod, data = iris_binary, B = 5, inference_target = "all")
     vals3 <- tidy(inf3)
     sum(vals3$selected==0) ==0
     sum(vals3$prop_selected==1) ==nrow(vals3)
 
   })
 
-  # try debiasing
+  # try uniform padding, all terms
   expect_no_error({
     set.seed(2)
-    inf4 <- infer_boot(fullmod,, data = iris_binary, B = 5, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(fullmod,, data = iris_binary, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)
@@ -301,16 +301,16 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # run vanilla version
   expect_no_warning({
     set.seed(4)
-    inf1 <- infer_boot(fullmod , data = hers_diab, B = 5, debias = FALSE)
+    inf1 <- infer_boot(fullmod , data = hers_diab, B = 5)
     vals1 <- tidy(inf1)
     sum(vals1$selected==0) ==0
     sum(vals1$prop_selected==1) ==nrow(vals1)
   })
 
-  # try debiasing everything
+  # try uniform padding
   expect_no_warning({
     set.seed(4)
-    inf2 <- infer_boot(fullmod , data = hers_diab, B = 5, debias = TRUE)
+    inf2 <- infer_boot(fullmod , data = hers_diab, B = 5, pad = "all")
     vals2 <- tidy(inf2)
     sum(vals2$selected==0) ==0
     sum(vals2$prop_selected==1) ==nrow(vals2)
@@ -321,17 +321,17 @@ test_that("basic inferrer bootstrap functionality; full model", {
   # try for "all" inference target
   expect_no_warning({
     set.seed(4)
-    inf3 <- infer_boot(fullmod, data = hers_diab, B = 5, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(fullmod, data = hers_diab, B = 5, inference_target = "all")
     vals3 <- tidy(inf3)
     sum(vals3$selected==0) ==0
     sum(vals3$prop_selected==1) ==nrow(vals3)
 
   })
 
-  # try debiasing
+  # try uniform padding, all terms
   expect_no_warning({
     set.seed(4)
-    inf4 <- infer_boot(fullmod,, data = hers_diab, B = 5, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(fullmod,, data = hers_diab, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
     sum(vals4$selected==0) ==0
     sum(vals4$prop_selected==1) ==nrow(vals4)

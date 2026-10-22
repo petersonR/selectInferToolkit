@@ -125,10 +125,17 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
   }
 
   # Check for other goodies, add if available
-  to_add <- which(names(inferences) %in% c("p_value", "prop_selected"))
+  to_add <- which(names(inferences) %in% c("p_value", "prop_selected", "null_radius"))
   if(length(to_add)) {
     results <- results %>%
       left_join(inferences[,c(1, to_add)], by = "term")
+  }
+
+  # the bootstrap's null-zone radius is on the scaled metric like the CIs
+  if(!scale_coef && "null_radius" %in% names(results)) {
+    sd_term <- sds$sd[match(results$term, sds$term)]
+    results$null_radius <- ifelse(is.na(sd_term), results$null_radius,
+                                  results$null_radius / sd_term)
   }
 
 

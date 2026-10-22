@@ -110,25 +110,25 @@ test_that("basic inferrer bootstrap functionality; null model", {
 
   # run vanilla version
   expect_no_warning({
-    inf1 <- infer_boot(sel0, data = mtcars, B = 50, debias = FALSE)
+    inf1 <- infer_boot(sel0, data = mtcars, B = 50)
     vals1 <- tidy(inf1)
   })
 
-  # try debiasing everything
+  # try uniform padding
   expect_no_warning({
-    inf2 <- infer_boot(sel0, data = mtcars, B = 50, debias = TRUE)
+    inf2 <- infer_boot(sel0, data = mtcars, B = 50, pad = "all")
     vals2 <- tidy(inf2)
   })
 
   # try for "all" inference target
   expect_no_warning({
-    inf3 <- infer_boot(sel0, data = mtcars, B = 50, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(sel0, data = mtcars, B = 50, inference_target = "all")
     vals3 <- tidy(inf3)
   })
 
-  # try debiasing
+  # try uniform padding, all terms
   expect_no_warning({
-    inf4 <- infer_boot(sel0, data = mtcars, B = 50, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(sel0, data = mtcars, B = 50, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
   })
 
@@ -139,7 +139,7 @@ test_that("basic inferrer bootstrap functionality; stepwise IC", {
 
   # run vanilla version
   expect_no_warning({
-    inf1 <- infer_boot(sel1, data = mtcars, B = 5, debias = FALSE)
+    inf1 <- infer_boot(sel1, data = mtcars, B = 5)
     vals1 <- tidy(inf1)
   })
 
@@ -151,9 +151,9 @@ test_that("basic inferrer bootstrap functionality; stepwise IC", {
   expect_equal(vals1$coef[10], 0)
   expect_true(is.na(vals1$estimate[10]))
 
-  # try debiasing everything
+  # try uniform padding
   expect_no_warning({
-    inf2 <- infer_boot(sel1, data = mtcars, B = 5, debias = TRUE)
+    inf2 <- infer_boot(sel1, data = mtcars, B = 5, pad = "all")
     vals2 <- tidy(inf2)
   })
 
@@ -162,13 +162,13 @@ test_that("basic inferrer bootstrap functionality; stepwise IC", {
 
   # try for "all" inference target
   expect_no_warning({
-    inf3 <- infer_boot(sel1, data = mtcars, B = 5, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(sel1, data = mtcars, B = 5, inference_target = "all")
     vals3 <- tidy(inf3)
   })
 
-  # try debiasing
+  # try uniform padding, all terms
   expect_no_warning({
-    inf4 <- infer_boot(sel1, data = mtcars, B = 5, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(sel1, data = mtcars, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
   })
 
@@ -178,11 +178,11 @@ test_that("basic inferrer bootstrap functionality; stepwise IC", {
 test_that("basic inferrer bootstrap functionality; glmnet", {
 
   set.seed(123)
-  # run vanilla version
-  expect_no_warning({
-    inf1 <- infer_boot(sel2, data = mtcars, B = 5, debias = FALSE)
+  # run vanilla version (zero-side padding warns for the lasso)
+  expect_warning({
+    inf1 <- infer_boot(sel2, data = mtcars, B = 5)
     vals1 <- tidy(inf1)
-  })
+  }, "lasso")
 
   # coef for `cyl` should be selected and nonzero w/0 ci upper bound
   expect_equal(vals1$selected[2], 1)
@@ -194,9 +194,9 @@ test_that("basic inferrer bootstrap functionality; glmnet", {
   expect_equal(vals1$coef[10], 0)
   expect_true(is.na(vals1$estimate[10]))
 
-  # try debiasing everything
+  # try uniform padding
   expect_no_warning({
-    inf2 <- infer_boot(sel2, data = mtcars, B = 5, debias = TRUE)
+    inf2 <- infer_boot(sel2, data = mtcars, B = 5, pad = "all")
     vals2 <- tidy(inf2)
   })
 
@@ -207,14 +207,14 @@ test_that("basic inferrer bootstrap functionality; glmnet", {
   #expect_gt(cyl_ci_high, 0)
 
   # try for "all" inference target
-  expect_no_warning({
-    inf3 <- infer_boot(sel2, data = mtcars, B = 5, debias = FALSE, inference_target = "all")
+  expect_warning({
+    inf3 <- infer_boot(sel2, data = mtcars, B = 5, inference_target = "all")
     vals3 <- tidy(inf3)
-  })
+  }, "lasso")
 
-  # try debiasing
+  # try uniform padding, all terms
   expect_no_warning({
-    inf4 <- infer_boot(sel2, data = mtcars, B = 5, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(sel2, data = mtcars, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
   })
 
@@ -227,7 +227,7 @@ test_that("Basic inferrer bootstrap functionality; ncvreg", {
   set.seed(123)
   # run vanilla version
   expect_no_warning({
-    inf1 <- infer_boot(sel3, data = mtcars, B = 5, debias = FALSE)
+    inf1 <- infer_boot(sel3, data = mtcars, B = 5)
     vals1 <- tidy(inf1)
   })
 
@@ -241,9 +241,9 @@ test_that("Basic inferrer bootstrap functionality; ncvreg", {
   expect_equal(vals1$coef[10], 0)
   expect_true(is.na(vals1$estimate[10]))
 
-  # try debiasing everything
+  # try uniform padding
   expect_no_warning({
-    inf2 <- infer_boot(sel3, data = mtcars, B = 5, debias = TRUE)
+    inf2 <- infer_boot(sel3, data = mtcars, B = 5, pad = "all")
     vals2 <- tidy(inf2)
   })
 
@@ -255,13 +255,13 @@ test_that("Basic inferrer bootstrap functionality; ncvreg", {
 
   # try for "all" inference target
   expect_no_warning({
-    inf3 <- infer_boot(sel3, data = mtcars, B = 5, debias = FALSE, inference_target = "all")
+    inf3 <- infer_boot(sel3, data = mtcars, B = 5, inference_target = "all")
     vals3 <- tidy(inf3)
   })
 
-  # try debiasing
+  # try uniform padding, all terms
   expect_no_warning({
-    inf4 <- infer_boot(sel3, data = mtcars, B = 5, debias = TRUE, inference_target = "all")
+    inf4 <- infer_boot(sel3, data = mtcars, B = 5, pad = "all", inference_target = "all")
     vals4 <- tidy(inf4)
   })
 
@@ -269,14 +269,14 @@ test_that("Basic inferrer bootstrap functionality; ncvreg", {
 })
 
 
-test_that("basic inferrer bootstrap functionality; glmnet + out-of-sample estimation", {
+test_that("basic inferrer bootstrap functionality; glmnet padding options", {
 
   set.seed(123)
-  # run vanilla version
+  # zero-side padding is not guaranteed for the lasso, so it warns
   expect_warning({
-    inf1 <- infer_boot(sel2, data = mtcars, B = 5, debias = FALSE, estimation_data = "out-of-sample")
+    inf1 <- infer_boot(sel2, data = mtcars, B = 5)
     vals1 <- tidy(inf1)
-  })
+  }, "lasso")
 
   # coef for `cyl` should be selected and nonzero
   expect_equal(vals1$selected[2], 1)
@@ -286,31 +286,21 @@ test_that("basic inferrer bootstrap functionality; glmnet + out-of-sample estima
   expect_equal(vals1$coef[10], 0)
   expect_true(is.na(vals1$estimate[10]))
 
-  # try debiasing everything
-  expect_warning({
-    inf2 <- infer_boot(sel2, data = mtcars, B = 5, debias = TRUE,
-                       estimation_data = "out-of-sample")
+  # uniform padding is the valid choice for the lasso: no warning
+  expect_no_warning({
+    inf2 <- infer_boot(sel2, data = mtcars, B = 5, pad = "all")
     vals2 <- tidy(inf2)
   })
 
   # coefs should be the same
   expect_equal(vals1$coef, vals2$coef)
 
-  # try for "all" inference target
-  expect_warning({
-    inf3 <- infer_boot(sel2, data = mtcars[1:20,], B = 5, debias = FALSE,
-                       inference_target = "all", estimation_data = "out-of-sample")
+  expect_no_warning({
+    inf3 <- infer_boot(sel2, data = mtcars, B = 5, pad = "none",
+                       inference_target = "all")
     vals3 <- tidy(inf3)
   })
-
-  # try debiasing
-  expect_warning({
-    inf4 <- infer_boot(sel2, data = rbind(mtcars, mtcars, mtcars), B = 5, debias = TRUE,
-                       inference_target = "all", estimation_data = "out-of-sample")
-    vals4 <- tidy(inf4)
-  })
-
-  # build in some additional testing
+  expect_true(all(is.na(vals3$null_radius)))
 })
 
 test_that("basic inferrer UPSI functionality", {

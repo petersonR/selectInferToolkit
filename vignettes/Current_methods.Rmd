@@ -58,7 +58,7 @@ Given a selected model object, the package offers four inference approaches:
 |---|---|---|
 | `infer_upsi()` | Unadjusted post-selection inference (UPSI) | `nonselection` |
 | `infer_selective()` | Selective inference: exact conditioning on the selection event; currently requires lasso or forward stepwise selection | `nonselection` |
-| `infer_boot()` | Bootstrap-based inference: resamples the full selection + estimation pipeline | `inference_target`, `debias`, `estimation_data` |
+| `infer_boot()` | Bootstrap-based inference: resamples the full selection + estimation pipeline | `inference_target`, `pad` |
 | `infer_pipe()` | PIPE: projection-based test statistics and intervals for a penalized fit (wraps `ncvreg::intervals()`); currently requires `ncvreg` selection, and is experimental | — |
 
 ## The `nonselection` argument
@@ -139,13 +139,11 @@ inf_fns_nonsel      <- c("infer_selective", "infer_upsi")
 
 boot_option_grid <- expand.grid(
   inference_target = c("selections", "all"),
-  debias           = c(TRUE, FALSE),
-  estimation_data  = c("in-sample", "out-of-sample"),
+  pad              = c("zero_side", "none", "all"),
   stringsAsFactors = FALSE
 ) %>%
   mutate(boot_label = paste0("target=", inference_target,
-                             " | debias=", debias,
-                             " | est=", estimation_data))
+                             " | pad=", pad))
 
 # ── Color palettes ───────────────────────────────────────────────────────────
 inf_palette <- c(infer_boot="#F18F01", infer_selective="#2E86AB", infer_upsi="#A23B72", infer_pipe="#2D6A4F")
@@ -276,8 +274,7 @@ probes_boot <- map(seq_len(nrow(grid_boot)), function(i) {
     sel <- run_sel(grid_boot$sel_fn[i], grid_boot$extra_args[[i]])
     infer_boot(sel, data=df,
                inference_target=grid_boot$inference_target[i],
-               debias=grid_boot$debias[i],
-               estimation_data=grid_boot$estimation_data[i],
+               pad=grid_boot$pad[i],
                B=5)
   })
 })
@@ -321,10 +318,9 @@ particular combination of tuning parameters (e.g. `select_glmnet` with `alpha=1.
 
 - For `infer_selective` and `infer_upsi`, the cell shows the consensus result
   across all three `nonselection` values.  If all three behave the same way the cell shows a single icon; if they differ a tally is shown (e.g. ✅×2 ❌×1).
-- For `infer_boot`, results are split into two columns by `estimation_data`
-  (in-sample vs out-of-sample) but collapsed across `inference_target` ×
-  `debias`, since currently those options do not affect whether the method
-  runs successfully.
+- For `infer_boot`, results are split into three columns by `pad`
+  (`zero_side`, `none`, `all`) but collapsed across `inference_target`, since
+  that option does not affect whether the method runs successfully.
 - For `infer_pipe`, there are no tuning options - the cell simply indicates
   whether the method accepts output from that selector.
   
@@ -337,10 +333,12 @@ particular combination of tuning parameters (e.g. `select_glmnet` with `alpha=1.
 - `infer_pipe` works with `select_ncvreg` but not with stepwise or glmnet
   selectors.
 - `infer_upsi` and `infer_boot` are the most broadly compatible, working across all selector families.
-- The out-of-sample `infer_boot` column is marked ⚠️ throughout: the method
-  runs for every selector, but warns that out-of-sample estimation is
-  experimental and needs a large sample size.  Treat those cells as "runs, but
-  use with care" rather than "recommended".
+- `infer_boot` with the default `pad = "zero_side"` warns for lasso
+  selectors (glmnet, and ncvreg with `penalty = "lasso"`): the lasso's bias
+  does not vanish for large effects, so zero-side padding does not guarantee
+  coverage there. `pad = "all"` is the uniformly valid choice for the lasso.
+  Elastic-net selectors (`alpha < 1`) warn for any padding, because padding by
+  lambda does not account for the ridge part of the penalty.
 
 
 ```{r matrix-combined}
@@ -370,18 +368,17 @@ mat_nonsel <- results %>%
   summarize(cell = consensus_icon(icon), .groups="drop") %>%
   pivot_wider(names_from=inference, values_from=cell)
 
-# ── Part 2: infer_boot collapsed to 2 columns (in-sample / out-of-sample) ────
-# Each cell = consensus across all 4 inference_target × debias combos.
+# ── Part 2: infer_boot collapsed to 3 columns (one per pad value) ───────────
+# Each cell = consensus across both inference_target values.
 mat_boot_wide <- results %>%
   filter(inference == "infer_boot") %>%
   mutate(
-    est_data = ifelse(grepl("out-of-sample", boot_label, fixed=TRUE),
-                      "infer_boot\n(out-of-sample)", "infer_boot\n(in-sample)"),
+    pad_col = paste0("infer_boot\n(pad=", sub(".*pad=", "", boot_label), ")"),
     icon = icon_of(status)
   ) %>%
-  group_by(sel_fn, sel_params, est_data) %>%
+  group_by(sel_fn, sel_params, pad_col) %>%
   summarize(cell = consensus_icon(icon), .groups="drop") %>%
-  pivot_wider(names_from=est_data, values_from=cell)
+  pivot_wider(names_from=pad_col, values_from=cell)
 
 # ── Part 3: infer_pipe — single column, no options ───────────────────────────
 mat_pipe <- results %>%
@@ -456,7 +453,7 @@ pair_best <- results %>%
   filter(best_rank >= 2L)   # keep only pairs where ≥1 variant works
 
 # ── Compute which specific option values are supported per (sel_fn × inference)
-# For infer_boot: list supported combinations of inference_target, debias, est_data.
+# For infer_boot: list supported values of inference_target and pad.
 # (Supported nonselection values are looked up directly from `results` inside
 # make_diagram(), so no equivalent summary table is needed for those methods.)
 supported_boot_vals <- results %>%
@@ -464,18 +461,16 @@ supported_boot_vals <- results %>%
   separate_wider_delim(
     boot_label,
     delim = " | ",
-    names = c("target", "debias", "est")
+    names = c("target", "pad")
   ) %>%
   mutate(
     inference_target = sub("target=", "", target),
-    debias = sub("debias=", "", debias),
-    estimation_data  = sub("est=", "", est)
+    pad = sub("pad=", "", pad)
   ) %>%
   group_by(sel_fn) %>%
   summarize(
     targets  = list(sort(unique(inference_target))),
-    debiases = list(sort(unique(as.character(debias)))),
-    est_data = list(sort(unique(estimation_data))),
+    pads     = list(sort(unique(pad))),
     .groups  = "drop"
   )
 
@@ -558,12 +553,9 @@ make_diagram <- function(sel_fn_filter, pair_best, inf_palette, sel_palette,
         list(id    = paste0(safe_id(i), "_target"),
              label = paste0("inference_target\n",
                             paste(bv$targets[[1]], collapse=" | "))),
-        list(id    = paste0(safe_id(i), "_debias"),
-             label = paste0("debias\n",
-                            paste(bv$debiases[[1]], collapse=" | "))),
-        list(id    = paste0(safe_id(i), "_estdata"),
-             label = paste0("estimation_data\n",
-                            paste(bv$est_data[[1]], collapse=" | ")))
+        list(id    = paste0(safe_id(i), "_pad"),
+             label = paste0("pad\n",
+                            paste(bv$pads[[1]], collapse=" | ")))
       )
       for (d in dims) {
         lines <- c(lines, sprintf(
@@ -619,7 +611,7 @@ make_diagram <- function(sel_fn_filter, pair_best, inf_palette, sel_palette,
     if (i == "infer_boot") {
       bv <- supported_boot_vals %>% filter(sel_fn == sel_fn_filter)
       if (nrow(bv) == 0) next
-      for (sfx in c("_target","_debias","_estdata")) {
+      for (sfx in c("_target","_pad")) {
         lines <- c(lines, edge_def(i, paste0(safe_id(i), sfx), col, penwidth=1.0))
       }
 

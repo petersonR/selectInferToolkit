@@ -9,8 +9,7 @@ infer_boot(
   object,
   data,
   inference_target = c("selections", "all"),
-  debias = FALSE,
-  estimation_data = c("in-sample", "out-of-sample"),
+  pad = c("zero_side", "none", "all"),
   conf.level = 0.95,
   type = c("paired", "residual"),
   B = 250,
@@ -23,8 +22,7 @@ boot(
   data,
   B,
   inference_target = c("selections", "all"),
-  debias = FALSE,
-  estimation_data = c("in-sample", "out-of-sample"),
+  pad = c("zero_side", "none", "all"),
   conf.level,
   n_cores,
   ...
@@ -37,10 +35,33 @@ boot(
 
 \item{inference_target}{is inference requested on all or selected only}
 
-\item{debias}{should estimates be debiased (no, non-selections, or all)}
+\item{pad}{how to pad the bootstrap percentile intervals, which otherwise
+collapse toward \verb{[0, 0]} for small nonzero coefficients the selector
+rarely picks. Within each replicate a non-selected coefficient is 0.
+\itemize{
+\item \code{"zero_side"} (default): an interval that contains 0 has each endpoint
+pushed out to at least \code{-delta} / \code{delta}; intervals that exclude 0 are
+unchanged. \verb{[-delta, delta]} is a region of "reasonably confident null"
+that shrinks with \code{n}.
+\item \code{"none"}: the raw percentile interval ("confident nulls").
+\item \code{"all"}: every interval is widened by \code{delta} on both sides.
+}
 
-\item{estimation_data}{within a bootstrap, should in-sample or
-out-of-sample residuals be used for estimation (defaults to FALSE)}
+The radius \code{delta} is set from the selector (scaled metric) and returned
+in the \code{null_radius} column of \code{tidy()}:
+\itemize{
+\item \code{select_ncvreg()}: \code{gamma * lambda} for MCP/SCAD with \code{"zero_side"},
+\code{lambda} with \code{"all"}.
+\item \code{select_glmnet()} and lasso \code{select_ncvreg()}: \code{lambda}. The lasso's
+bias does not vanish for large effects, so \code{"zero_side"} warns; \code{"all"}
+is the uniformly valid choice.
+\item \code{select_stepwise_ic()}: \code{sqrt(k)} times the full-model standard error,
+with \code{k = 2} (AIC) or \code{log(n)} (BIC). Requires \code{n > p + 1}.
+\item \code{select_full_model()} / \code{select_null_model()}: 0, so no padding.
+}
+
+Coverage guarantees are for the gaussian family in an orthonormal design;
+other families warn.}
 
 \item{conf.level}{.95 by default}
 

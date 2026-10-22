@@ -1,11 +1,11 @@
 run_bootstrap_checks <- function(sel, data) {
 
-  inf <- infer_boot(sel, data = data, B = 5, debias = FALSE,
+  inf <- infer_boot(sel, data = data, B = 5,
                     inference_target = "selections")
 
   vals <- tidy(inf)
 
-  inf_all <- infer_boot(sel, data = data, B = 5, debias = FALSE,
+  inf_all <- infer_boot(sel, data = data, B = 5,
                         inference_target = "all")
 
   val_conf <- tidy(inf_all)

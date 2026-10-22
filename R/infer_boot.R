@@ -3,9 +3,31 @@
 #' @param object a `selector` object
 #' @param data data must be passed to infer
 #' @param inference_target is inference requested on all or selected only
-#' @param debias should estimates be debiased
-#' @param estimation_data within a bootstrap, should in-sample or
-#'  out-of-sample residuals be used for estimation (defaults to FALSE)
+#' @param pad how to pad the bootstrap percentile intervals, which otherwise
+#'   collapse toward `[0, 0]` for small nonzero coefficients the selector
+#'   rarely picks. Within each replicate a non-selected coefficient is 0.
+#'
+#'   * `"zero_side"` (default): an interval that contains 0 has each endpoint
+#'     pushed out to at least `-delta` / `delta`; intervals that exclude 0 are
+#'     unchanged. `[-delta, delta]` is a region of "reasonably confident null"
+#'     that shrinks with `n`.
+#'   * `"none"`: the raw percentile interval ("confident nulls").
+#'   * `"all"`: every interval is widened by `delta` on both sides.
+#'
+#'   The radius `delta` is set from the selector (scaled metric) and returned
+#'   in the `null_radius` column of `tidy()`:
+#'
+#'   * `select_ncvreg()`: `gamma * lambda` for MCP/SCAD with `"zero_side"`,
+#'     `lambda` with `"all"`.
+#'   * `select_glmnet()` and lasso `select_ncvreg()`: `lambda`. The lasso's
+#'     bias does not vanish for large effects, so `"zero_side"` warns; `"all"`
+#'     is the uniformly valid choice.
+#'   * `select_stepwise_ic()`: `sqrt(k)` times the full-model standard error,
+#'     with `k = 2` (AIC) or `log(n)` (BIC). Requires `n > p + 1`.
+#'   * `select_full_model()` / `select_null_model()`: 0, so no padding.
+#'
+#'   Coverage guarantees are for the gaussian family in an orthonormal design;
+#'   other families warn.
 #' @param conf.level .95 by default
 #' @param type what type of bootstrap (currently only `paired` supported)
 #' @param B number of bootstrap resamples
@@ -21,8 +43,7 @@ infer_boot <- function(
   object,
   data,
   inference_target = c("selections", "all"),
-  debias = FALSE,
-  estimation_data = c("in-sample", "out-of-sample"),
+  pad = c("zero_side", "none", "all"),
   conf.level = .95,
   type = c("paired", "residual"),
   B = 250,
@@ -33,16 +54,24 @@ infer_boot <- function(
     stop("`object` must be a `selector`. ",
          "Did you pass an `inferrer` by mistake? Use a select_* function first.")
 
+  # `...` would otherwise silently swallow these, changing results unannounced
+  removed <- intersect(names(list(...)), c("debias", "estimation_data"))
+  if (length(removed))
+    stop("`", paste(removed, collapse = "`, `"), "` ",
+         if (length(removed) > 1) "were" else "was",
+         " removed from infer_boot(); see `pad` for handling near-zero ",
+         "intervals.", call. = FALSE)
+
   # A bit of argument checking
   inference_target <- match.arg(inference_target)
-  estimation_data <- match.arg(estimation_data)
+  pad <- match.arg(pad)
   type <- match.arg(type)
 
   stopifnot(type == "paired")
   n_cores <- min(n_cores, parallel::detectCores() - 2)
 
   result <- boot(object, data=data, B=B, inference_target=inference_target,
-                 debias = debias, estimation_data = estimation_data,
+                 pad = pad,
                  n_cores= n_cores, conf.level = conf.level, ...)
   result
 }
@@ -53,9 +82,6 @@ infer_boot <- function(
 #' @param object a `selector` object
 #' @param B The number of bootstrap replicates.
 #' @param inference_target is inference requested on all or selected only
-#' @param debias should estimates be debiased (no, non-selections, or all)
-#' @param estimation_data within a bootstrap, should in-sample or
-#'  out-of-sample residuals be used for estimation (defaults to FALSE)
 #' @param conf.level .95 by default
 #' @param n_cores number of cores for parallel computation
 #' @param ... 	any additional arguments to that can be passed to fitting engine
@@ -81,18 +107,12 @@ infer_boot <- function(
 
 boot <- function(object, data, B,
                  inference_target = c("selections", "all"),
-                 debias = FALSE,
-                 estimation_data = c("in-sample", "out-of-sample"),
+                 pad = c("zero_side", "none", "all"),
                  conf.level, n_cores, ...) {
   stopifnot(inherits(object, "selector"))
-
-  if(estimation_data != "in-sample") {
-    warning("using out-of-sample data is experimental; requires large sample size.")
-  }
+  pad <- match.arg(pad)
 
   rec_obj <- attr(object, "recipe_obj")
-  family  <- attr(object, "meta")$family
-  family <- if (is.character(family)) get(family,mode = "function")() else family
 
   outcome_name <- rec_obj$var_info |>
     filter(.data$role == "outcome") |>
@@ -143,63 +163,7 @@ boot <- function(object, data, B,
     sel_boot = reselect(object, newdata = data_boot)
     val_boot <- tidy(sel_boot)
 
-    # bake estimation data
-    if (estimation_data == "in-sample") {
-      X <- bake(rec_obj, new_data = data_boot, recipes::all_predictors())
-      y <- bake(rec_obj, new_data = data_boot, recipes::all_outcomes())[[1]]
-    } else {
-      X <- bake(rec_obj, new_data = data[-boot_idx, ], recipes::all_predictors())
-      y <- bake(rec_obj, new_data = data[-boot_idx, ], recipes::all_outcomes())[[1]]
-    }
-
-    selected_terms <- val_boot$term[val_boot$selected == 1]
-    selected_cols <- term_to_col |>filter(.data$term %in% selected_terms) |>pull("col") |>
-      unlist()
-
-    # debiasing for selected terms
-    if(debias) {
-
-      df <- X
-      df$y <- y
-
-      if(length( selected_cols) ==0){
-        formula_str <- paste0("y ~ .")
-      }else{
-        formula_str <- paste0("y ~ ", paste0( selected_cols , collapse = " + "))
-      }
-      fit_sel_debias <- glm(as.formula(formula_str), data = df, family = family)
-
-      sel_coefs <- tidy(  fit_sel_debias )[, c("term", "estimate")]
-
-      val_boot <- val_boot %>% left_join(sel_coefs %>% select("term", "estimate"),
-                                         by = "term",suffix = c("", "_new"))
-
-      # after the join `estimate` holds the debiased coefficient for every
-      # selected term and NA for the rest; the loop below fills those in.
-      nonselected_terms <- val_boot$term[val_boot$selected == 0]
-
-      if(length(nonselected_terms) > 0) {
-        # If debiased non-selections, set to "uncertain nulls"
-        for (t in nonselected_terms) {
-          cols_t <- term_to_col$col[term_to_col$term == t][[1]]
-          if (length(cols_t) == 0) next
-          X_aug <- X[, c(selected_cols, cols_t), drop = FALSE]
-          df_fit <- cbind(y, X_aug)
-          fit_j <- glm(y ~.,data=df_fit,family = family)
-          tj <- tidy(fit_j)
-          tj <- tj[tj$term %in% cols_t, , drop = FALSE]
-          if (nrow(tj) > 0) {
-            val_boot$estimate[val_boot$term == t] <- tj$estimate[1]}
-        }
-      }
-
-      # for weird cases where it's not possible to do uncertain null.
-      val_boot$estimate <- ifelse(is.na(val_boot$estimate),
-                                  val_boot$coef, val_boot$estimate)
-
-    } else {
-      val_boot$estimate <- ifelse(is.na(val_boot$coef), 0, val_boot$coef)
-    }
+    val_boot$estimate <- ifelse(is.na(val_boot$coef), 0, val_boot$coef)
 
     val_boot
   })
@@ -239,11 +203,15 @@ boot <- function(object, data, B,
   }
 
 
+  # Pad the percentile intervals (scaled metric; the intercept is never padded)
+  radius <- pad_radius(object, pad, X_full, y_full, term_to_col)
+  results$null_radius <- unname(radius[results$term])
+  results <- pad_intervals(results, pad)
+
   meta_information <- list(
     B = B,
     inference_target = inference_target,
-    debias = debias,
-    estimation_data = estimation_data
+    pad = pad
   )
 
   as_inferrer(
@@ -256,4 +224,94 @@ boot <- function(object, data, B,
     selector = object,
     meta = meta_information
   )
+}
+
+
+# Null-zone radius for each term, on the scaled metric; NA for the intercept
+# (never padded). See the `pad` documentation in infer_boot().
+pad_radius <- function(object, pad, X, y, term_to_col) {
+  terms <- term_to_col$term
+  radius <- stats::setNames(rep(NA_real_, length(terms)), terms)
+  slopes <- terms != "(Intercept)"
+  if (pad == "none" || !any(slopes)) return(radius)
+
+  name <- attr(object, "name")
+  meta <- attr(object, "meta")
+
+  if (name %in% c("full_model", "null_model")) {
+    radius[slopes] <- 0
+    return(radius)
+  }
+
+  if (!identical(meta$family, "gaussian"))
+    warning("Padding radii are derived for the gaussian family; ",
+            "coverage for family = \"", meta$family, "\" is untested.",
+            call. = FALSE)
+
+  if (name == "ncvreg") {
+    penalty <- meta$penalty
+    gamma <- if (inherits(object, "cv.ncvreg")) object$fit$gamma else object$gamma
+    if (penalty == "lasso" && pad == "zero_side")
+      warn_lasso_zero_side()
+    radius[slopes] <- if (pad == "zero_side" && penalty != "lasso")
+      gamma * meta$lambda_used else meta$lambda_used
+
+  } else if (name == "glmnet") {
+    if (pad == "zero_side")
+      warn_lasso_zero_side()
+    if (!isTRUE(meta$alpha == 1))
+      warning("Padding by lambda does not account for the ridge part of an ",
+              "elastic net penalty (alpha < 1).", call. = FALSE)
+    radius[slopes] <- meta$lambda_used
+
+  } else if (name == "stepwise_ic") {
+    # Stepwise IC is hard thresholding of the t statistic at sqrt(k)
+    k <- if (meta$penalty == "AIC") 2 else log(length(y))
+    if (nrow(X) <= ncol(X) + 1)
+      stop("pad = \"", pad, "\" for stepwise selection needs the full-model ",
+           "standard errors, which require n > p + 1. Use pad = \"none\".",
+           call. = FALSE)
+    df <- as.data.frame(X)
+    df$.y <- y
+    fit <- glm(.y ~ ., data = df, family = meta$family)
+    se <- summary(fit)$coefficients[, "Std. Error"]
+    names(se) <- gsub("`", "", names(se))
+    for (i in which(slopes)) {
+      cols <- unlist(term_to_col$col[i])
+      if (length(cols) && all(cols %in% names(se)))
+        radius[i] <- sqrt(k) * max(se[cols])
+    }
+
+  } else {
+    stop("Padding is not defined for selector \"", name, "\"; ",
+         "use pad = \"none\".", call. = FALSE)
+  }
+
+  radius
+}
+
+warn_lasso_zero_side <- function() {
+  warning("The lasso's bias does not vanish for large effects, so ",
+          "pad = \"zero_side\" does not guarantee coverage. ",
+          "Consider pad = \"all\" or select_ncvreg(penalty = \"MCP\").",
+          call. = FALSE)
+}
+
+# Apply the padding rule to ci_low/ci_high using the null_radius column
+pad_intervals <- function(results, pad) {
+  d <- results$null_radius
+  ok <- !is.na(d) & !is.na(results$ci_low) & !is.na(results$ci_high)
+  lo <- results$ci_low
+  hi <- results$ci_high
+  if (pad == "zero_side") {
+    z <- ok & lo <= 0 & hi >= 0
+    lo[z] <- pmin(lo[z], -d[z])
+    hi[z] <- pmax(hi[z], d[z])
+  } else if (pad == "all") {
+    lo[ok] <- lo[ok] - d[ok]
+    hi[ok] <- hi[ok] + d[ok]
+  }
+  results$ci_low <- lo
+  results$ci_high <- hi
+  results
 }

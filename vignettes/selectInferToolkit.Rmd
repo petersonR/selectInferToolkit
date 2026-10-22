@@ -63,20 +63,31 @@ For \( j \in \hat{M}_s \), the coefficient is \(\hat{\beta}_j\); otherwise, NA.
 
 **Bootstrap CIs for All Variables**
 
-If inference targets all \( p \) variables:
+If inference targets all \( p \) variables, the same procedure is applied to
+every variable, recording 0 whenever a variable is not selected in a
+resample.
 
-1. *Treating non-selections as confident nulls:*
-     1. Resample data with replacement.  
-     2. Apply \( s \) to the resample.  
-     3. et coefficients of non-selections to zero.  
-2. *Treating non-selections as uncertain nulls:*
-     1. Resample data with replacement.  
-     2. Apply \( s \) to the resample.  
-     3. After selection, regress residuals on each non-selected variable individually.
+**Padding: reasonably confident nulls**
 
-Both yield bootstrap distributions for all variables, enabling CI calculation.
+Because non-selections are recorded as 0, a small nonzero coefficient that the
+selector rarely picks has a bootstrap distribution piled up at 0, and its
+percentile interval collapses toward \([0, 0]\). The `pad` argument of
+`infer_boot()` corrects this:
 
-There is an option to refit OLS within each iteration (essentially a debiased bootstrap approach).
+* `"zero_side"` (default): if an interval contains 0, each endpoint is pushed
+  out to at least \(\pm\delta\); intervals that exclude 0 are unchanged.
+  \([-\delta, \delta]\) is a region of *reasonably confident null*, in the
+  spirit of second-generation p-values, and it shrinks with \(n\). For MCP/SCAD
+  \(\delta = \gamma\hat\lambda\); for stepwise selection
+  \(\delta = \sqrt{k}\cdot\mathrm{SE}\) with \(k = 2\) (AIC) or \(\log n\)
+  (BIC). Large effects are not padded.
+* `"all"`: every interval is widened by \(\delta\) (\(\hat\lambda\) for
+  penalized selectors). This is the uniformly valid choice for the lasso, whose
+  bias does not vanish for large effects.
+* `"none"`: the raw percentile interval, treating non-selections as confident
+  nulls.
+
+The radius is reported in the `null_radius` column of `tidy()`.
 
 ### Selective Inference 
 
