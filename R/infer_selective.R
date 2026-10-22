@@ -1,9 +1,13 @@
-#' Inference based on selective inference
+#' Selective inference
 #'
-#' A wrapper for the `selectiveInference` functions on `selector` objects
+#' Inference that conditions on the selection event, via the
+#' `selectiveInference` package: [selectiveInference::fixedLassoInf()] for
+#' lasso [select_glmnet()] selectors (`alpha = 1`), and
+#' [selectiveInference::fsInf()] for forward [select_stepwise_ic()] selectors
+#' (gaussian family only).
 #'
 #' @param object a `selector` object
-#' @param data data must be passed to infer
+#' @param data the data used to fit the selector
 #' @param nonselection how to handle variables the selector did not select;
 #'   one of `"ignored"`, `"confident_nulls"` or `"uncertain_nulls"`. See
 #'   [infer_upsi()] for what each does; here, too, `"uncertain_nulls"`
@@ -45,8 +49,7 @@
 #' @importFrom dplyr select
 #' @importFrom selectiveInference fs fsInf fixedLassoInf
 #'
-#' @return `inferrer` object
-#' @rdname infer
+#' @return an `inferrer` object; see [tidy.inferrer()]
 #' @export
 #'
 infer_selective <- function(

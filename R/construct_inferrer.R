@@ -1,9 +1,9 @@
 #' Constructor for `inferrer`s
 #'
-#' Create an `inferrer` wrapper around post-selection inference algorithms so they
-#' can be used with the `selectInferToolkit` package and can harmonize results
-#' across various selection algorithms (`inferrer`s). This is not a user-facing
-#' function.
+#' Create an `inferrer` wrapper around a post-selection inference method so
+#' its results can be harmonized across selection algorithms. Users don't call
+#' this directly; the `infer_*` functions do. It is exported for writing new
+#' inference methods.
 #'
 #' @param x a slot for the main inferential object
 #' @param name brief name for method
@@ -15,10 +15,10 @@
 #' @param meta a list containing important meta-information from the method
 #' @param selector a carried-forward `selector` object
 #'
-#' @return An S3 object (list) of class `inferrer`
+#' @return `x` with class `inferrer` prepended and the other arguments
+#'   stored as attributes.
 #'
-#' @rdname infer
-#'
+#' @keywords internal
 #' @export
 
 as_inferrer <- function(
@@ -44,10 +44,12 @@ as_inferrer <- function(
             meta = meta)
 }
 
-#' tidy method for `inferrer` object
+#' Methods for `inferrer` objects
 #'
-#' Returns a tibble with all candidate variables, estimates (scaled & unscaled)
-
+#' The objects returned by the `infer_*` functions support `tidy()`, which
+#' returns the inferences as a tibble with one row per candidate term, and
+#' `print()`, which summarizes them.
+#'
 #' @param x an `inferrer`
 #' @param scale_coef should scaled betas be returned, or unscaled?
 #' @param ... additional parameters (not yet used)
@@ -57,7 +59,7 @@ as_inferrer <- function(
 #' @importFrom dplyr left_join transmute case_when
 #' @importFrom tibble tibble
 #' @importFrom rlang .data
-#' @rdname inferrer
+#' @rdname inferrer-methods
 #'
 #' @export
 tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
@@ -142,9 +144,8 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
   results
 }
 
-#' @param x an `inferrer`
 #' @importFrom rlang .data
-#' @rdname inferrer
+#' @rdname inferrer-methods
 #' @export
 print.inferrer <- function(x, ...) {
 

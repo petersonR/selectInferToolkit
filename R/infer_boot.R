@@ -1,7 +1,7 @@
 #' Inference for `selector` via bootstrapping
 #'
 #' @param object a `selector` object
-#' @param data data must be passed to infer
+#' @param data the data used to fit the selector
 #' @param inference_target is inference requested on all or selected only
 #' @param pad how to pad the bootstrap percentile intervals, which otherwise
 #'   collapse toward `[0, 0]` for small nonzero coefficients the selector

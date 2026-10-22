@@ -1,34 +1,37 @@
 
-#' Computing mean/median CI ratio and significant Discoveries
-#' @description
-#' Perfroms full model boostrap, stepwise AIC, stepwise BIc, lasso and MCP and gives average CI for variables
-#' adjusting for post-selectino inference using hybrid, bootstrap and selective inference
+#' Compare CI lengths and discoveries across selectors and inference methods
+#'
+#' A research helper: fits the full model, stepwise AIC and BIC, lasso and MCP
+#' (each with `lambda = "best"` and `"compact"`), runs UPSI, the bootstrap and
+#' (where supported) selective inference on each, and tabulates the mean and
+#' median CI length and the number of significant terms. Internal; call it as
+#' `selectInferToolkit:::ciratio()`.
+#'
 #' @param formula a formula
-#' @param data data set
+#' @param data a data frame
 #' @param family outcome distributional family
-#' @param nonselection  A character string specifying how to handle variables
-#'   not selected by model selection procedure. One of "ignored",
-#'   "confident_nulls" or "uncertain_nulls" supported
+#' @param nonselection how UPSI and selective inference handle non-selected
+#'   variables; see [infer_upsi()]
 #' @param conf.level .95 by default
-#' @param B Number of bootstraps
-#' @param direction the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"
-#' @param select_factors_together should categorical variables be jointly selected?
+#' @param B number of bootstrap resamples
+#' @param direction stepwise search direction: `"forward"` (default),
+#'   `"backward"` or `"both"`
+#' @param select_factors_together should categorical variables be jointly
+#'   selected (stepwise)?
 #' @param pad how bootstrap intervals are padded; see [infer_boot()]
-#' @param inference_target is inference requested on all or selected only
-#' @param ... additional arguments
+#' @param inference_target bootstrap inference target; see [infer_boot()]
+#' @param ... passed to the full-model and MCP selectors
 #' @importFrom magrittr %>%
 #' @importFrom broom tidy
-#' @return A list with following data frames
-#' \item{avg_ci_ln}{Mean of CI length across all variables in model excluding intercept}
-#' \item{med_ci_ln}{Median of CI length across all variables in model excluding intercept}
-#' \item{no_sign_disc}{# of significant discoveries in model excluding intercept}
+#' @return a list of three matrices, each with one row per selector and
+#'   columns `UPSI`, `Bootstrap` and `Selective Inference` (`NA` where a
+#'   method doesn't apply). All exclude the intercept.
+#' \item{avg_ci_ln}{mean CI length}
+#' \item{med_ci_ln}{median CI length}
+#' \item{no_sign_disc}{number of terms with p < 0.05 (bootstrap: CI
+#'   excluding 0)}
 #'
-#' @export
-#'
-#'
-#'
-
-
+#' @keywords internal
 ciratio <- function(formula, data,
                     family = c("gaussian", "binomial", "poisson"),
                     nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),

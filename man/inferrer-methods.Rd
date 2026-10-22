@@ -3,7 +3,7 @@
 \name{tidy.inferrer}
 \alias{tidy.inferrer}
 \alias{print.inferrer}
-\title{tidy method for \code{inferrer} object}
+\title{Methods for \code{inferrer} objects}
 \usage{
 \method{tidy}{inferrer}(x, scale_coef = TRUE, ...)
 
@@ -17,5 +17,7 @@
 \item{...}{additional parameters (not yet used)}
 }
 \description{
-Returns a tibble with all candidate variables, estimates (scaled & unscaled)
+The objects returned by the \verb{infer_*} functions support \code{tidy()}, which
+returns the inferences as a tibble with one row per candidate term, and
+\code{print()}, which summarizes them.
 }

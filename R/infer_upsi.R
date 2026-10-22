@@ -5,7 +5,7 @@
 #' same data to fit the model. It is common, easy, and ill-advised.
 #'
 #' @param object a `selector` object
-#' @param data data must be passed to `infer` methods
+#' @param data the data used to fit the selector
 #' @param nonselection how to handle variables the selector did not select:
 #'
 #'   * `"ignored"` (default): no inference; their `estimate`, `ci_low`,
@@ -19,12 +19,11 @@
 #'   Partial names are matched (e.g. `"uncertain"`).
 #' @param conf.level .95 by default
 #'
-#' @return `inferrer` object
+#' @return an `inferrer` object; see [tidy.inferrer()]
 #'
 #' @importFrom dplyr right_join group_by summarize bind_rows pull filter if_else
 #' @importFrom rlang .data
 #'
-#' @rdname infer
 #' @export
 #'
 

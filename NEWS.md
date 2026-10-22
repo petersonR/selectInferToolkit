@@ -1,5 +1,14 @@
 # selectInferToolkit 0.4.4
 
+- Help pages reorganized (#26): each `infer_*` function has its own page, the
+  `selector` and `inferrer` methods (`tidy()`, `predict()`, `coef()`,
+  `print()`) have "Methods for ..." pages, and `reselect()` has its own. The
+  constructors `as_selector()` and `as_inferrer()` stay exported for writing
+  new methods but are marked internal. Stale Value sections were replaced.
+
+- `ciratio()` is no longer exported; it remains available as
+  `selectInferToolkit:::ciratio()` (#26).
+
 - `infer_boot()` now errors on any unrecognized argument instead of silently
   ignoring it through `...`. `type = "residual"` errors as not yet implemented,
   and supplying `n_cores` warns that it currently has no effect (it is reserved

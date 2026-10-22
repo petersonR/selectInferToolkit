@@ -1,8 +1,8 @@
 #' Constructor for `selector`s
 #'
-#' Create a `selector` wrapper around selection algorithms so they
-#' can be used with the `selectInferToolkit` package. This is not a user-facing
-#' function.
+#' Create a `selector` wrapper around a selection algorithm so it can be used
+#' with the `selectInferToolkit` package. Users don't call this directly; the
+#' `select_*` functions do. It is exported for writing new selectors.
 #'
 #' @param x an object from a selection algorithm
 #' @param name name of the selector
@@ -15,13 +15,10 @@
 #' @param default_infer the root string of the default infer method
 #' @param meta a list containing important meta-information
 #'
-#' @return An S3 object (list) of class `selector` containing:'
-#'   x
-#'   all_terms
-#'   meta
+#' @return `x` with class `selector` prepended and the other arguments
+#'   stored as attributes.
 #'
-#' @rdname selector
-#'
+#' @keywords internal
 #' @export
 
 as_selector <- function(x, name, label = name, all_terms,
@@ -45,11 +42,22 @@ as_selector <- function(x, name, label = name, all_terms,
             meta = meta)
 }
 
-#' predict method for `selector` object
+#' Methods for `selector` objects
 #'
-#' Returns predictions for `selector` objects on new data
+#' @description
+#' The objects returned by the `select_*` functions support:
 #'
-#' @rdname selector
+#' * `predict()`: predictions on new data, using the selected model.
+#' * `tidy()`: a tibble with one row per candidate term.
+#' * `coef()`: the selected coefficients (including the intercept).
+#' * `print()`: a short summary of the selection.
+#'
+#' @param object,x a `selector`
+#' @param newdata a data frame to predict on
+#' @param ... for `coef()`, passed to the native `coef` method when
+#'   `use_native = TRUE`; otherwise not used
+#'
+#' @rdname selector-methods
 #' @export
 
 predict.selector <- function(object, newdata, ...) {
@@ -78,19 +86,14 @@ predict.selector <- function(object, newdata, ...) {
 
 
 
-#' tidy method for `selector` object
-#'
-#' Returns a tibble with all candidate variables, estimates (scaled & unscaled)
-#' @param x a `selector`
 #' @param scale_coef should scaled betas be returned, or unscaled?
-#' @param ... additional parameters (not yet used)
 #'
 #' @importFrom tibble rownames_to_column
 #' @importFrom broom tidy
 #' @importFrom dplyr left_join filter select mutate if_else
 #' @importFrom tibble tibble
 #' @importFrom rlang .data
-#' @rdname selector
+#' @rdname selector-methods
 #'
 #' @export
 tidy.selector <- function(x, scale_coef = TRUE, ...) {
@@ -151,8 +154,7 @@ tidy.selector <- function(x, scale_coef = TRUE, ...) {
 
 
 
-#'
-#' @rdname selector
+#' @rdname selector-methods
 #' @export
 print.selector <- function(x, ...) {
 
@@ -176,16 +178,10 @@ print.selector <- function(x, ...) {
   # NextMethod()  # prints with the original class' print() method
 }
 
-#' coef method for `selector` object
+#' @param use_native if `TRUE`, call the underlying fit's own `coef` method
+#'   (e.g. `coef.cv.glmnet`) instead
 #'
-#' Returns a vector with all selected coefficients (scaled only, includes
-#' intercept)
-#'
-#' @param object a selector object
-#' @param use_native if true, passes call to original class `coef`
-#' @param ... objects passed to native function, otherwise not used.
-#'
-#' @rdname selector
+#' @rdname selector-methods
 #'
 #' @export
 coef.selector <- function(object, use_native = FALSE, ...) {
@@ -195,15 +191,17 @@ coef.selector <- function(object, use_native = FALSE, ...) {
 }
 
 
-#' A re-selection function
+#' Re-run a selection on new data
 #'
-#' Re-do the selection, possibly on new data. Does not re-do the pre-processing;
-#' instead uses the original preprocess recipe from `selector_obj`.
+#' Re-does the selection, possibly on new data, with the same settings as the
+#' original. The pre-processing is not re-estimated: the original recipe from
+#' `selector_obj` (including its centering and scaling) is applied to
+#' `newdata`. This is what [infer_boot()] calls on each resample.
 #'
-#' @param selector_obj a selector object
-#' @param newdata a new data set (or same one)
+#' @param selector_obj a `selector`
+#' @param newdata a data frame (or the same one)
 #'
-#' @rdname selector
+#' @return a new `selector`
 #'
 #' @export
 #'

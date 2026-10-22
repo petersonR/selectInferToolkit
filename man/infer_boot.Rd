@@ -19,7 +19,7 @@ infer_boot(
 \arguments{
 \item{object}{a \code{selector} object}
 
-\item{data}{data must be passed to infer}
+\item{data}{the data used to fit the selector}
 
 \item{inference_target}{is inference requested on all or selected only}
 
