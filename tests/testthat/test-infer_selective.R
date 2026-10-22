@@ -410,3 +410,28 @@ test_that("Lasso works for binomial family (glmnet) (#19)", {
   }
   expect_true(all(c("x1", "x2") %in% sel_terms))
 })
+
+test_that("glmnet SI refits tightly and reports selector/refit mismatches (#18)", {
+  # correlated design where glmnet's default tolerance leaves the selector's
+  # active set or signs off from the converged lasso solution
+  n <- 200; p <- 10
+  set.seed(20)
+  X <- matrix(rnorm(n * p), n) %*% chol(0.8^abs(outer(1:p, 1:p, "-")))
+  colnames(X) <- paste0("x", 1:p)
+  b <- rep(0, p); b[1:4] <- c(1, -0.5, 0.2, 0.1)
+  d <- data.frame(y = drop(X %*% b) + rnorm(n), X)
+  sel <- select_glmnet(y ~ ., data = d)
+
+  expect_warning(inf <- infer_selective(sel, data = d, sigma = 1),
+                 "high-precision refit")
+  expect_true(attr(inf, "meta")$refit_mismatch)
+  expect_no_warning(infer_selective(sel, data = d, sigma = 1,
+                                    on_mismatch = "silent-fall-back"))
+  expect_error(infer_selective(sel, data = d, sigma = 1, on_mismatch = "stop"),
+               "high-precision refit")
+
+  # a selector fit at the tight tolerance agrees with the refit
+  sel_tight <- select_glmnet(y ~ ., data = d, control = list(thresh = 1e-14))
+  expect_no_warning(inf_tight <- infer_selective(sel_tight, data = d, sigma = 1))
+  expect_null(attr(inf_tight, "meta")$refit_mismatch)
+})

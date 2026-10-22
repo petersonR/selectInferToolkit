@@ -95,7 +95,14 @@ of steps; this argument controls how loudly that is reported:
 
 The fallback does not account for uncertainty in how many variables were
 selected, proceeding as though the number of steps had been pre-ordained;
-the effect of this appears to be minor.}
+the effect of this appears to be minor.
+
+For \code{glmnet} selectors, inference always conditions on a refit of the
+lasso at the selected lambda with a tight convergence tolerance (\code{thresh = 1e-14}), since glmnet's default tolerance can leave the active set or signs
+slightly off on correlated designs, which makes intervals undercover. If
+the refit's active set or signs differ from the selector's, the same three
+options control whether this is reported with a warning, silently, or as
+an error.}
 }
 \value{
 An S3 object (list) of class \code{inferrer}

@@ -29,6 +29,14 @@
 #'   selected, proceeding as though the number of steps had been pre-ordained;
 #'   the effect of this appears to be minor.
 #'
+#'   For `glmnet` selectors, inference always conditions on a refit of the
+#'   lasso at the selected lambda with a tight convergence tolerance (`thresh =
+#'   1e-14`), since glmnet's default tolerance can leave the active set or signs
+#'   slightly off on correlated designs, which makes intervals undercover. If
+#'   the refit's active set or signs differ from the selector's, the same three
+#'   options control whether this is reported with a warning, silently, or as
+#'   an error.
+#'
 #' @param ... arguments passed to `selectiveInference` function(s)
 #'
 #' @importFrom broom tidy
@@ -219,9 +227,33 @@ infer_selective <- function(
     n<- nrow(X)
     p <- ncol(X)
     sig <- NULL
-    b_full <- coef(object, use_native = TRUE, s=meta$lambda_used,
-                   exact = TRUE, x = X, y = y)
+    # The polyhedral conditioning depends on the exact active set and signs at
+    # lambda, and glmnet's default tolerance (1e-7) is too loose on correlated
+    # designs: intervals silently undercover (#18). Refit tightly. (coef(...,
+    # exact = TRUE) won't do: it skips the refit when lambda is already on the
+    # path, which lambda.min/lambda.1se always are.)
+    b_full <- refit_glmnet_tight(object, X, y)
     b <- b_full[-1]
+
+    # Inference conditions on the refit's active set and signs; if the
+    # selector's (looser) fit disagrees, the inferences won't line up with it.
+    sel_b <- beta[names(beta) != "(Intercept)"]
+    refit_b <- stats::setNames(b, colnames(X))[b != 0]
+    if(!setequal(names(sel_b), names(refit_b)) ||
+       any(sign(sel_b) != sign(refit_b[names(sel_b)]))) {
+      msg <- paste0(
+        "The selector's lasso solution differs from a high-precision refit at ",
+        "the same lambda (active set or signs); selective inference conditions ",
+        "on the refit.\nTo make them agree, re-run selection with a tighter ",
+        "tolerance:\n  select_glmnet(..., ",
+        if("control" %in% names(formals(glmnet::glmnet)))
+          "control = list(thresh = 1e-14))" else "thresh = 1e-14)")
+      if(on_mismatch == "stop")
+        stop(msg, call. = FALSE)
+      if(on_mismatch == "warn-fall-back")
+        warning(msg, call. = FALSE)
+      si_meta$refit_mismatch <- TRUE
+    }
 
     if(!is.null(sigma)) {
       sig <- sigma
@@ -287,3 +319,37 @@ infer_selective <- function(
     inferences = results)
 }
 
+
+# Refit a glmnet selector at its lambda with a tight convergence tolerance,
+# reusing the original lambda path down to lambda_used for warm starts.
+# Returns the coefficient vector, intercept first.
+refit_glmnet_tight <- function(object, X, y, thresh = 1e-14) {
+  meta <- attr(object, "meta")
+  path_fit <- if(inherits(object, "cv.glmnet")) object$glmnet.fit else object
+  path <- path_fit$lambda
+  path <- path[path >= meta$lambda_used]
+  if(!length(path) || !isTRUE(all.equal(min(path), meta$lambda_used)))
+    path <- c(path, meta$lambda_used)
+
+  dots <- meta$ellipses
+  thresh <- min(dots$thresh, dots$control$thresh, thresh)
+  dots$thresh <- NULL
+  # glmnet >= 5.0 deprecates `thresh` in favor of `control`
+  if("control" %in% names(formals(glmnet::glmnet))) {
+    dots$control <- as.list(dots$control)
+    dots$control$thresh <- thresh
+  } else {
+    dots$thresh <- thresh
+  }
+  # cv.glmnet-only arguments
+  dots[c("nfolds", "foldid", "type.measure", "keep", "grouped", "parallel",
+         "gamma", "relax", "trace.it")] <- NULL
+
+  fit <- do.call(glmnet::glmnet, c(
+    list(x = as.matrix(as.data.frame(X)), y = as.numeric(y),
+         family = meta$family, lambda = path, standardize = FALSE,
+         alpha = meta$alpha %||% 1),
+    dots))
+  b <- as.matrix(coef(fit, s = meta$lambda_used))
+  stats::setNames(as.numeric(b), rownames(b))
+}
