@@ -2,7 +2,7 @@
 % Please edit documentation in R/select_glmnet.R
 \name{select_glmnet}
 \alias{select_glmnet}
-\title{Fit an (relaxed) lasso or elastic net penalized regression via glmnet}
+\title{Lasso or elastic net selection via \code{glmnet}}
 \usage{
 select_glmnet(
   formula,
@@ -17,32 +17,36 @@ select_glmnet(
 \arguments{
 \item{formula}{a formula}
 
-\item{data}{data set}
+\item{data}{a data frame}
 
 \item{family}{outcome distributional family}
 
-\item{lambda}{can be \code{best}, \code{compact} (which use CV), or a single numeric
-value giving a fixed penalty. See details.}
+\item{lambda}{\code{"best"} (default) or \code{"compact"}, both chosen by
+cross-validation (see Details), or a single number giving a fixed
+penalty.}
 
-\item{fitted_selector}{a previously fit \code{selector}, used for resampling}
+\item{fitted_selector}{a previously fit \code{selector}, used by \code{\link[=reselect]{reselect()}}}
 
-\item{alpha}{The elasticnet mixing parameter, passed to \code{glmnet}}
+\item{alpha}{the elastic net mixing parameter, passed to \code{glmnet}: 1
+(default) is the lasso}
 
-\item{...}{Additional arguments that can be passed to \code{glmnet}}
+\item{...}{additional arguments passed to \code{\link[glmnet:cv.glmnet]{glmnet::cv.glmnet()}} or
+\code{\link[glmnet:glmnet]{glmnet::glmnet()}}, e.g. \code{nfolds}, \code{penalty.factor}}
 }
 \value{
-A \code{selector} object wrapping \code{glmnet} containing:
-\item{beta}{a tibble containing term names and coefficients}
-\item{std}{Was desing matrix standadrized}
-\item{penalty}{penalty used (lasso or MCP)}
-\item{lambda}{are the coefficeint associated with "lambda.min" or "lambda.1se"}
-\item{lambda.select}{numeric value of selected lambda}
-\item{fold}{Which fold each observation belongs to. By default the observations are randomly assigned.}
-\item{x}{ the model dataframe used}
-\item{y}{repsonse used}
-\item{alpha}{The elasticnet mixing parameter passed to \code{glmnet}}
+a \code{selector} wrapping the \code{cv.glmnet} (or \code{glmnet}) fit; see
+\code{\link[=tidy.selector]{tidy.selector()}}. Its default inference method is \code{\link[=infer_selective]{infer_selective()}}.
 }
 \description{
-A wrapper for \code{glmnet} and \code{cv.glmnet}. It runs CV by default so remember to
-set your seed for reproducibility.
+A wrapper for \code{\link[glmnet:cv.glmnet]{glmnet::cv.glmnet()}} (or \code{\link[glmnet:glmnet]{glmnet::glmnet()}} at a fixed
+\code{lambda}). Cross-validation is random, so set a seed for reproducibility.
+Predictors are standardized first; see \code{\link[=tidy.selector]{tidy.selector()}}.
+}
+\details{
+With \code{lambda = "best"} the penalty is \code{lambda.min}, the value minimizing
+cross-validated error; with \code{"compact"} it is \code{lambda.1se}, the largest
+value whose cross-validated error is within one standard error of the
+minimum, which gives a sparser model.
+
+Only the lasso (\code{alpha = 1}) is supported by \code{\link[=infer_selective]{infer_selective()}}.
 }

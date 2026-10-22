@@ -1,5 +1,12 @@
 # selectInferToolkit 0.4.4
 
+- The selector help pages and README were corrected and updated (#27). Among
+  other fixes, `?select_glmnet` and `?select_ncvreg` now explain
+  `lambda = "best"` / `"compact"`; `select_ncvreg()`'s `lambda` is documented
+  as `"best"` or `"compact"` only (a numeric value was documented but never
+  accepted); and the README's stepwise selective-inference example uses
+  `criterion = "cp"`.
+
 - `?tidy.inferrer` and `?tidy.selector` now document every output column and
   explain the scaled metric: by default coefficients are per standard
   deviation of each predictor, `scale_coef = FALSE` gives per-unit slopes, and

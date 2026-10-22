@@ -1,44 +1,50 @@
-#' Stepwise forward/backward/bidirectional selection with AIC/BIC
+#' Stepwise selection with AIC or BIC
 #'
+#' @description Forward, backward or bidirectional stepwise selection via
+#' [MASS::stepAIC()]. Predictors are standardized first; see
+#' [tidy.selector()].
 #'
-#' @description This function implements forward/backward/bidirectional stepwise regression,
-#' for use in the `selectInferToolkit` package
+#' @param formula a formula
+#' @param data a data frame
+#' @param family outcome distributional family: `"gaussian"` or
+#'   `"binomial"` (`"poisson"` is not yet supported)
+#' @param penalty `"AIC"` (default) or `"BIC"`
+#' @param select_factors_together should the dummy columns of a factor enter
+#'   or leave the model together?
+#' @param direction the search direction: `"forward"` (default), `"backward"`
+#'   or `"both"`
+#' @param criterion which form of the information criterion to minimize:
 #'
-#' @param formula a formula.
-#' @param data data set
-#' @param family outcome distributional family
-#' @param penalty AIC, BIC
-#' @param select_factors_together should categorical variables be jointly selected?
-#' @param direction the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"
-#' @param criterion which form of the information criterion to minimize.
-#'   `"deviance"` (default) mirrors [MASS::stepAIC()]
-#'   `"cp"` is the Mallows-Cp form, mirrors `selectiveInference`
+#'   * `"deviance"` (default): `n * log(RSS / n) + k * df`, as in
+#'     [MASS::stepAIC()].
+#'   * `"cp"`: the Mallows-Cp form `RSS + k * sigma^2 * df`, which is what
+#'     `selectiveInference` conditions on.
 #'
-#'   The two may disagree,
-#'   in which case the results returned by [`infer_selective()`] has to fall
-#'   back from passing `type = "aic"` to selectiveInference to `type = "active"`,
-#'   which may have minor inferential consequences as it doesn't account for
-#'   uncertainty in the number of selected features, proceeding as though
-#'   the number of steps taken by the algorithm was pre-ordained. The effect of
-#'   this seems to be minor.
+#'   Here `k = 2` for AIC and `log(n)` for BIC.
 #'
-#'   Requires `family = "gaussian"`, `direction = "forward"` and
+#'   The two can stop at different steps. When they do, [infer_selective()]
+#'   falls back from conditioning on the IC stopping rule (`type = "aic"`) to
+#'   conditioning on a fixed number of steps (`type = "active"`), which treats
+#'   the number of selected terms as fixed in advance; the effect of this seems
+#'   to be minor. `"cp"` avoids the fallback. It requires
+#'   `family = "gaussian"`, `direction = "forward"` and
 #'   `select_factors_together = FALSE`.
 #'
 #' @param sigma residual standard deviation defining the `criterion = "cp"`
 #'   penalty. Ignored when `criterion = "deviance"`. When `NULL` the same rule
 #'   `selectiveInference::fsInf()` uses is applied.
 #'
-#' @param ... Additional arguments
-#' @param trace passed to MASS::stepAIC
-#' @param fitted_selector a previously fit `selector`, used for resampling
+#' @param ... additional arguments passed to [MASS::stepAIC()]
+#' @param trace passed to [MASS::stepAIC()]
+#' @param fitted_selector a previously fit `selector`, used by [reselect()]
 #' @importFrom magrittr %>%
 #' @importFrom dplyr mutate_if select
 #' @importFrom broom tidy
 #' @importFrom stats lm  model.frame model.matrix na.pass
 #' @importFrom MASS stepAIC
 #' @import recipes
-#' @return A  `selector` object
+#' @return a `selector`; see [tidy.selector()]. Its default inference method
+#'   is [infer_boot()].
 #' @export
 #
 

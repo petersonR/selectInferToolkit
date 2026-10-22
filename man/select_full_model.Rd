@@ -19,7 +19,7 @@ select_full_model(
 
 \item{family}{outcome distributional family}
 
-\item{fitted_selector}{a previously fit \code{selector}, used for resampling}
+\item{fitted_selector}{a previously fit \code{selector}, used by \code{\link[=reselect]{reselect()}}}
 
 \item{...}{Additional arguments}
 }

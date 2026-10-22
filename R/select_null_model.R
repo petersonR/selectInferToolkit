@@ -7,7 +7,7 @@
 #' @param data data set
 #' @param family outcome distributional family
 #' @param ... Additional arguments
-#' @param fitted_selector a previously fit `selector`, used for resampling
+#' @param fitted_selector a previously fit `selector`, used by [reselect()]
 #'
 #' @importFrom magrittr %>%
 #' @importFrom dplyr mutate_if select

@@ -2,7 +2,7 @@
 % Please edit documentation in R/select_ncvreg.R
 \name{select_ncvreg}
 \alias{select_ncvreg}
-\title{Fit an MCP- or SCAD-penalized regression via \code{ncvreg}}
+\title{MCP, SCAD or lasso selection via \code{ncvreg}}
 \usage{
 select_ncvreg(
   formula,
@@ -16,20 +16,31 @@ select_ncvreg(
 \arguments{
 \item{formula}{a formula}
 
-\item{data}{data set}
+\item{data}{a data frame}
 
 \item{family}{outcome distributional family}
 
-\item{lambda}{can be \code{best}, \code{compact} (which use CV), or a numeric vector. See details.}
+\item{lambda}{\code{"best"} (default) or \code{"compact"}, both chosen by
+cross-validation (see Details)}
 
-\item{fitted_selector}{a previously fit \code{selector}, used for resampling}
+\item{fitted_selector}{a previously fit \code{selector}, used by \code{\link[=reselect]{reselect()}}}
 
-\item{...}{Additional arguments that can be passed to \code{ncvreg}, e.g. \code{penalty}, \code{alpha}}
+\item{...}{additional arguments passed to \code{\link[ncvreg:cv.ncvreg]{ncvreg::cv.ncvreg()}}, e.g.
+\code{penalty}, \code{gamma}, \code{alpha}, \code{nfolds}}
 }
 \value{
-A \code{selector} object wrapping \code{ncvreg}
+a \code{selector} wrapping the \code{cv.ncvreg} fit; see \code{\link[=tidy.selector]{tidy.selector()}}.
+Its default inference method is \code{\link[=infer_boot]{infer_boot()}}.
 }
 \description{
-A wrapper for \code{ncvreg} and \code{cv.ncvreg}. It runs CV by default so remember to
-set your seed for reproducibility.
+A wrapper for \code{\link[ncvreg:cv.ncvreg]{ncvreg::cv.ncvreg()}}. The penalty is ncvreg's default, MCP,
+unless \code{penalty = "SCAD"} or \code{"lasso"} is passed through \code{...}.
+Cross-validation is random, so set a seed for reproducibility. Predictors
+are standardized first; see \code{\link[=tidy.selector]{tidy.selector()}}.
+}
+\details{
+With \code{lambda = "best"} the penalty is \code{lambda.min}, the value minimizing
+cross-validated error; with \code{"compact"} it is \code{lambda.1se}, the largest
+value whose cross-validated error is within one standard error of the
+minimum, which gives a sparser model.
 }
