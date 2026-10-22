@@ -50,8 +50,7 @@ Bootstrapping selection process"></head><body>
 <span>  <span class="va">object</span>,</span>
 <span>  <span class="va">data</span>,</span>
 <span>  inference_target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"selections"</span>, <span class="st">"all"</span><span class="op">)</span>,</span>
-<span>  debias <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  estimation_data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"in-sample"</span>, <span class="st">"out-of-sample"</span><span class="op">)</span>,</span>
+<span>  pad <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"zero_side"</span>, <span class="st">"none"</span>, <span class="st">"all"</span><span class="op">)</span>,</span>
 <span>  conf.level <span class="op">=</span> <span class="fl">0.95</span>,</span>
 <span>  type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"paired"</span>, <span class="st">"residual"</span><span class="op">)</span>,</span>
 <span>  B <span class="op">=</span> <span class="fl">250</span>,</span>
@@ -64,8 +63,7 @@ Bootstrapping selection process"></head><body>
 <span>  <span class="va">data</span>,</span>
 <span>  <span class="va">B</span>,</span>
 <span>  inference_target <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"selections"</span>, <span class="st">"all"</span><span class="op">)</span>,</span>
-<span>  debias <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  estimation_data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"in-sample"</span>, <span class="st">"out-of-sample"</span><span class="op">)</span>,</span>
+<span>  pad <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"zero_side"</span>, <span class="st">"none"</span>, <span class="st">"all"</span><span class="op">)</span>,</span>
 <span>  <span class="va">conf.level</span>,</span>
 <span>  <span class="va">n_cores</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -88,13 +86,26 @@ Bootstrapping selection process"></head><body>
 <dd><p>is inference requested on all or selected only</p></dd>
 
 
-<dt id="arg-debias">debias<a class="anchor" aria-label="anchor" href="#arg-debias"></a></dt>
-<dd><p>should estimates be debiased (no, non-selections, or all)</p></dd>
-
-
-<dt id="arg-estimation-data">estimation_data<a class="anchor" aria-label="anchor" href="#arg-estimation-data"></a></dt>
-<dd><p>within a bootstrap, should in-sample or
-out-of-sample residuals be used for estimation (defaults to FALSE)</p></dd>
+<dt id="arg-pad">pad<a class="anchor" aria-label="anchor" href="#arg-pad"></a></dt>
+<dd><p>how to pad the bootstrap percentile intervals, which otherwise
+collapse toward <code>[0, 0]</code> for small nonzero coefficients the selector
+rarely picks. Within each replicate a non-selected coefficient is 0.</p><ul><li><p><code>"zero_side"</code> (default): an interval that contains 0 has each endpoint
+pushed out to at least <code>-delta</code> / <code>delta</code>; intervals that exclude 0 are
+unchanged. <code>[-delta, delta]</code> is a region of "reasonably confident null"
+that shrinks with <code>n</code>.</p></li>
+<li><p><code>"none"</code>: the raw percentile interval ("confident nulls").</p></li>
+<li><p><code>"all"</code>: every interval is widened by <code>delta</code> on both sides.</p></li>
+</ul><p>The radius <code>delta</code> is set from the selector (scaled metric) and returned
+in the <code>null_radius</code> column of <code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code>:</p><ul><li><p><code><a href="select_ncvreg.html">select_ncvreg()</a></code>: <code>gamma * lambda</code> for MCP/SCAD with <code>"zero_side"</code>,
+<code>lambda</code> with <code>"all"</code>.</p></li>
+<li><p><code><a href="select_glmnet.html">select_glmnet()</a></code> and lasso <code><a href="select_ncvreg.html">select_ncvreg()</a></code>: <code>lambda</code>. The lasso's
+bias does not vanish for large effects, so <code>"zero_side"</code> warns; <code>"all"</code>
+is the uniformly valid choice.</p></li>
+<li><p><code><a href="select_stepwise_ic.html">select_stepwise_ic()</a></code>: <code>sqrt(k)</code> times the full-model standard error,
+with <code>k = 2</code> (AIC) or <code>log(n)</code> (BIC). Requires <code>n &gt; p + 1</code>.</p></li>
+<li><p><code><a href="select_full_model.html">select_full_model()</a></code> / <code><a href="select_null_model.html">select_null_model()</a></code>: 0, so no padding.</p></li>
+</ul><p>Coverage guarantees are for the gaussian family in an orthonormal design;
+other families warn.</p></dd>
 
 
 <dt id="arg-conf-level">conf.level<a class="anchor" aria-label="anchor" href="#arg-conf-level"></a></dt>

@@ -181,39 +181,46 @@ otherwise, NA.</p>
 <p><strong>Bootstrap CIs for All Variables</strong></p>
 <p>If inference targets all
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>
-variables:</p>
-<ol style="list-style-type: decimal">
+variables, the same procedure is applied to every variable, recording 0
+whenever a variable is not selected in a resample.</p>
+<p><strong>Padding: reasonably confident nulls</strong></p>
+<p>Because non-selections are recorded as 0, a small nonzero coefficient
+that the selector rarely picks has a bootstrap distribution piled up at
+0, and its percentile interval collapses toward
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[0, 0]</annotation></semantics></math>.
+The <code>pad</code> argument of <code><a href="../reference/boot.html">infer_boot()</a></code> corrects
+this:</p>
+<ul>
 <li>
-<em>Treating non-selections as confident nulls:</em>
-<ol style="list-style-type: decimal">
-<li>Resample data with replacement.<br>
-</li>
-<li>Apply
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
-to the resample.<br>
-</li>
-<li>et coefficients of non-selections to zero.<br>
-</li>
-</ol>
-</li>
+<code>"zero_side"</code> (default): if an interval contains 0, each
+endpoint is pushed out to at least
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mi>δ</mi></mrow><annotation encoding="application/x-tex">\pm\delta</annotation></semantics></math>;
+intervals that exclude 0 are unchanged.
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>−</mi><mi>δ</mi><mo>,</mo><mi>δ</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[-\delta, \delta]</annotation></semantics></math>
+is a region of <em>reasonably confident null</em>, in the spirit of
+second-generation p-values, and it shrinks with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>.
+For MCP/SCAD
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>=</mo><mi>γ</mi><mover><mi>λ</mi><mo accent="true">̂</mo></mover></mrow><annotation encoding="application/x-tex">\delta = \gamma\hat\lambda</annotation></semantics></math>;
+for stepwise selection
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>=</mo><msqrt><mi>k</mi></msqrt><mo>⋅</mo><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow></mrow><annotation encoding="application/x-tex">\delta = \sqrt{k}\cdot\mathrm{SE}</annotation></semantics></math>
+with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">k = 2</annotation></semantics></math>
+(AIC) or
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">log</mi><mo>⁡</mo></mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">\log n</annotation></semantics></math>
+(BIC). Large effects are not padded.</li>
 <li>
-<em>Treating non-selections as uncertain nulls:</em>
-<ol style="list-style-type: decimal">
-<li>Resample data with replacement.<br>
-</li>
-<li>Apply
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>s</mi><annotation encoding="application/x-tex">s</annotation></semantics></math>
-to the resample.<br>
-</li>
-<li>After selection, regress residuals on each non-selected variable
-individually.</li>
-</ol>
-</li>
-</ol>
-<p>Both yield bootstrap distributions for all variables, enabling CI
-calculation.</p>
-<p>There is an option to refit OLS within each iteration (essentially a
-debiased bootstrap approach).</p>
+<code>"all"</code>: every interval is widened by
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>δ</mi><annotation encoding="application/x-tex">\delta</annotation></semantics></math>
+(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>λ</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\hat\lambda</annotation></semantics></math>
+for penalized selectors). This is the uniformly valid choice for the
+lasso, whose bias does not vanish for large effects.</li>
+<li>
+<code>"none"</code>: the raw percentile interval, treating
+non-selections as confident nulls.</li>
+</ul>
+<p>The radius is reported in the <code>null_radius</code> column of
+<code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code>.</p>
 </div>
 <div class="section level4">
 <h4 id="selective-inference">Selective Inference<a class="anchor" aria-label="anchor" href="#selective-inference"></a>

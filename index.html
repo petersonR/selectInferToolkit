@@ -118,9 +118,8 @@
 <div class="section level3">
 <h3 id="bootstrapping-considerations">Bootstrapping considerations<a class="anchor" aria-label="anchor" href="#bootstrapping-considerations"></a>
 </h3>
-<p>In bootstrapping, the above methods of handling nonselections are similar but slightly altered.</p>
-<p>We allow the user to specify their <code>inference_target</code> as either <code>"selections"</code> or <code>"all"</code>, <code>debias</code> varies whether the coefficients are re-fit after selection prior to bootstrapped aggregation, and <code>estimation_data</code> as either <code>"in-sample"</code> or <code>"out-of-sample"</code> which facilitates the estimation of the coefficients on the ‘left-out’ data after the model has been fit within a bootstrapped sample (similar to sample spliting).</p>
-<p>More details on the bootstrapping approach are forthcoming.</p>
+<p>In bootstrapping, the selection is re-run on each resample and a non-selected coefficient is recorded as 0. The user specifies their <code>inference_target</code> as either <code>"selections"</code> or <code>"all"</code>.</p>
+<p>Recording non-selections as 0 makes the percentile interval of a small, rarely selected coefficient collapse toward <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[0, 0]</annotation></semantics></math>. The <code>pad</code> argument corrects this. The default, <code>pad = "zero_side"</code>, pushes the endpoints of any interval that contains 0 out to at least <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mi>δ</mi></mrow><annotation encoding="application/x-tex">\pm\delta</annotation></semantics></math>, a region of <em>reasonably confident null</em> that shrinks with <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math> (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>=</mo><mi>γ</mi><mover><mi>λ</mi><mo accent="true">̂</mo></mover></mrow><annotation encoding="application/x-tex">\delta = \gamma\hat\lambda</annotation></semantics></math> for MCP/SCAD, <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msqrt><mi>k</mi></msqrt><mo>⋅</mo><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow></mrow><annotation encoding="application/x-tex">\sqrt{k}\cdot\mathrm{SE}</annotation></semantics></math> for stepwise IC); intervals that exclude 0 are unchanged. <code>pad = "all"</code> widens every interval by <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>δ</mi><annotation encoding="application/x-tex">\delta</annotation></semantics></math> (the valid choice for the lasso), and <code>pad = "none"</code> returns the raw percentile intervals (confident nulls). The radius is reported in the <code>null_radius</code> column.</p>
 </div>
 </div>
 <div class="section level2">
@@ -180,7 +179,7 @@
 <span><span class="va">fit_aic</span></span>
 <span><span class="co">#&gt; Stepwise IC-based selector</span></span>
 <span><span class="co">#&gt; 3 of 10 variables selected: hp, cyl, wt </span></span>
-<span><span class="co">#&gt; Meta information: family=gaussian, select_factors_together=TRUE, penalty=AIC, direction=forward </span></span>
+<span><span class="co">#&gt; Meta information: family=gaussian, select_factors_together=FALSE, penalty=AIC, direction=forward, criterion=deviance, sigma_arg=NULL, sigma_used=NULL </span></span>
 <span><span class="co">#&gt; Default `infer()` method: boot</span></span></code></pre></div>
 <p>Functions prefixed with <code>select_</code> create a <code>selector</code> class object. We can pass <code>selector</code> objects to <code>coef</code>, <code>predict</code>, and <code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code> functions:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
@@ -225,27 +224,29 @@
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">fit_aic_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer.html">infer</a></span><span class="op">(</span><span class="va">fit_aic</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Default inference method is bootstrapping (infer_boot). This may take a moment. Set a seed for reproducibility, or use infer_upsi() / infer_selective() for faster alternatives.</span></span>
+<span><span class="co">#&gt; Bootstrapping with B = 100 replicates...</span></span>
 <span><span class="va">fit_aic_infer_boot</span></span>
 <span><span class="co">#&gt; Bootstrap inference applied post Stepwise IC-based Selection </span></span>
 <span><span class="co">#&gt; 3 of 10 variables selected. </span></span>
 <span><span class="co">#&gt; Nonselections were considered N/A </span></span>
-<span><span class="co">#&gt; Meta information: B=100, inference_target=selections, debias=TRUE, estimation_data=in-sample </span></span>
-<span><span class="co">#&gt; Median CI length = 7.8; mean = 7.1; max = 9.7</span></span>
+<span><span class="co">#&gt; Meta information: B=100, inference_target=selections, pad=zero_side </span></span>
+<span><span class="co">#&gt; Median CI length = 7.9; mean = 7.6; max = 10</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_aic_infer_boot</span><span class="op">)</span> </span>
-<span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
-<span><span class="co">#&gt;    term        selected  coef estimate ci_low ci_high prop_selected</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 (Intercept)        1 20.1    20.1    18.7    21.7           1   </span></span>
-<span><span class="co">#&gt;  2 cyl                1 -1.68   -0.357  -4.19    3.99          0.51</span></span>
-<span><span class="co">#&gt;  3 disp               0  0      NA      NA      NA            NA   </span></span>
-<span><span class="co">#&gt;  4 hp                 1 -1.24   -1.42   -5.70    1.66          0.5 </span></span>
-<span><span class="co">#&gt;  5 drat               0  0      NA      NA      NA            NA   </span></span>
-<span><span class="co">#&gt;  6 wt                 1 -3.10   -3.21   -8.05    1.64          0.88</span></span>
-<span><span class="co">#&gt;  7 qsec               0  0      NA      NA      NA            NA   </span></span>
-<span><span class="co">#&gt;  8 vs                 0  0      NA      NA      NA            NA   </span></span>
-<span><span class="co">#&gt;  9 am                 0  0      NA      NA      NA            NA   </span></span>
-<span><span class="co">#&gt; 10 gear               0  0      NA      NA      NA            NA   </span></span>
-<span><span class="co">#&gt; 11 carb               0  0      NA      NA      NA            NA</span></span></code></pre></div>
+<span><span class="co">#&gt; # A tibble: 11 × 8</span></span>
+<span><span class="co">#&gt;    term        selected  coef estimate ci_low ci_high prop_selected null_radius</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;       &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 (Intercept)        1 20.1    20.2    18.2    22.6           1          NA   </span></span>
+<span><span class="co">#&gt;  2 cyl                1 -1.68   -0.386  -4.07    5.15          0.5         2.64</span></span>
+<span><span class="co">#&gt;  3 disp               0  0      NA      NA      NA            NA           3.13</span></span>
+<span><span class="co">#&gt;  4 hp                 1 -1.24   -0.834  -4.48    2.18          0.43        2.11</span></span>
+<span><span class="co">#&gt;  5 drat               0  0      NA      NA      NA            NA           1.24</span></span>
+<span><span class="co">#&gt;  6 wt                 1 -3.10   -3.28   -7.34    2.62          0.91        2.62</span></span>
+<span><span class="co">#&gt;  7 qsec               0  0      NA      NA      NA            NA           1.85</span></span>
+<span><span class="co">#&gt;  8 vs                 0  0      NA      NA      NA            NA           1.50</span></span>
+<span><span class="co">#&gt;  9 am                 0  0      NA      NA      NA            NA           1.45</span></span>
+<span><span class="co">#&gt; 10 gear               0  0      NA      NA      NA            NA           1.56</span></span>
+<span><span class="co">#&gt; 11 carb               0  0      NA      NA      NA            NA           1.89</span></span></code></pre></div>
 <p>These results are less promising. Here we can also use a wrapper for <code>selectiveInference</code> method:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_aic_SI</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer.html">infer_selective</a></span><span class="op">(</span><span class="va">fit_aic</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
@@ -253,18 +254,18 @@
 <span><span class="co">#&gt; Selective inference applied post Stepwise IC-based Selection </span></span>
 <span><span class="co">#&gt; 3 of 10 variables selected. </span></span>
 <span><span class="co">#&gt; Nonselections were considered ignored </span></span>
-<span><span class="co">#&gt; Meta information: none </span></span>
+<span><span class="co">#&gt; Meta information: conditioning=aic </span></span>
 <span><span class="co">#&gt; Median CI length = Inf; mean = Inf; max = Inf</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_aic_SI</span><span class="op">)</span> </span>
 <span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
 <span><span class="co">#&gt;    term        selected  coef estimate ci_low ci_high p_value</span></span>
 <span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;</span></span>
 <span><span class="co">#&gt;  1 (Intercept)        1 20.1     NA      NA     NA     NA    </span></span>
-<span><span class="co">#&gt;  2 cyl                1 -1.68     1.68 -Inf     38.0    0.235</span></span>
+<span><span class="co">#&gt;  2 cyl                1 -1.68    -1.68 -Inf     30.4    0.235</span></span>
 <span><span class="co">#&gt;  3 disp               0  0       NA      NA     NA     NA    </span></span>
-<span><span class="co">#&gt;  4 hp                 1 -1.24     1.24  -32.2  Inf      0.795</span></span>
+<span><span class="co">#&gt;  4 hp                 1 -1.24    -1.24  -25.5  Inf      0.795</span></span>
 <span><span class="co">#&gt;  5 drat               0  0       NA      NA     NA     NA    </span></span>
-<span><span class="co">#&gt;  6 wt                 1 -3.10     3.10  -13.2    7.59   0.224</span></span>
+<span><span class="co">#&gt;  6 wt                 1 -3.10    -3.10  -11.6    5.87   0.224</span></span>
 <span><span class="co">#&gt;  7 qsec               0  0       NA      NA     NA     NA    </span></span>
 <span><span class="co">#&gt;  8 vs                 0  0       NA      NA     NA     NA    </span></span>
 <span><span class="co">#&gt;  9 am                 0  0       NA      NA     NA     NA    </span></span>
@@ -285,103 +286,103 @@
 <span><span class="va">fit_lso</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/select_glmnet.html">select_glmnet</a></span><span class="op">(</span><span class="va">mpg</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span> </span>
 <span><span class="va">fit_lso</span> </span>
 <span><span class="co">#&gt; Penalized `glmnet`-based selector</span></span>
-<span><span class="co">#&gt; 4 of 10 variables selected: am, hp, cyl, wt </span></span>
-<span><span class="co">#&gt; Meta information: family=gaussian, lambda=best, lambda_used=0.654, cv_info=list(...), ellipses=list(...) </span></span>
+<span><span class="co">#&gt; 5 of 10 variables selected: carb, am, hp, cyl, wt </span></span>
+<span><span class="co">#&gt; Meta information: family=gaussian, lambda=best, lambda_used=0.543, cv_info=list(...), ellipses=list(...), alpha=1 </span></span>
 <span><span class="co">#&gt; Default `infer()` method: selective</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_lso</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 3</span></span>
-<span><span class="co">#&gt;    term        selected     coef</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt;    &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 (Intercept)        1 20.1    </span></span>
-<span><span class="co">#&gt;  2 cyl                1 -1.59   </span></span>
-<span><span class="co">#&gt;  3 disp               0  0      </span></span>
-<span><span class="co">#&gt;  4 hp                 1 -0.879  </span></span>
-<span><span class="co">#&gt;  5 drat               0  0      </span></span>
-<span><span class="co">#&gt;  6 wt                 1 -2.72   </span></span>
-<span><span class="co">#&gt;  7 qsec               0  0      </span></span>
-<span><span class="co">#&gt;  8 vs                 0  0      </span></span>
-<span><span class="co">#&gt;  9 am                 1  0.00672</span></span>
-<span><span class="co">#&gt; 10 gear               0  0      </span></span>
-<span><span class="co">#&gt; 11 carb               0  0</span></span></code></pre></div>
+<span><span class="co">#&gt;    term        selected    coef</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt;   &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 (Intercept)        1 20.1   </span></span>
+<span><span class="co">#&gt;  2 cyl                1 -1.56  </span></span>
+<span><span class="co">#&gt;  3 disp               0  0     </span></span>
+<span><span class="co">#&gt;  4 hp                 1 -0.956 </span></span>
+<span><span class="co">#&gt;  5 drat               0  0     </span></span>
+<span><span class="co">#&gt;  6 wt                 1 -2.66  </span></span>
+<span><span class="co">#&gt;  7 qsec               0  0     </span></span>
+<span><span class="co">#&gt;  8 vs                 0  0     </span></span>
+<span><span class="co">#&gt;  9 am                 1  0.169 </span></span>
+<span><span class="co">#&gt; 10 gear               0  0     </span></span>
+<span><span class="co">#&gt; 11 carb               1 -0.0934</span></span></code></pre></div>
 <p>The lasso also selects the same 3 variables. The lasso alone does not provide any p-value or CI to do inference, but UPSIs aside we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_lasso_infer_upsi</span> <span class="op">&lt;-</span><span class="fu"><a href="reference/infer.html">infer_upsi</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span> </span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_lasso_infer_upsi</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
-<span><span class="co">#&gt;    term        selected     coef estimate ci_low ci_high   p_value</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 (Intercept)        1 20.1       20.1   19.2    21.0    5.23e-27</span></span>
-<span><span class="co">#&gt;  2 cyl                1 -1.59      -1.33  -3.37    0.709  2.12e- 1</span></span>
-<span><span class="co">#&gt;  3 disp               0  0         NA     NA      NA     NA       </span></span>
-<span><span class="co">#&gt;  4 hp                 1 -0.879     -1.71  -3.54    0.123  7.86e- 2</span></span>
-<span><span class="co">#&gt;  5 drat               0  0         NA     NA      NA     NA       </span></span>
-<span><span class="co">#&gt;  6 wt                 1 -2.72      -2.55  -4.31   -0.786  8.60e- 3</span></span>
-<span><span class="co">#&gt;  7 qsec               0  0         NA     NA      NA     NA       </span></span>
-<span><span class="co">#&gt;  8 vs                 0  0         NA     NA      NA     NA       </span></span>
-<span><span class="co">#&gt;  9 am                 1  0.00672    0.738 -0.672   2.15   3.14e- 1</span></span>
-<span><span class="co">#&gt; 10 gear               0  0         NA     NA      NA     NA       </span></span>
-<span><span class="co">#&gt; 11 carb               0  0         NA     NA      NA     NA</span></span></code></pre></div>
+<span><span class="co">#&gt;    term        selected    coef estimate ci_low ci_high   p_value</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 (Intercept)        1 20.1      20.1   19.2    21.0    2.67e-26</span></span>
+<span><span class="co">#&gt;  2 cyl                1 -1.56     -1.46  -3.51    0.588  1.74e- 1</span></span>
+<span><span class="co">#&gt;  3 disp               0  0        NA     NA      NA     NA       </span></span>
+<span><span class="co">#&gt;  4 hp                 1 -0.956    -1.08  -3.24    1.08   3.37e- 1</span></span>
+<span><span class="co">#&gt;  5 drat               0  0        NA     NA      NA     NA       </span></span>
+<span><span class="co">#&gt;  6 wt                 1 -2.66     -2.31  -4.12   -0.500  1.90e- 2</span></span>
+<span><span class="co">#&gt;  7 qsec               0  0        NA     NA      NA     NA       </span></span>
+<span><span class="co">#&gt;  8 vs                 0  0        NA     NA      NA     NA       </span></span>
+<span><span class="co">#&gt;  9 am                 1  0.169     1.04  -0.470   2.54   1.89e- 1</span></span>
+<span><span class="co">#&gt; 10 gear               0  0        NA     NA      NA     NA       </span></span>
+<span><span class="co">#&gt; 11 carb               1 -0.0934   -0.815 -2.30    0.666  2.91e- 1</span></span></code></pre></div>
 <p>These results should look familiar: since the model selected by lasso is the same as that selected by stepwise AIC, the UPSI inference method is identical; <code>wt</code> is still seemingly significant.</p>
 <p><em>Selective inference</em></p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_lasso_infer_SI</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer.html">infer_selective</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_lasso_infer_SI</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
-<span><span class="co">#&gt;    term        selected     coef estimate  ci_low ci_high   p_value</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 (Intercept)        1 20.1       NA       NA     NA     NA       </span></span>
-<span><span class="co">#&gt;  2 cyl                1 -1.59      -1.33  -Inf      0.213  0.0147  </span></span>
-<span><span class="co">#&gt;  3 disp               0  0         NA       NA     NA     NA       </span></span>
-<span><span class="co">#&gt;  4 hp                 1 -0.879     -1.71    -2.35 Inf      0.947   </span></span>
-<span><span class="co">#&gt;  5 drat               0  0         NA       NA     NA     NA       </span></span>
-<span><span class="co">#&gt;  6 wt                 1 -2.72      -2.55  -Inf     -2.22   0.000395</span></span>
-<span><span class="co">#&gt;  7 qsec               0  0         NA       NA     NA     NA       </span></span>
-<span><span class="co">#&gt;  8 vs                 0  0         NA       NA     NA     NA       </span></span>
-<span><span class="co">#&gt;  9 am                 1  0.00672    0.738 -Inf      0.504  0.981   </span></span>
-<span><span class="co">#&gt; 10 gear               0  0         NA       NA     NA     NA       </span></span>
-<span><span class="co">#&gt; 11 carb               0  0         NA       NA     NA     NA</span></span></code></pre></div>
+<span><span class="co">#&gt;    term        selected    coef estimate ci_low ci_high  p_value</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 (Intercept)        1 20.1      NA      NA     NA     NA      </span></span>
+<span><span class="co">#&gt;  2 cyl                1 -1.56     -1.46   -6.90   2.72   0.204  </span></span>
+<span><span class="co">#&gt;  3 disp               0  0        NA      NA     NA     NA      </span></span>
+<span><span class="co">#&gt;  4 hp                 1 -0.956    -1.08  -20.6    3.78   0.157  </span></span>
+<span><span class="co">#&gt;  5 drat               0  0        NA      NA     NA     NA      </span></span>
+<span><span class="co">#&gt;  6 wt                 1 -2.66     -2.31  -13.3   -0.569  0.00873</span></span>
+<span><span class="co">#&gt;  7 qsec               0  0        NA      NA     NA     NA      </span></span>
+<span><span class="co">#&gt;  8 vs                 0  0        NA      NA     NA     NA      </span></span>
+<span><span class="co">#&gt;  9 am                 1  0.169     1.04  -13.6    2.25   0.710  </span></span>
+<span><span class="co">#&gt; 10 gear               0  0        NA      NA     NA     NA      </span></span>
+<span><span class="co">#&gt; 11 carb               1 -0.0934   -0.815  -2.20  24.2    0.834</span></span></code></pre></div>
 <p>Here we see that after adjusting for the selective process with selective inference, we are able to assert a significant effect of <code>wt</code> even after the selective process. The CI for this term is only slightly wide than in the full model.</p>
-<p><em>Bootstrapping + debiasing</em></p>
-<p>If we debias our bootrapped estimates, we no longer are “confident” that a non-selection is akin to a coefficient of zero, thereby treating non-selections as “uncertain nulls”.</p>
-<p>This may be the case if we’re interesting in making inferences for all variables, including those not selected by the prime model using full data. To obtain the bootstrap distribution of each <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mover><mi>β</mi><mo accent="true">̂</mo></mover><mi>j</mi></msub><annotation encoding="application/x-tex">\hat{\beta}_j</annotation></semantics></math> we proceed as follows: For each B iterations, we re sample the data with replacement, apply the same model selection method to the re sampled data, and save the coefficients of selected variables. For any variable not selected in a given bootstrap sample, we regress the model residuals on the each non-selected variables separately to get the beta estimates for non-selections. By doing so, we’re trying to explain the residual variance by variables that were not selected by model selection method. This process will produces a bootstrap distribution for all <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math> variables, allowing us to calculate CIs by using the quantiles of these distributions.</p>
+<p><em>Bootstrapping</em></p>
+<p>The lasso’s bias does not vanish for large effects, so for a lasso selector the uniformly valid choice is to pad every interval by <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>λ</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\hat\lambda</annotation></semantics></math>:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">fit_lasso_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, debias <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> </span>
+<span><span class="va">fit_lasso_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, pad <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span> </span>
+<span><span class="co">#&gt; Bootstrapping with B = 100 replicates...</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_lasso_infer_boot</span><span class="op">)</span> </span>
-<span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
-<span><span class="co">#&gt;    term        selected     coef estimate ci_low ci_high prop_selected</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 (Intercept)        1 20.1       20.1   19.3    21.1            1   </span></span>
-<span><span class="co">#&gt;  2 cyl                1 -1.59      -0.542 -3.21    3.51           0.9 </span></span>
-<span><span class="co">#&gt;  3 disp               0  0          1.28  -1.06    4.97           0.09</span></span>
-<span><span class="co">#&gt;  4 hp                 1 -0.879     -1.23  -3.40    1.32           0.82</span></span>
-<span><span class="co">#&gt;  5 drat               0  0          0.616 -0.541   2.91           0.44</span></span>
-<span><span class="co">#&gt;  6 wt                 1 -2.72      -2.61  -5.34   -0.626          1   </span></span>
-<span><span class="co">#&gt;  7 qsec               0  0          0.910 -1.19    2.93           0.11</span></span>
-<span><span class="co">#&gt;  8 vs                 0  0          0.157 -1.49    2.48           0.23</span></span>
-<span><span class="co">#&gt;  9 am                 1  0.00672    0.881 -0.599   2.47           0.43</span></span>
-<span><span class="co">#&gt; 10 gear               0  0          0.393 -1.32    3.10           0.06</span></span>
-<span><span class="co">#&gt; 11 carb               0  0         -0.885 -2.72    0.926          0.51</span></span></code></pre></div>
-<p>With this approach, we see that the <code>wt</code> has a CI which does not intersect zero, indicating a significant effect.</p>
-<p>Compare these to the results if <code>debias = FALSE</code>:</p>
+<span><span class="co">#&gt; # A tibble: 11 × 8</span></span>
+<span><span class="co">#&gt;    term       selected    coef estimate ci_low ci_high prop_selected null_radius</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;         &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;       &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 (Intercep…        1 20.1     20.1    19.3    21.0            1         NA    </span></span>
+<span><span class="co">#&gt;  2 cyl               1 -1.56    -1.15   -3.39    0.543          0.85       0.543</span></span>
+<span><span class="co">#&gt;  3 disp              0  0       -0.0570 -1.28    0.543          0.08       0.543</span></span>
+<span><span class="co">#&gt;  4 hp                1 -0.956   -0.901  -2.80    0.543          0.85       0.543</span></span>
+<span><span class="co">#&gt;  5 drat              0  0        0.278  -0.543   1.87           0.48       0.543</span></span>
+<span><span class="co">#&gt;  6 wt                1 -2.66    -2.45   -4.46   -0.293          1          0.543</span></span>
+<span><span class="co">#&gt;  7 qsec              0  0        0.106  -0.543   1.31           0.18       0.543</span></span>
+<span><span class="co">#&gt;  8 vs                0  0        0.0973 -0.543   1.27           0.28       0.543</span></span>
+<span><span class="co">#&gt;  9 am                1  0.169    0.320  -0.543   1.98           0.5        0.543</span></span>
+<span><span class="co">#&gt; 10 gear              0  0        0.0300 -0.543   0.940          0.1        0.543</span></span>
+<span><span class="co">#&gt; 11 carb              1 -0.0934  -0.286  -1.75    0.543          0.63       0.543</span></span></code></pre></div>
+<p>Compare these to the raw percentile intervals (<code>pad = "none"</code>), where coefficients that are rarely selected collapse toward <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[0, 0]</annotation></semantics></math>:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">fit_lasso_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, debias <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> </span>
+<span><span class="va">fit_lasso_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, pad <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> </span>
+<span><span class="co">#&gt; Bootstrapping with B = 100 replicates...</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_lasso_infer_boot</span><span class="op">)</span> </span>
-<span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
-<span><span class="co">#&gt;    term        selected     coef estimate ci_low ci_high prop_selected</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 (Intercept)        1 20.1     20.1     19.3    21.0            1   </span></span>
-<span><span class="co">#&gt;  2 cyl                1 -1.59    -1.25    -2.89    0              0.9 </span></span>
-<span><span class="co">#&gt;  3 disp               0  0       -0.0580  -0.755   0              0.09</span></span>
-<span><span class="co">#&gt;  4 hp                 1 -0.879   -0.862   -2.20    0              0.82</span></span>
-<span><span class="co">#&gt;  5 drat               0  0        0.223    0       1.19           0.44</span></span>
-<span><span class="co">#&gt;  6 wt                 1 -2.72    -2.43    -3.85   -0.732          1   </span></span>
-<span><span class="co">#&gt;  7 qsec               0  0        0.0624   0       0.558          0.11</span></span>
-<span><span class="co">#&gt;  8 vs                 0  0        0.0691   0       0.811          0.23</span></span>
-<span><span class="co">#&gt;  9 am                 1  0.00672  0.235    0       1.27           0.43</span></span>
-<span><span class="co">#&gt; 10 gear               0  0        0.00933  0       0.141          0.06</span></span>
-<span><span class="co">#&gt; 11 carb               0  0       -0.187   -0.928   0              0.51</span></span></code></pre></div>
+<span><span class="co">#&gt; # A tibble: 11 × 8</span></span>
+<span><span class="co">#&gt;    term       selected    coef estimate ci_low ci_high prop_selected null_radius</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;         &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;       &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 (Intercep…        1 20.1     20.1    19.3    21.0            1             NA</span></span>
+<span><span class="co">#&gt;  2 cyl               1 -1.56    -1.15   -2.85    0              0.85          NA</span></span>
+<span><span class="co">#&gt;  3 disp              0  0       -0.0570 -0.740   0              0.08          NA</span></span>
+<span><span class="co">#&gt;  4 hp                1 -0.956   -0.901  -2.26    0              0.85          NA</span></span>
+<span><span class="co">#&gt;  5 drat              0  0        0.278   0       1.33           0.48          NA</span></span>
+<span><span class="co">#&gt;  6 wt                1 -2.66    -2.45   -3.92   -0.837          1             NA</span></span>
+<span><span class="co">#&gt;  7 qsec              0  0        0.106   0       0.769          0.18          NA</span></span>
+<span><span class="co">#&gt;  8 vs                0  0        0.0973  0       0.729          0.28          NA</span></span>
+<span><span class="co">#&gt;  9 am                1  0.169    0.320   0       1.44           0.5           NA</span></span>
+<span><span class="co">#&gt; 10 gear              0  0        0.0300  0       0.397          0.1           NA</span></span>
+<span><span class="co">#&gt; 11 carb              1 -0.0934  -0.286  -1.21    0              0.63          NA</span></span></code></pre></div>
 <p>For a more in depth tutorial and examples for different methods, please consult the package vignette.</p>
 </div>
 <div class="section level4">
@@ -392,8 +393,8 @@
 <span><span class="va">fit_mcp</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/select_ncvreg.html">select_ncvreg</a></span><span class="op">(</span><span class="va">mpg</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span> </span>
 <span><span class="va">fit_mcp</span> </span>
 <span><span class="co">#&gt; Penalized `ncvreg`-based selector</span></span>
-<span><span class="co">#&gt; 2 of 10 variables selected: qsec, wt </span></span>
-<span><span class="co">#&gt; Meta information: family=gaussian, penalty=MCP, lambda=best, lambda_used=0.73, lambda_seq=list(...), cv_info=list(...), ellipses=list(...) </span></span>
+<span><span class="co">#&gt; 3 of 10 variables selected: am, qsec, wt </span></span>
+<span><span class="co">#&gt; Meta information: family=gaussian, penalty=MCP, lambda=best, lambda_used=0.339, lambda_seq=list(...), cv_info=list(...), ellipses=list(...) </span></span>
 <span><span class="co">#&gt; Default `infer()` method: pipe</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_mcp</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 3</span></span>
@@ -404,84 +405,87 @@
 <span><span class="co">#&gt;  3 disp               0  0   </span></span>
 <span><span class="co">#&gt;  4 hp                 0  0   </span></span>
 <span><span class="co">#&gt;  5 drat               0  0   </span></span>
-<span><span class="co">#&gt;  6 wt                 1 -4.99</span></span>
-<span><span class="co">#&gt;  7 qsec               1  1.37</span></span>
+<span><span class="co">#&gt;  6 wt                 1 -3.83</span></span>
+<span><span class="co">#&gt;  7 qsec               1  2.19</span></span>
 <span><span class="co">#&gt;  8 vs                 0  0   </span></span>
-<span><span class="co">#&gt;  9 am                 0  0   </span></span>
+<span><span class="co">#&gt;  9 am                 1  1.46</span></span>
 <span><span class="co">#&gt; 10 gear               0  0   </span></span>
 <span><span class="co">#&gt; 11 carb               0  0</span></span></code></pre></div>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_mcp_infer_upsi</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer.html">infer_upsi</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span> </span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_mcp_infer_upsi</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
-<span><span class="co">#&gt;    term        selected  coef estimate ci_low ci_high   p_value</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 (Intercept)        1 20.1     20.1  19.2     21.0   4.84e-28</span></span>
-<span><span class="co">#&gt;  2 cyl                0  0       NA    NA       NA    NA       </span></span>
-<span><span class="co">#&gt;  3 disp               0  0       NA    NA       NA    NA       </span></span>
-<span><span class="co">#&gt;  4 hp                 0  0       NA    NA       NA    NA       </span></span>
-<span><span class="co">#&gt;  5 drat               0  0       NA    NA       NA    NA       </span></span>
-<span><span class="co">#&gt;  6 wt                 1 -4.99    -4.94 -5.87    -4.01  2.52e-11</span></span>
-<span><span class="co">#&gt;  7 qsec               1  1.37     1.66  0.732    2.59  1.50e- 3</span></span>
-<span><span class="co">#&gt;  8 vs                 0  0       NA    NA       NA    NA       </span></span>
-<span><span class="co">#&gt;  9 am                 0  0       NA    NA       NA    NA       </span></span>
-<span><span class="co">#&gt; 10 gear               0  0       NA    NA       NA    NA       </span></span>
-<span><span class="co">#&gt; 11 carb               0  0       NA    NA       NA    NA</span></span></code></pre></div>
+<span><span class="co">#&gt;    term        selected  coef estimate  ci_low ci_high   p_value</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 (Intercept)        1 20.1     20.1  19.2      20.9   5.53e-28</span></span>
+<span><span class="co">#&gt;  2 cyl                0  0       NA    NA        NA    NA       </span></span>
+<span><span class="co">#&gt;  3 disp               0  0       NA    NA        NA    NA       </span></span>
+<span><span class="co">#&gt;  4 hp                 0  0       NA    NA        NA    NA       </span></span>
+<span><span class="co">#&gt;  5 drat               0  0       NA    NA        NA    NA       </span></span>
+<span><span class="co">#&gt;  6 wt                 1 -3.83    -3.83 -5.20     -2.47  6.95e- 6</span></span>
+<span><span class="co">#&gt;  7 qsec               1  2.19     2.19  1.18      3.20  2.16e- 4</span></span>
+<span><span class="co">#&gt;  8 vs                 0  0       NA    NA        NA    NA       </span></span>
+<span><span class="co">#&gt;  9 am                 1  1.46     1.46  0.0851    2.84  4.67e- 2</span></span>
+<span><span class="co">#&gt; 10 gear               0  0       NA    NA        NA    NA       </span></span>
+<span><span class="co">#&gt; 11 carb               0  0       NA    NA        NA    NA</span></span></code></pre></div>
 <p><em>Bootstrapping</em></p>
+<p>MCP is unbiased for large effects, so the default zero-side padding applies: intervals that contain 0 are padded out to <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mi>γ</mi><mover><mi>λ</mi><mo accent="true">̂</mo></mover></mrow><annotation encoding="application/x-tex">\pm\gamma\hat\lambda</annotation></semantics></math>, and the others are left alone.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12</span><span class="op">)</span></span>
-<span><span class="va">fit_mcp_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, debias <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> </span>
+<span><span class="va">fit_mcp_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span> </span>
+<span><span class="co">#&gt; Bootstrapping with B = 100 replicates...</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_mcp_infer_boot</span><span class="op">)</span> </span>
-<span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
-<span><span class="co">#&gt;    term        selected  coef  estimate ci_low ci_high prop_selected</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;     &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 (Intercept)        1 20.1  20.1       19.1    21.0           1   </span></span>
-<span><span class="co">#&gt;  2 cyl                0  0    -1.33      -5.54    0             0.37</span></span>
-<span><span class="co">#&gt;  3 disp               0  0    -0.397     -4.85    0             0.09</span></span>
-<span><span class="co">#&gt;  4 hp                 0  0    -0.283     -4.74    0             0.07</span></span>
-<span><span class="co">#&gt;  5 drat               0  0     0.0157     0       0             0.02</span></span>
-<span><span class="co">#&gt;  6 wt                 1 -4.99 -3.24      -6.32    0             0.76</span></span>
-<span><span class="co">#&gt;  7 qsec               1  1.37  0.575      0       2.13          0.45</span></span>
-<span><span class="co">#&gt;  8 vs                 0  0     0          0       0             0   </span></span>
-<span><span class="co">#&gt;  9 am                 0  0     0.136      0       1.73          0.12</span></span>
-<span><span class="co">#&gt; 10 gear               0  0     0.000184   0       0             0.01</span></span>
-<span><span class="co">#&gt; 11 carb               0  0    -0.169     -1.84    0             0.2</span></span></code></pre></div>
+<span><span class="co">#&gt; # A tibble: 11 × 8</span></span>
+<span><span class="co">#&gt;    term        selected  coef estimate ci_low ci_high prop_selected null_radius</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;       &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 (Intercept)        1 20.1   20.1     19.2    21.2           1          NA   </span></span>
+<span><span class="co">#&gt;  2 cyl                0  0     -0.801   -3.42    1.02          0.33        1.02</span></span>
+<span><span class="co">#&gt;  3 disp               0  0     -0.209   -3.24    1.02          0.07        1.02</span></span>
+<span><span class="co">#&gt;  4 hp                 0  0     -0.396   -3.98    1.02          0.11        1.02</span></span>
+<span><span class="co">#&gt;  5 drat               0  0      0.378   -1.02    2.18          0.22        1.02</span></span>
+<span><span class="co">#&gt;  6 wt                 1 -3.83  -2.83    -5.73    1.02          0.79        1.02</span></span>
+<span><span class="co">#&gt;  7 qsec               1  2.19   1.01    -1.02    4.11          0.52        1.02</span></span>
+<span><span class="co">#&gt;  8 vs                 0  0     -0.0886  -2.59    1.02          0.08        1.02</span></span>
+<span><span class="co">#&gt;  9 am                 1  1.46   0.763   -1.02    3.20          0.38        1.02</span></span>
+<span><span class="co">#&gt; 10 gear               0  0      0.133   -1.02    1.77          0.14        1.02</span></span>
+<span><span class="co">#&gt; 11 carb               0  0     -0.710   -3.57    1.02          0.52        1.02</span></span></code></pre></div>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12</span><span class="op">)</span></span>
-<span><span class="va">fit_mcp_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, debias <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span> </span>
+<span><span class="va">fit_mcp_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, pad <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> </span>
+<span><span class="co">#&gt; Bootstrapping with B = 100 replicates...</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_mcp_infer_boot</span><span class="op">)</span> </span>
-<span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
-<span><span class="co">#&gt;    term        selected  coef estimate ci_low ci_high prop_selected</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 (Intercept)        1 20.1   20.1    19.2    21.0            1   </span></span>
-<span><span class="co">#&gt;  2 cyl                0  0     -1.69   -5.56    1.23           0.37</span></span>
-<span><span class="co">#&gt;  3 disp               0  0     -0.0320 -4.37    2.52           0.09</span></span>
-<span><span class="co">#&gt;  4 hp                 0  0     -1.16   -4.62    0.778          0.07</span></span>
-<span><span class="co">#&gt;  5 drat               0  0      0.521  -0.891   1.92           0.02</span></span>
-<span><span class="co">#&gt;  6 wt                 1 -4.99  -3.56   -6.28   -0.543          0.76</span></span>
-<span><span class="co">#&gt;  7 qsec               1  1.37   0.912  -1.02    2.24           0.45</span></span>
-<span><span class="co">#&gt;  8 vs                 0  0     -0.0734 -2.02    1.23           0   </span></span>
-<span><span class="co">#&gt;  9 am                 0  0      0.915  -0.605   2.46           0.12</span></span>
-<span><span class="co">#&gt; 10 gear               0  0      0.351  -1.12    2.52           0.01</span></span>
-<span><span class="co">#&gt; 11 carb               0  0     -0.706  -2.19    0.385          0.2</span></span></code></pre></div>
+<span><span class="co">#&gt; # A tibble: 11 × 8</span></span>
+<span><span class="co">#&gt;    term        selected  coef estimate ci_low ci_high prop_selected null_radius</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;       &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 (Intercept)        1 20.1   20.1     19.2   21.2            1             NA</span></span>
+<span><span class="co">#&gt;  2 cyl                0  0     -0.801   -3.42   0              0.33          NA</span></span>
+<span><span class="co">#&gt;  3 disp               0  0     -0.209   -3.24   0              0.07          NA</span></span>
+<span><span class="co">#&gt;  4 hp                 0  0     -0.396   -3.98   0              0.11          NA</span></span>
+<span><span class="co">#&gt;  5 drat               0  0      0.378    0      2.18           0.22          NA</span></span>
+<span><span class="co">#&gt;  6 wt                 1 -3.83  -2.83    -5.73   0              0.79          NA</span></span>
+<span><span class="co">#&gt;  7 qsec               1  2.19   1.01     0      4.11           0.52          NA</span></span>
+<span><span class="co">#&gt;  8 vs                 0  0     -0.0886  -2.59   0.752          0.08          NA</span></span>
+<span><span class="co">#&gt;  9 am                 1  1.46   0.763    0      3.20           0.38          NA</span></span>
+<span><span class="co">#&gt; 10 gear               0  0      0.133    0      1.77           0.14          NA</span></span>
+<span><span class="co">#&gt; 11 carb               0  0     -0.710   -3.57   0              0.52          NA</span></span></code></pre></div>
 <p><em>PIPE</em>: available for <code>ncvreg</code> only</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit_mcp_infer_pipe</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer.html">infer_pipe</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_mcp_infer_pipe</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
-<span><span class="co">#&gt;    term        selected  coef estimate ci_low ci_high   p_value</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 (Intercept)        1 20.1   NA      NA      NA     NA       </span></span>
-<span><span class="co">#&gt;  2 cyl                0  0     -0.423  -2.44    1.60   0.701   </span></span>
-<span><span class="co">#&gt;  3 disp               0  0     -0.0843 -2.46    2.29   0.947   </span></span>
-<span><span class="co">#&gt;  4 hp                 0  0     -0.423  -2.26    1.43   0.679   </span></span>
-<span><span class="co">#&gt;  5 drat               0  0      0.425  -0.706   1.39   0.518   </span></span>
-<span><span class="co">#&gt;  6 wt                 1 -4.99  -4.99   -5.91   -4.07   0       </span></span>
-<span><span class="co">#&gt;  7 qsec               1  1.37   1.65    0.284   2.45   0.000426</span></span>
-<span><span class="co">#&gt;  8 vs                 0  0      0.216  -1.37    1.77   0.811   </span></span>
-<span><span class="co">#&gt;  9 am                 0  0      0.473  -0.816   1.63   0.520   </span></span>
-<span><span class="co">#&gt; 10 gear               0  0      0.274  -0.731   1.15   0.658   </span></span>
-<span><span class="co">#&gt; 11 carb               0  0     -0.290  -1.30    0.828  0.667</span></span></code></pre></div>
+<span><span class="co">#&gt;    term        selected  coef estimate  ci_low ci_high       p_value</span></span>
+<span><span class="co">#&gt;    &lt;chr&gt;          &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;         &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt;  1 (Intercept)        1 20.1  NA       NA       NA     NA           </span></span>
+<span><span class="co">#&gt;  2 cyl                0  0    -0.0765  -2.51     2.36   0.951       </span></span>
+<span><span class="co">#&gt;  3 disp               0  0     0.111   -2.37     2.59   0.931       </span></span>
+<span><span class="co">#&gt;  4 hp                 0  0    -0.246   -2.11     1.62   0.798       </span></span>
+<span><span class="co">#&gt;  5 drat               0  0     0.131   -1.20     1.47   0.852       </span></span>
+<span><span class="co">#&gt;  6 wt                 1 -3.83 -3.83    -5.17    -2.49   0.0000000209</span></span>
+<span><span class="co">#&gt;  7 qsec               1  2.19  2.19     1.19     3.18   0.0000155   </span></span>
+<span><span class="co">#&gt;  8 vs                 0  0    -0.00198 -1.65     1.64   0.998       </span></span>
+<span><span class="co">#&gt;  9 am                 1  1.46  1.46     0.0421   2.81   0.0342      </span></span>
+<span><span class="co">#&gt; 10 gear               0  0    -0.0379  -1.41     1.33   0.958       </span></span>
+<span><span class="co">#&gt; 11 carb               0  0    -0.328   -1.61     0.950  0.625</span></span></code></pre></div>
 </div>
 </div>
 </div>

@@ -16,7 +16,7 @@ ciratio(
   B = 250,
   direction = "forward",
   select_factors_together = F,
-  debias = F,
+  pad = c("zero_side", "none", "all"),
   inference_target = "selections",
   ...
 )
@@ -59,9 +59,10 @@ ciratio(
 
   should categorical variables be jointly selected?
 
-- debias:
+- pad:
 
-  should estimates be debiased in bootstrap
+  how bootstrap intervals are padded; see
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md)
 
 - inference_target:
 

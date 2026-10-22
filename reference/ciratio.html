@@ -55,7 +55,7 @@ adjusting for post-selectino inference using hybrid, bootstrap and selective inf
 <span>  B <span class="op">=</span> <span class="fl">250</span>,</span>
 <span>  direction <span class="op">=</span> <span class="st">"forward"</span>,</span>
 <span>  select_factors_together <span class="op">=</span> <span class="cn">F</span>,</span>
-<span>  debias <span class="op">=</span> <span class="cn">F</span>,</span>
+<span>  pad <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"zero_side"</span>, <span class="st">"none"</span>, <span class="st">"all"</span><span class="op">)</span>,</span>
 <span>  inference_target <span class="op">=</span> <span class="st">"selections"</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -99,8 +99,8 @@ not selected by model selection procedure. One of "ignored",
 <dd><p>should categorical variables be jointly selected?</p></dd>
 
 
-<dt id="arg-debias">debias<a class="anchor" aria-label="anchor" href="#arg-debias"></a></dt>
-<dd><p>should estimates be debiased in bootstrap</p></dd>
+<dt id="arg-pad">pad<a class="anchor" aria-label="anchor" href="#arg-pad"></a></dt>
+<dd><p>how bootstrap intervals are padded; see <code><a href="boot.html">infer_boot()</a></code></p></dd>
 
 
 <dt id="arg-inference-target">inference_target<a class="anchor" aria-label="anchor" href="#arg-inference-target"></a></dt>

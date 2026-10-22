@@ -52,7 +52,7 @@ approaches:
 |----|----|----|
 | [`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md) | Unadjusted post-selection inference (UPSI) | `nonselection` |
 | [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md) | Selective inference: exact conditioning on the selection event; currently requires lasso or forward stepwise selection | `nonselection` |
-| [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md) | Bootstrap-based inference: resamples the full selection + estimation pipeline | `inference_target`, `debias`, `estimation_data` |
+| [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md) | Bootstrap-based inference: resamples the full selection + estimation pipeline | `inference_target`, `pad` |
 | [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md) | PIPE: projection-based test statistics and intervals for a penalized fit (wraps [`ncvreg::intervals()`](https://pbreheny.github.io/ncvreg/reference/intervals.html)); currently requires `ncvreg` selection, and is experimental | — |
 
 ### The `nonselection` argument
@@ -88,10 +88,10 @@ method.
   result across all three `nonselection` values. If all three behave the
   same way the cell shows a single icon; if they differ a tally is shown
   (e.g. ✅×2 ❌×1).
-- For `infer_boot`, results are split into two columns by
-  `estimation_data` (in-sample vs out-of-sample) but collapsed across
-  `inference_target` × `debias`, since currently those options do not
-  affect whether the method runs successfully.
+- For `infer_boot`, results are split into three columns by `pad`
+  (`zero_side`, `none`, `all`) but collapsed across `inference_target`,
+  since that option does not affect whether the method runs
+  successfully.
 - For `infer_pipe`, there are no tuning options - the cell simply
   indicates whether the method accepts output from that selector.
 
@@ -103,10 +103,13 @@ method.
   glmnet selectors.
 - `infer_upsi` and `infer_boot` are the most broadly compatible, working
   across all selector families.
-- The out-of-sample `infer_boot` column is marked ⚠️ throughout: the
-  method runs for every selector, but warns that out-of-sample
-  estimation is experimental and needs a large sample size. Treat those
-  cells as “runs, but use with care” rather than “recommended”.
+- `infer_boot` with the default `pad = "zero_side"` warns for lasso
+  selectors (glmnet, and ncvreg with `penalty = "lasso"`): the lasso’s
+  bias does not vanish for large effects, so zero-side padding does not
+  guarantee coverage there. `pad = "all"` is the uniformly valid choice
+  for the lasso. Elastic-net selectors (`alpha < 1`) warn for any
+  padding, because padding by lambda does not account for the ridge part
+  of the penalty.
 
 ### Flow diagrams
 
