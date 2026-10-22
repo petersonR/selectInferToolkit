@@ -1,5 +1,29 @@
 # selectInferToolkit 0.4.4
 
+- **Breaking:** `infer_boot()` gains `pad`, and loses `debias` and
+  `estimation_data`. Because a non-selected coefficient is recorded as 0 in
+  each replicate, the percentile interval of a small, rarely selected
+  coefficient collapses toward `[0, 0]`. `pad` fixes this:
+  * `"zero_side"` (the new default) pushes the endpoints of any interval that
+    contains 0 out to at least `-delta` / `delta`, a region of "reasonably
+    confident null" that shrinks with `n`. Intervals that exclude 0 are
+    unchanged, so large effects pay nothing.
+  * `"all"` widens every interval by `delta`.
+  * `"none"` keeps the previous (`debias = FALSE`) behavior.
+
+  `delta` is set from the selector: `gamma * lambda` for MCP/SCAD (`lambda`
+  with `"all"`), `lambda` for the lasso, `sqrt(k)` times the full-model
+  standard error for stepwise IC, and 0 for the full and null models. It is
+  returned in a new `null_radius` column of `tidy()`, unscaled along with the
+  intervals when `scale_coef = FALSE`. Zero-side padding warns for lasso
+  selectors, whose bias does not vanish for large effects (use `pad = "all"`),
+  and any padding warns for an elastic net and for non-gaussian families.
+
+  `debias = TRUE` (refitting OLS within each replicate, with uncertain-null
+  refits for non-selections) is removed; padding needs the selector's own
+  thresholded estimates. `estimation_data` only chose the data that refit used,
+  so it is removed too. `ciratio()` takes `pad` in place of `debias`.
+
 - `infer_selective()` for `glmnet` selectors now conditions on a refit of the
   lasso at the selected lambda with a tight convergence tolerance (`thresh =
   1e-14`) (#18). With glmnet's default tolerance, the active set and signs on

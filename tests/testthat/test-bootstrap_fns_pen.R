@@ -3,35 +3,35 @@ run_inference_suite <- function(sel, data) {
   set.seed(1)
 
   configs <- list(
-    list(inf_target = "selections", est = "in-sample", debias = FALSE),
-    list(inf_target = "all",        est = "in-sample", debias = FALSE),
-    list(inf_target = "selections", est = "out-of-sample", debias = FALSE),
-    list(inf_target = "all",        est = "out-of-sample", debias = FALSE),
-    list(inf_target = "selections", est = "in-sample", debias = TRUE)
+    list(inf_target = "selections", pad = "zero_side"),
+    list(inf_target = "all",        pad = "zero_side"),
+    list(inf_target = "selections", pad = "all"),
+    list(inf_target = "all",        pad = "none")
   )
+
+  # zero-side padding warns for lasso selectors (glmnet, ncvreg lasso), and
+  # any padding warns for an elastic net
+  is_lasso <- attr(sel, "name") == "glmnet" ||
+    identical(attr(sel, "meta")$penalty, "lasso")
+  is_enet <- attr(sel, "name") == "glmnet" &&
+    !isTRUE(attr(sel, "meta")$alpha == 1)
 
   for (cfg in configs) {
 
-    run <- function() infer_boot(
-      sel,
-      data = data,
-      B = 5,
-      debias = cfg$debias,
-      inference_target = cfg$inf_target,
-      estimation_data = cfg$est
-    )
+    ws <- character(0)
+    inf <- withCallingHandlers(
+      infer_boot(sel, data = data, B = 5, pad = cfg$pad,
+                 inference_target = cfg$inf_target),
+      warning = function(w) {
+        ws <<- c(ws, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      })
 
-    # infer_boot() deliberately warns that out-of-sample estimation is
-    # experimental. Assert that warning where it is expected rather than
-    # letting it accumulate as noise in the test output.
-    inf <- if (cfg$est == "out-of-sample") {
-      # expect_warning() returns the condition, not the value, so capture the
-      # result by assigning inside the expectation.
-      expect_warning(res <- run(), "experimental")
-      res
-    } else {
-      run()
-    }
+    expected <- c(
+      if (is_lasso && cfg$pad == "zero_side") "lasso",
+      if (is_enet && cfg$pad != "none") "ridge")
+    expect_length(ws, length(expected))
+    for (e in expected) expect_true(any(grepl(e, ws)))
 
     expect_no_error(tidy(inf))
   }

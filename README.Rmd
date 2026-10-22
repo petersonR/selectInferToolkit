@@ -68,11 +68,9 @@ The core contribution of `selectInferToolkit` lies in its ability to provide str
 
 ### Bootstrapping considerations
 
-In bootstrapping, the above methods of handling nonselections are similar but slightly altered. 
+In bootstrapping, the selection is re-run on each resample and a non-selected coefficient is recorded as 0. The user specifies their `inference_target` as either `"selections"` or `"all"`. 
 
-We allow the user to specify their `inference_target` as either `"selections"` or `"all"`, `debias` varies whether the coefficients are re-fit after selection prior to bootstrapped aggregation, and `estimation_data` as either `"in-sample"` or `"out-of-sample"` which facilitates the estimation of the coefficients on the 'left-out' data after the model has been fit within a bootstrapped sample (similar to sample spliting). 
-
-More details on the bootstrapping approach are forthcoming. 
+Recording non-selections as 0 makes the percentile interval of a small, rarely selected coefficient collapse toward $[0, 0]$. The `pad` argument corrects this. The default, `pad = "zero_side"`, pushes the endpoints of any interval that contains 0 out to at least $\pm\delta$, a region of *reasonably confident null* that shrinks with $n$ ($\delta = \gamma\hat\lambda$ for MCP/SCAD, $\sqrt{k}\cdot\mathrm{SE}$ for stepwise IC); intervals that exclude 0 are unchanged. `pad = "all"` widens every interval by $\delta$ (the valid choice for the lasso), and `pad = "none"` returns the raw percentile intervals (confident nulls). The radius is reported in the `null_radius` column. 
 
 ## Example
 
@@ -172,25 +170,23 @@ tidy(fit_lasso_infer_SI)
 
 Here we see that after adjusting for the selective process with selective inference, we are able to assert a significant effect of `wt` even after the selective process. The CI for this term is only slightly wide than in the full model. 
 
-*Bootstrapping + debiasing*
+*Bootstrapping*
 
-If we debias our bootrapped estimates, we no longer are "confident" that a non-selection is akin to a coefficient of zero, thereby treating non-selections as "uncertain nulls". 
-
-This may be the case if we're interesting in making inferences for all variables, including those not selected by the prime model using full data. To obtain the bootstrap distribution of each $\hat{\beta}_j$ we proceed as follows: For each B iterations, we re sample the data with replacement, apply the same model selection method to the re sampled data, and save the coefficients of selected variables. For any variable not selected in a given bootstrap sample, we regress the model residuals on the each non-selected variables separately to get the beta estimates for non-selections. By doing so, we're trying to explain the residual variance by variables that were not selected by model selection method. This process will produces a bootstrap distribution for all $p$ variables, allowing us to calculate CIs by using the quantiles of these distributions. 
-
+The lasso's bias does not vanish for large effects, so for a lasso selector the
+uniformly valid choice is to pad every interval by $\hat\lambda$:
 
 ```{r}
 set.seed(1)
-fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", debias = TRUE) 
+fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", pad = "all") 
 tidy(fit_lasso_infer_boot) 
 ```
 
-With this approach, we see that the `wt` has a CI which does not intersect zero, indicating a significant effect.
+Compare these to the raw percentile intervals (`pad = "none"`), where
+coefficients that are rarely selected collapse toward $[0, 0]$: 
 
-Compare these to the results if `debias = FALSE`: 
 ```{r}
 set.seed(1)
-fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", debias = FALSE) 
+fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", pad = "none") 
 tidy(fit_lasso_infer_boot) 
 ```
 
@@ -214,15 +210,19 @@ tidy(fit_mcp_infer_upsi)
 
 *Bootstrapping*
 
+MCP is unbiased for large effects, so the default zero-side padding applies:
+intervals that contain 0 are padded out to $\pm\gamma\hat\lambda$, and the
+others are left alone.
+
 ```{r}
 set.seed(12)
-fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, inference_target = "all", debias = FALSE) 
+fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, inference_target = "all") 
 tidy(fit_mcp_infer_boot) 
 ```
 
 ```{r}
 set.seed(12)
-fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, inference_target = "all", debias = TRUE) 
+fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, inference_target = "all", pad = "none") 
 tidy(fit_mcp_infer_boot) 
 ```
 

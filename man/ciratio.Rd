@@ -13,7 +13,7 @@ ciratio(
   B = 250,
   direction = "forward",
   select_factors_together = F,
-  debias = F,
+  pad = c("zero_side", "none", "all"),
   inference_target = "selections",
   ...
 )
@@ -37,7 +37,7 @@ not selected by model selection procedure. One of "ignored",
 
 \item{select_factors_together}{should categorical variables be jointly selected?}
 
-\item{debias}{should estimates be debiased in bootstrap}
+\item{pad}{how bootstrap intervals are padded; see \code{\link[=infer_boot]{infer_boot()}}}
 
 \item{inference_target}{is inference requested on all or selected only}
 

@@ -13,7 +13,7 @@
 #' @param B Number of bootstraps
 #' @param direction the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"
 #' @param select_factors_together should categorical variables be jointly selected?
-#' @param debias should estimates be debiased in bootstrap
+#' @param pad how bootstrap intervals are padded; see [infer_boot()]
 #' @param inference_target is inference requested on all or selected only
 #' @param ... additional arguments
 #' @importFrom magrittr %>%
@@ -35,10 +35,11 @@ ciratio <- function(formula, data,
                     conf.level = .95,
                     B=250,direction="forward",
                     select_factors_together =F,
-                    debias=F,
+                    pad = c("zero_side", "none", "all"),
                     inference_target ="selections",
                     ...){
 
+  pad <- match.arg(pad)
 
   ## Full model no model selection
   fullmod <- select_full_model(formula = formula, data=data, ...)
@@ -74,7 +75,7 @@ ciratio <- function(formula, data,
   aicupsi_sdisc <- sum( aic_mod_upsi$p_value[aic_mod_upsi$term !="(Intercept)"] <0.05, na.rm=T)
 
   ## Step wise AIC bootstrap
-  aic_mod_boot= tidy( infer_boot(  aic_mod, data = data, B = B, debias = debias,
+  aic_mod_boot= tidy( infer_boot(  aic_mod, data = data, B = B, pad = pad,
                                    inference_target = inference_target))
   aicboot_ci_avg <-  mean(  aic_mod_boot$ci_high[aic_mod_boot$term!="(Intercept)"] -
                               aic_mod_boot$ci_low[aic_mod_boot$term!="(Intercept)"], na.rm=T)
@@ -105,7 +106,7 @@ ciratio <- function(formula, data,
   bicupsi_sdisc <- sum( bic_mod_upsi$p_value[bic_mod_upsi$term !="(Intercept)"] <0.05, na.rm=T)
 
   ## Step wise bic bootstrap
-  bic_mod_boot= tidy( infer_boot(  bic_mod, data = data, B = B, debias = debias,
+  bic_mod_boot= tidy( infer_boot(  bic_mod, data = data, B = B, pad = pad,
                                    inference_target = inference_target))
   bicboot_ci_avg <-  mean(  bic_mod_boot$ci_high[bic_mod_boot$term!="(Intercept)"] -
                               bic_mod_boot$ci_low[bic_mod_boot$term!="(Intercept)"], na.rm=T)
@@ -136,7 +137,7 @@ ciratio <- function(formula, data,
   lsominupsi_sdisc <- sum( lso_min_upsi$p_value[lso_min_upsi$term !="(Intercept)"] <0.05, na.rm=T)
 
   ## Lasso bootstrap
-  lso_min_boot= tidy( infer_boot( lso_min , data = data, B = B, debias = debias,
+  lso_min_boot= tidy( infer_boot( lso_min , data = data, B = B, pad = pad,
                                    inference_target = inference_target))
   lsominboot_ci_avg <-  mean( lso_min_boot$ci_high[lso_min_boot$term!="(Intercept)"] -
                               lso_min_boot$ci_low[lso_min_boot$term!="(Intercept)"], na.rm=T)
@@ -166,7 +167,7 @@ ciratio <- function(formula, data,
   lsoseupsi_sdisc <- sum( lso_se_upsi$p_value[lso_se_upsi$term !="(Intercept)"] <0.05, na.rm=T)
 
   ## Lasso bootstrap
-  lso_se_boot= tidy( infer_boot( lso_se , data = data, B = B, debias = debias,
+  lso_se_boot= tidy( infer_boot( lso_se , data = data, B = B, pad = pad,
                                   inference_target = inference_target))
   lsoseboot_ci_avg <-  mean( lso_se_boot$ci_high[lso_se_boot$term!="(Intercept)"] -
                                 lso_se_boot$ci_low[lso_se_boot$term!="(Intercept)"], na.rm=T)
@@ -198,7 +199,7 @@ ciratio <- function(formula, data,
   mcpminupsi_sdisc <- sum( mcp_min_upsi$p_value[mcp_min_upsi$term !="(Intercept)"] <0.05, na.rm=T)
 
   ## MCP bootstrap
-  mcp_min_boot= tidy( infer_boot( mcp_min , data = data, B = B, debias = debias,
+  mcp_min_boot= tidy( infer_boot( mcp_min , data = data, B = B, pad = pad,
                                   inference_target = inference_target))
   mcpminboot_ci_avg <-  mean( mcp_min_boot$ci_high[mcp_min_boot$term!="(Intercept)"] -
                                 mcp_min_boot$ci_low[mcp_min_boot$term!="(Intercept)"], na.rm=T)
@@ -219,7 +220,7 @@ ciratio <- function(formula, data,
   mcpseupsi_sdisc <- sum( mcp_se_upsi$p_value[mcp_se_upsi$term !="(Intercept)"] <0.05, na.rm=T)
 
   ## MCP bootstrap
-  mcp_se_boot= tidy( infer_boot( mcp_se , data = data, B = B, debias = debias,
+  mcp_se_boot= tidy( infer_boot( mcp_se , data = data, B = B, pad = pad,
                                   inference_target = inference_target))
   mcpseboot_ci_avg <-  mean( mcp_se_boot$ci_high[mcp_se_boot$term!="(Intercept)"] -
                                 mcp_se_boot$ci_low[mcp_se_boot$term!="(Intercept)"], na.rm=T)
