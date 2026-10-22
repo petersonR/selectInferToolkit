@@ -23,7 +23,7 @@ as_inferrer(
 infer(
   object,
   data,
-  nonselection = c("ignored", "uncertain_nulls", "confident_nulls"),
+  nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
   ...
 )
 
@@ -54,9 +54,18 @@ infer_upsi(
 
 \item{label}{label for method}
 
-\item{nonselection}{A character string specifying how to handle variables
-not selected by model selection procedure. One of "ignored",
-"confident_nulls" or "uncertain_nulls" supported}
+\item{nonselection}{how to handle variables the selector did not select:
+\itemize{
+\item \code{"ignored"} (default): no inference; their \code{estimate}, \code{ci_low},
+\code{ci_high} and \code{p_value} are \code{NA}.
+\item \code{"confident_nulls"}: treated as exactly zero, with \code{estimate = 0}, a
+degenerate interval \verb{[0, 0]} and \code{p_value = 1}.
+\item \code{"uncertain_nulls"}: each non-selected variable is added, one at a time,
+to the selected model, which is refit on \code{data}; its estimate, interval
+and p-value come from that fit. These are not adjusted for selection.
+}
+
+Partial names are matched (e.g. \code{"uncertain"}).}
 
 \item{inferences}{a slot for post-selection inferences that should
 have confidence intervals (at least)}
@@ -107,17 +116,7 @@ an error.}
 \value{
 An S3 object (list) of class \code{inferrer}
 
-A list of class \verb{infer_*} containing:'
-\item{ci_avg_ratio}{Average CI length across all variables in model}
-\item{ci_median_ratio}{median CI length across all variables in model}
-\item{nonselection}{method chosen  to deal with non selection}
-\item{infmethod}{Inference method chosen}
-\item{selection_method}{Stepwsie,returned for selector_stepwise_ic class only}
-\item{direction}{the mode of step wise search, returned for selector_stepwise_ic class only}
-\item{penalty}{penalty used (AIC or BIC), returned for selector_stepwise_ic class only}
-\item{lambda}{selected lambda for inference , either "lambda.min" or "lambda.1se"; returned for selector_pen class only}
-\item{alpha}{selected alpha for inference, returned for selector_pen class only}
-\item{B}{The number of bootstrap replicates used (only for bootstrap selection method)}
+an \code{inferrer} object; see \code{\link[=tidy.inferrer]{tidy.inferrer()}}
 
 an \code{inferror} object
 
@@ -140,4 +139,12 @@ A wrapper for the \code{selectiveInference} functions on \code{selector} objects
 UPSI is sometimes referred to as "hybrid-OLS", but essentially we
 re-fit the selected model to the data as though we never used that
 same data to fit the model. It is common, easy, and ill-advised.
+}
+\details{
+The default method is set by the selector:
+\itemize{
+\item \code{select_stepwise_ic()}, \code{select_ncvreg()}: \code{\link[=infer_boot]{infer_boot()}}
+\item \code{select_glmnet()}: \code{\link[=infer_selective]{infer_selective()}}
+\item \code{select_full_model()}, \code{select_null_model()}: \code{\link[=infer_upsi]{infer_upsi()}}
+}
 }

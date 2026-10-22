@@ -4,9 +4,10 @@
 #'
 #' @param object a `selector` object
 #' @param data data must be passed to infer
-#' @param nonselection  A character string specifying how to handle variables
-#'   not selected by model selection procedure. One of "ignored",
-#'   "confident_nulls" or "uncertain_nulls" supported
+#' @param nonselection how to handle variables the selector did not select;
+#'   one of `"ignored"`, `"confident_nulls"` or `"uncertain_nulls"`. See
+#'   [infer_upsi()] for what each does; here, too, `"uncertain_nulls"`
+#'   intervals are not adjusted for selection.
 #' @param conf.level .95 by default
 #' @param use_cv_sigma estimate Sigma via CV (if FALSE, uses SI defaults)
 #' @param sigma optional known or pre-computed residual standard deviation. When

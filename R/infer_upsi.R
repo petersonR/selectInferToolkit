@@ -6,9 +6,17 @@
 #'
 #' @param object a `selector` object
 #' @param data data must be passed to `infer` methods
-#' @param nonselection  A character string specifying how to handle variables
-#'   not selected by model selection procedure. One of "ignored",
-#'   "confident_nulls" or "uncertain_nulls" supported
+#' @param nonselection how to handle variables the selector did not select:
+#'
+#'   * `"ignored"` (default): no inference; their `estimate`, `ci_low`,
+#'     `ci_high` and `p_value` are `NA`.
+#'   * `"confident_nulls"`: treated as exactly zero, with `estimate = 0`, a
+#'     degenerate interval `[0, 0]` and `p_value = 1`.
+#'   * `"uncertain_nulls"`: each non-selected variable is added, one at a time,
+#'     to the selected model, which is refit on `data`; its estimate, interval
+#'     and p-value come from that fit. These are not adjusted for selection.
+#'
+#'   Partial names are matched (e.g. `"uncertain"`).
 #' @param conf.level .95 by default
 #'
 #' @return `inferrer` object

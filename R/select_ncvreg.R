@@ -120,6 +120,6 @@ select_ncvreg <- function(
              orig_formula =formula,
               selected_terms =  names(selected_coefs),
               selected_coefs = selected_coefs,
-              default_infer = "pipe", meta = meta_information)
+              default_infer = "boot", meta = meta_information)
 }
 

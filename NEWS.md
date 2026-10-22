@@ -1,5 +1,15 @@
 # selectInferToolkit 0.4.4
 
+- `select_ncvreg()` selectors now default to `infer_boot()` in `infer()`
+  (was the experimental `infer_pipe()`), since zero-side padding targets MCP
+  (#24). `infer_pipe()` is still available directly.
+
+- `infer()` passes `nonselection` only to methods that take it
+  (`infer_upsi()`, `infer_selective()`). When the default method has no such
+  option (`infer_boot()`, `infer_pipe()`) and `nonselection` is supplied, it
+  now warns that it is ignored instead of silently dropping it (#24). The three
+  `nonselection` modes are now defined in `?infer_upsi`.
+
 - **Breaking:** `infer_boot()` gains `pad`, and loses `debias` and
   `estimation_data`. Because a non-selected coefficient is recorded as 0 in
   each replicate, the percentile interval of a small, rarely selected
