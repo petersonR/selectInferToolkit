@@ -52,6 +52,32 @@ as_selector <- function(x, name, label = name, all_terms,
 #' * `coef()`: the selected coefficients (including the intercept).
 #' * `print()`: a short summary of the selection.
 #'
+#' @section Scale of the coefficients:
+#' Before selection, every `select_*` function standardizes the predictors
+#' with a `recipes` recipe: factors are dummy-coded, then all numeric
+#' predictors (dummies included) are centered and divided by their standard
+#' deviation. The outcome is not transformed. So, by default
+#' (`scale_coef = TRUE`), a coefficient is the change in the outcome per
+#' standard deviation of that predictor. With `scale_coef = FALSE`, slopes are
+#' divided by the predictor's standard deviation, giving the usual per-unit
+#' change. (A factor kept whole by
+#' `select_stepwise_ic(select_factors_together = TRUE)` is not scaled, so it
+#' is the same either way.)
+#'
+#' The intercept is never unscaled: because the predictors are centered, it is
+#' the predicted outcome (on the link scale) at the predictor means, not the
+#' intercept `lm()` would report on the raw data.
+#'
+#' @return
+#' * `tidy()`: a tibble with columns `term` (every candidate term, plus the
+#'   intercept), `selected` (1 if the selector kept the term, else 0; the
+#'   intercept is always 1) and `coef` (the selector's estimate, e.g. the
+#'   penalized estimate for [select_glmnet()] or [select_ncvreg()]; 0 when not
+#'   selected).
+#' * `coef()`: a named vector of the selected coefficients, including the
+#'   intercept, always on the scaled metric.
+#' * `predict()`: a vector of predictions for `newdata`.
+#'
 #' @param object,x a `selector`
 #' @param newdata a data frame to predict on
 #' @param ... for `coef()`, passed to the native `coef` method when
@@ -86,7 +112,9 @@ predict.selector <- function(object, newdata, ...) {
 
 
 
-#' @param scale_coef should scaled betas be returned, or unscaled?
+#' @param scale_coef if `TRUE` (default), coefficients are per standard
+#'   deviation of each predictor; if `FALSE`, per unit. See "Scale of the
+#'   coefficients".
 #'
 #' @importFrom tibble rownames_to_column
 #' @importFrom broom tidy

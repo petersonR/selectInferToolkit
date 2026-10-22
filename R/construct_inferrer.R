@@ -50,8 +50,50 @@ as_inferrer <- function(
 #' returns the inferences as a tibble with one row per candidate term, and
 #' `print()`, which summarizes them.
 #'
+#' @section Scale of the coefficients:
+#' Before selection, every `select_*` function standardizes the predictors
+#' with a `recipes` recipe: factors are dummy-coded, then all numeric
+#' predictors (dummies included) are centered and divided by their standard
+#' deviation. The outcome is not transformed. So, by default
+#' (`scale_coef = TRUE`), a coefficient is the change in the outcome per
+#' standard deviation of that predictor. With `scale_coef = FALSE`, slopes are
+#' divided by the predictor's standard deviation, giving the usual per-unit
+#' change. (A factor kept whole by
+#' `select_stepwise_ic(select_factors_together = TRUE)` is not scaled, so it
+#' is the same either way.)
+#'
+#' The intercept is never unscaled: because the predictors are centered, it is
+#' the predicted outcome (on the link scale) at the predictor means, not the
+#' intercept `lm()` would report on the raw data.
+#'
+#' Intervals and `null_radius` are converted along with the estimates.
+#'
+#' @return `tidy()` returns a tibble with one row per candidate term (plus the
+#'   intercept):
+#'
+#' * `term`, `selected`, `coef`: as in `tidy()` for the `selector` (see
+#'   [tidy.selector()]). `coef` is the selector's own estimate.
+#' * `estimate`: the inference method's estimate, which can differ from
+#'   `coef`: a refit of the selected model for [infer_upsi()], the
+#'   selective-inference estimate for [infer_selective()], and the mean over
+#'   resamples for [infer_boot()].
+#' * `ci_low`, `ci_high`: the confidence interval at the inferrer's
+#'   `conf.level`.
+#' * `p_value`: from [infer_upsi()], [infer_selective()] and [infer_pipe()].
+#' * `prop_selected`: from [infer_boot()], the proportion of resamples in
+#'   which the term was selected.
+#' * `null_radius`: from [infer_boot()], the padding radius (see its `pad`
+#'   argument).
+#'
+#' How non-selected terms are filled in depends on the method's
+#' `nonselection` (see [infer_upsi()]) or, for [infer_boot()],
+#' `inference_target`.
+#'
+#' `print()` returns, invisibly, a summary of the CI lengths.
+#'
 #' @param x an `inferrer`
-#' @param scale_coef should scaled betas be returned, or unscaled?
+#' @param scale_coef if `TRUE` (default), estimates are per standard deviation
+#'   of each predictor; if `FALSE`, per unit. See "Scale of the coefficients".
 #' @param ... additional parameters (not yet used)
 #'
 #' @importFrom tibble rownames_to_column

@@ -1,5 +1,10 @@
 # selectInferToolkit 0.4.4
 
+- `?tidy.inferrer` and `?tidy.selector` now document every output column and
+  explain the scaled metric: by default coefficients are per standard
+  deviation of each predictor, `scale_coef = FALSE` gives per-unit slopes, and
+  the intercept is always at the predictor means (#23).
+
 - Help pages reorganized (#26): each `infer_*` function has its own page, the
   `selector` and `inferrer` methods (`tidy()`, `predict()`, `coef()`,
   `print()`) have "Methods for ..." pages, and `reselect()` has its own. The

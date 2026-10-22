@@ -12,12 +12,58 @@
 \arguments{
 \item{x}{an \code{inferrer}}
 
-\item{scale_coef}{should scaled betas be returned, or unscaled?}
+\item{scale_coef}{if \code{TRUE} (default), estimates are per standard deviation
+of each predictor; if \code{FALSE}, per unit. See "Scale of the coefficients".}
 
 \item{...}{additional parameters (not yet used)}
+}
+\value{
+\code{tidy()} returns a tibble with one row per candidate term (plus the
+intercept):
+\itemize{
+\item \code{term}, \code{selected}, \code{coef}: as in \code{tidy()} for the \code{selector} (see
+\code{\link[=tidy.selector]{tidy.selector()}}). \code{coef} is the selector's own estimate.
+\item \code{estimate}: the inference method's estimate, which can differ from
+\code{coef}: a refit of the selected model for \code{\link[=infer_upsi]{infer_upsi()}}, the
+selective-inference estimate for \code{\link[=infer_selective]{infer_selective()}}, and the mean over
+resamples for \code{\link[=infer_boot]{infer_boot()}}.
+\item \code{ci_low}, \code{ci_high}: the confidence interval at the inferrer's
+\code{conf.level}.
+\item \code{p_value}: from \code{\link[=infer_upsi]{infer_upsi()}}, \code{\link[=infer_selective]{infer_selective()}} and \code{\link[=infer_pipe]{infer_pipe()}}.
+\item \code{prop_selected}: from \code{\link[=infer_boot]{infer_boot()}}, the proportion of resamples in
+which the term was selected.
+\item \code{null_radius}: from \code{\link[=infer_boot]{infer_boot()}}, the padding radius (see its \code{pad}
+argument).
+}
+
+How non-selected terms are filled in depends on the method's
+\code{nonselection} (see \code{\link[=infer_upsi]{infer_upsi()}}) or, for \code{\link[=infer_boot]{infer_boot()}},
+\code{inference_target}.
+
+\code{print()} returns, invisibly, a summary of the CI lengths.
 }
 \description{
 The objects returned by the \verb{infer_*} functions support \code{tidy()}, which
 returns the inferences as a tibble with one row per candidate term, and
 \code{print()}, which summarizes them.
 }
+\section{Scale of the coefficients}{
+
+Before selection, every \verb{select_*} function standardizes the predictors
+with a \code{recipes} recipe: factors are dummy-coded, then all numeric
+predictors (dummies included) are centered and divided by their standard
+deviation. The outcome is not transformed. So, by default
+(\code{scale_coef = TRUE}), a coefficient is the change in the outcome per
+standard deviation of that predictor. With \code{scale_coef = FALSE}, slopes are
+divided by the predictor's standard deviation, giving the usual per-unit
+change. (A factor kept whole by
+\code{select_stepwise_ic(select_factors_together = TRUE)} is not scaled, so it
+is the same either way.)
+
+The intercept is never unscaled: because the predictors are centered, it is
+the predicted outcome (on the link scale) at the predictor means, not the
+intercept \code{lm()} would report on the raw data.
+
+Intervals and \code{null_radius} are converted along with the estimates.
+}
+
