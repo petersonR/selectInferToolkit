@@ -2,6 +2,15 @@
 
 ## selectInferToolkit 0.4.4
 
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  now works for
+  [`select_glmnet()`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md)
+  selectors with `family = "binomial"` (#19).
+  [`selectiveInference::fixedLassoInf()`](https://rdrr.io/pkg/selectiveInference/man/fixedLassoInf.html)
+  requires the intercept in `beta` for the binomial family (and its
+  absence for gaussian), and the binomial result has no `vmat`, so
+  estimates are taken from its debiased `coef0` instead.
+
 - [`select_stepwise_ic()`](https://petersonr.github.io/selectInferToolkit/reference/select_stepwise_ic.md)
   gains `criterion`, choosing which form of the information criterion to
   minimize. The default `"deviance"` is
