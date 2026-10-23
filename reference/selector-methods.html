@@ -115,19 +115,23 @@ intercept, always on the scaled metric.</p></li>
     <h2 id="scale-of-the-coefficients">Scale of the coefficients<a class="anchor" aria-label="anchor" href="#scale-of-the-coefficients"></a></h2>
 
 
-<p>Before selection, every <code>select_*</code> function standardizes the predictors
-with a <code>recipes</code> recipe: factors are dummy-coded, then all numeric
-predictors (dummies included) are centered and divided by their standard
-deviation. The outcome is not transformed. So, by default
+<p>Before selection, every <code>select_*</code> function builds the model matrix as
+<code><a href="https://rdrr.io/r/stats/model.matrix.html" class="external-link">model.matrix()</a></code> would (factors, logicals and character predictors are
+treatment-coded, so the columns are named e.g. <code>g3mid</code>, <code>am1</code>, <code>fTRUE</code>),
+then centers each column and divides it by its standard deviation, dummies
+included. The outcome is not transformed. So, by default
 (<code>scale_coef = TRUE</code>), a coefficient is the change in the outcome per
-standard deviation of that predictor. With <code>scale_coef = FALSE</code>, slopes are
-divided by the predictor's standard deviation, giving the usual per-unit
-change. (A factor kept whole by
-<code>select_stepwise_ic(select_factors_together = TRUE)</code> is not scaled, so it
-is the same either way.)</p>
-<p>The intercept is never unscaled: because the predictors are centered, it is
-the predicted outcome (on the link scale) at the predictor means, not the
-intercept <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> would report on the raw data.</p>
+standard deviation of that column. With <code>scale_coef = FALSE</code>, slopes are
+divided by the column's standard deviation, giving the usual per-unit
+change. The centers and standard deviations come from the data the
+selector was first fit to, and are reused by <code><a href="reselect.html">reselect()</a></code> and <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>.</p>
+<p>The intercept is never unscaled: it is the predicted outcome (on the link
+scale) at the means of the predictors, not the intercept <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> would
+report on the raw data. (<code><a href="select_stepwise_ic.html">select_stepwise_ic()</a></code> leaves dummies uncentered,
+so there it is the prediction at each factor's reference level.)</p>
+<p>Ordered factors are not supported (convert them to numeric scores or
+unordered factors first), nor are missing values in the outcome or
+predictors.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -12,8 +12,7 @@ as_selector(
   x,
   name,
   label = name,
-  all_terms,
-  recipe_obj,
+  design,
   orig_formula,
   selected_terms,
   selected_coefs,
@@ -36,13 +35,11 @@ as_selector(
 
   label of the selector (for pretty printing)
 
-- all_terms:
+- design:
 
-  a slot containing names of all terms
-
-- recipe_obj:
-
-  preprocessor trained from recipes package
+  the selector's design (internal): how the formula and data become the
+  standardized predictor matrix, and the term map behind
+  [`tidy()`](https://generics.r-lib.org/reference/tidy.html)
 
 - orig_formula:
 

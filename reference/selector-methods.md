@@ -76,18 +76,27 @@ coef(object, use_native = FALSE, ...)
 
 ## Scale of the coefficients
 
-Before selection, every `select_*` function standardizes the predictors
-with a `recipes` recipe: factors are dummy-coded, then all numeric
-predictors (dummies included) are centered and divided by their standard
-deviation. The outcome is not transformed. So, by default
-(`scale_coef = TRUE`), a coefficient is the change in the outcome per
-standard deviation of that predictor. With `scale_coef = FALSE`, slopes
-are divided by the predictor's standard deviation, giving the usual
-per-unit change. (A factor kept whole by
-`select_stepwise_ic(select_factors_together = TRUE)` is not scaled, so
-it is the same either way.)
+Before selection, every `select_*` function builds the model matrix as
+[`model.matrix()`](https://rdrr.io/r/stats/model.matrix.html) would
+(factors, logicals and character predictors are treatment-coded, so the
+columns are named e.g. `g3mid`, `am1`, `fTRUE`), then centers each
+column and divides it by its standard deviation, dummies included. The
+outcome is not transformed. So, by default (`scale_coef = TRUE`), a
+coefficient is the change in the outcome per standard deviation of that
+column. With `scale_coef = FALSE`, slopes are divided by the column's
+standard deviation, giving the usual per-unit change. The centers and
+standard deviations come from the data the selector was first fit to,
+and are reused by
+[`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
+and [`predict()`](https://rdrr.io/r/stats/predict.html).
 
-The intercept is never unscaled: because the predictors are centered, it
-is the predicted outcome (on the link scale) at the predictor means, not
-the intercept [`lm()`](https://rdrr.io/r/stats/lm.html) would report on
-the raw data.
+The intercept is never unscaled: it is the predicted outcome (on the
+link scale) at the means of the predictors, not the intercept
+[`lm()`](https://rdrr.io/r/stats/lm.html) would report on the raw data.
+([`select_stepwise_ic()`](https://petersonr.github.io/selectInferToolkit/reference/select_stepwise_ic.md)
+leaves dummies uncentered, so there it is the prediction at each
+factor's reference level.)
+
+Ordered factors are not supported (convert them to numeric scores or
+unordered factors first), nor are missing values in the outcome or
+predictors.

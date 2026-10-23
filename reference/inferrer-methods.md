@@ -78,20 +78,11 @@ summary of the CI lengths.
 
 ## Scale of the coefficients
 
-Before selection, every `select_*` function standardizes the predictors
-with a `recipes` recipe: factors are dummy-coded, then all numeric
-predictors (dummies included) are centered and divided by their standard
-deviation. The outcome is not transformed. So, by default
-(`scale_coef = TRUE`), a coefficient is the change in the outcome per
-standard deviation of that predictor. With `scale_coef = FALSE`, slopes
-are divided by the predictor's standard deviation, giving the usual
-per-unit change. (A factor kept whole by
-`select_stepwise_ic(select_factors_together = TRUE)` is not scaled, so
-it is the same either way.)
-
-The intercept is never unscaled: because the predictors are centered, it
-is the predicted outcome (on the link scale) at the predictor means, not
-the intercept [`lm()`](https://rdrr.io/r/stats/lm.html) would report on
-the raw data.
+Coefficients, estimates and intervals are on the same metric as the
+selector's; see "Scale of the coefficients" in
+[`tidy.selector()`](https://petersonr.github.io/selectInferToolkit/reference/selector-methods.md).
+By default (`scale_coef = TRUE`) they are per standard deviation of each
+design column; with `scale_coef = FALSE` they are per unit. The
+intercept is never unscaled.
 
 Intervals and `null_radius` are converted along with the estimates.

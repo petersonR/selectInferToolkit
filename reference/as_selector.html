@@ -53,8 +53,7 @@ with the <code>selectInferToolkit</code> package. Users don't call this directly
 <span>  <span class="va">x</span>,</span>
 <span>  <span class="va">name</span>,</span>
 <span>  label <span class="op">=</span> <span class="va">name</span>,</span>
-<span>  <span class="va">all_terms</span>,</span>
-<span>  <span class="va">recipe_obj</span>,</span>
+<span>  <span class="va">design</span>,</span>
 <span>  <span class="va">orig_formula</span>,</span>
 <span>  <span class="va">selected_terms</span>,</span>
 <span>  <span class="va">selected_coefs</span>,</span>
@@ -79,12 +78,10 @@ with the <code>selectInferToolkit</code> package. Users don't call this directly
 <dd><p>label of the selector (for pretty printing)</p></dd>
 
 
-<dt id="arg-all-terms">all_terms<a class="anchor" aria-label="anchor" href="#arg-all-terms"></a></dt>
-<dd><p>a slot containing names of all terms</p></dd>
-
-
-<dt id="arg-recipe-obj">recipe_obj<a class="anchor" aria-label="anchor" href="#arg-recipe-obj"></a></dt>
-<dd><p>preprocessor trained from recipes package</p></dd>
+<dt id="arg-design">design<a class="anchor" aria-label="anchor" href="#arg-design"></a></dt>
+<dd><p>the selector's design (internal): how the formula and data
+become the standardized predictor matrix, and the term map behind
+<code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code></p></dd>
 
 
 <dt id="arg-orig-formula">orig_formula<a class="anchor" aria-label="anchor" href="#arg-orig-formula"></a></dt>

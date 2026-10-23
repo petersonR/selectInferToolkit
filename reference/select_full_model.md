@@ -19,11 +19,17 @@ select_full_model(
 
 - formula:
 
-  a formula.
+  a model formula, as for [`lm()`](https://rdrr.io/r/stats/lm.html). It
+  may include interactions (`x * z`) and in-formula transformations
+  (`log(x)`, `poly(x, 2)`); factor, logical and character predictors are
+  treatment-coded. Ordered factors and missing values are not supported.
+  See
+  [`tidy.selector()`](https://petersonr.github.io/selectInferToolkit/reference/selector-methods.md)
+  for how the columns are standardized and named.
 
 - data:
 
-  data set
+  a data frame
 
 - family:
 

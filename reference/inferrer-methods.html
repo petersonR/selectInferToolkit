@@ -98,19 +98,11 @@ argument).</p></li>
     <h2 id="scale-of-the-coefficients">Scale of the coefficients<a class="anchor" aria-label="anchor" href="#scale-of-the-coefficients"></a></h2>
 
 
-<p>Before selection, every <code>select_*</code> function standardizes the predictors
-with a <code>recipes</code> recipe: factors are dummy-coded, then all numeric
-predictors (dummies included) are centered and divided by their standard
-deviation. The outcome is not transformed. So, by default
-(<code>scale_coef = TRUE</code>), a coefficient is the change in the outcome per
-standard deviation of that predictor. With <code>scale_coef = FALSE</code>, slopes are
-divided by the predictor's standard deviation, giving the usual per-unit
-change. (A factor kept whole by
-<code>select_stepwise_ic(select_factors_together = TRUE)</code> is not scaled, so it
-is the same either way.)</p>
-<p>The intercept is never unscaled: because the predictors are centered, it is
-the predicted outcome (on the link scale) at the predictor means, not the
-intercept <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> would report on the raw data.</p>
+<p>Coefficients, estimates and intervals are on the same metric as the
+selector's; see "Scale of the coefficients" in <code><a href="selector-methods.html">tidy.selector()</a></code>. By
+default (<code>scale_coef = TRUE</code>) they are per standard deviation of each
+design column; with <code>scale_coef = FALSE</code> they are per unit. The intercept
+is never unscaled.</p>
 <p>Intervals and <code>null_radius</code> are converted along with the estimates.</p>
     </div>
 

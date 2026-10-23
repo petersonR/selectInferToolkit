@@ -2,6 +2,99 @@
 
 ## selectInferToolkit 0.4.4
 
+- The predictor matrix is now built the way
+  [`model.matrix()`](https://rdrr.io/r/stats/model.matrix.html) builds
+  it, and one internal term map drives
+  [`tidy()`](https://generics.r-lib.org/reference/tidy.html),
+  [`predict()`](https://rdrr.io/r/stats/predict.html),
+  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
+  and every `infer_*` method, instead of `recipes` plus name-matching
+  (#29). As a result:
+
+  - Factor levels that start with a digit (e.g. `factor(am)`, giving
+    `am1`) are no longer reported as unselected with coefficient 0.
+  - Columns keep their
+    [`model.matrix()`](https://rdrr.io/r/stats/model.matrix.html) names,
+    e.g. `spmuch less` rather than `spmuch.less`.
+  - Character predictors work with every selector and are treated as
+    factors, as in [`lm()`](https://rdrr.io/r/stats/lm.html). Previously
+    [`select_full_model()`](https://petersonr.github.io/selectInferToolkit/reference/select_full_model.md)
+    and
+    [`select_ncvreg()`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md)
+    errored on them, and
+    [`select_glmnet()`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md)
+    silently dropped them.
+  - Formulas may now include interactions (`x * z`) and transformations
+    (`log(x)`, `poly(x, 2)`). Numeric variables are centered before
+    interactions are formed.
+  - Ordered factors now error, asking for a conversion to numeric scores
+    or unordered levels; previously some selectors errored and
+    [`select_glmnet()`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md)
+    silently dropped them.
+  - Missing values now error in every selector, with a suggestion to
+    impute or drop rows. Previously
+    [`select_stepwise_ic()`](https://petersonr.github.io/selectInferToolkit/reference/select_stepwise_ic.md)
+    silently dropped incomplete rows.
+    [`predict()`](https://rdrr.io/r/stats/predict.html) still returns
+    `NA` for incomplete rows of new data.
+  - A factor level unseen when the selector was fit now gives a clear
+    error in [`predict()`](https://rdrr.io/r/stats/predict.html).
+  - With `select_stepwise_ic(select_factors_together = TRUE)`, dummies
+    are now standardized like every other column, so
+    `tidy(scale_coef = TRUE)` is on a per-SD metric for them too. Their
+    bootstrap intervals were previously `NA` for levels whose names were
+    not syntactic.
+  - [`select_stepwise_ic()`](https://petersonr.github.io/selectInferToolkit/reference/select_stepwise_ic.md)
+    no longer re-estimates centering and scaling on each
+    [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md),
+    matching the other selectors and
+    [`?reselect`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md).
+    This changes the scaled metric of its bootstrap draws, not which
+    terms are selected.
+  - `recipes`, `purrr` and `forcats` are no longer dependencies, and the
+    test suite runs in about half the time.
+
+- Results for a given [`set.seed()`](https://rdrr.io/r/base/Random.html)
+  change for anything using cross-validation or the bootstrap. `recipes`
+  drew a random number for every recipe step it created, which shifted
+  the CV folds and the bootstrap resamples.
+
+- [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
+  on a
+  [`select_ncvreg()`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md)
+  selector now replays the arguments originally passed through `...`.
+  Previously it dropped them, so a `penalty = "lasso"` or `"SCAD"`
+  selector was refit, and bootstrapped, with ncvreg’s default MCP
+  penalty.
+
+- [`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer_upsi.md)
+  intervals for gaussian models now use t quantiles, matching their
+  p-values; they previously used normal quantiles, so they were slightly
+  too narrow. The same applies to the intervals that
+  `nonselection = "uncertain_nulls"` fills in for unselected terms.
+
+- Logical predictors now work with every selector. They are coded like a
+  two-level factor, giving a column named `xTRUE`, as in
+  [`model.matrix()`](https://rdrr.io/r/stats/model.matrix.html).
+  Previously
+  [`select_full_model()`](https://petersonr.github.io/selectInferToolkit/reference/select_full_model.md)
+  errored, and
+  [`select_glmnet()`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md)
+  and
+  [`select_ncvreg()`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md)
+  reported them as unselected even when they were in the model.
+
+- Coefficients that [`glm()`](https://rdrr.io/r/stats/glm.html) cannot
+  estimate (aliased columns, e.g. a factor level absent from a bootstrap
+  resample or a
+  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
+  subset) are no longer reported as selected with coefficient 0 by
+  [`select_full_model()`](https://petersonr.github.io/selectInferToolkit/reference/select_full_model.md)
+  and
+  [`select_stepwise_ic()`](https://petersonr.github.io/selectInferToolkit/reference/select_stepwise_ic.md),
+  and no longer make [`predict()`](https://rdrr.io/r/stats/predict.html)
+  return `NA`.
+
 - The selector help pages and README were corrected and updated (#27).
   Among other fixes,
   [`?select_glmnet`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md)

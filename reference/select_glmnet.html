@@ -65,7 +65,11 @@ Predictors are standardized first; see <code><a href="selector-methods.html">tid
 
 
 <dl><dt id="arg-formula">formula<a class="anchor" aria-label="anchor" href="#arg-formula"></a></dt>
-<dd><p>a formula</p></dd>
+<dd><p>a model formula, as for <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code>. It may include
+interactions (<code>x * z</code>) and in-formula transformations (<code>log(x)</code>,
+<code>poly(x, 2)</code>); factor, logical and character predictors are
+treatment-coded. Ordered factors and missing values are not supported.
+See <code><a href="selector-methods.html">tidy.selector()</a></code> for how the columns are standardized and named.</p></dd>
 
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
