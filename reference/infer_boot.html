@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">selectInferToolkit</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -82,7 +82,8 @@ that shrinks with <code>n</code>.</p></li>
 <li><p><code>"none"</code>: the raw percentile interval ("confident nulls").</p></li>
 <li><p><code>"all"</code>: every interval is widened by <code>delta</code> on both sides.</p></li>
 </ul><p>The radius <code>delta</code> is set from the selector (scaled metric) and returned
-in the <code>null_radius</code> column of <code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code>:</p><ul><li><p><code><a href="select_ncvreg.html">select_ncvreg()</a></code>: <code>gamma * lambda</code> for MCP/SCAD with <code>"zero_side"</code>,
+in the <code>null_radius</code> column of <code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code>. The column is left out when no
+interval could be padded (<code>pad = "none"</code>, or a radius of 0):</p><ul><li><p><code><a href="select_ncvreg.html">select_ncvreg()</a></code>: <code>gamma * lambda</code> for MCP/SCAD with <code>"zero_side"</code>,
 <code>lambda</code> with <code>"all"</code>.</p></li>
 <li><p><code><a href="select_glmnet.html">select_glmnet()</a></code> and lasso <code><a href="select_ncvreg.html">select_ncvreg()</a></code>: <code>lambda</code>. The lasso's
 bias does not vanish for large effects, so <code>"zero_side"</code> warns; <code>"all"</code>
@@ -123,7 +124,8 @@ ignored.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>an <code>inferrer</code> object; see <code><a href="inferrer-methods.html">tidy.inferrer()</a></code>. Its inferences include
 <code>prop_selected</code> (the proportion of resamples in which each term was
-selected) and <code>null_radius</code> (the padding radius; see <code>pad</code>).</p>
+selected) and, when intervals are padded, <code>null_radius</code> (the padding
+radius; see <code>pad</code>).</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

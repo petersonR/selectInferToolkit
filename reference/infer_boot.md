@@ -49,7 +49,9 @@ infer_boot(
 
   The radius `delta` is set from the selector (scaled metric) and
   returned in the `null_radius` column of
-  [`tidy()`](https://generics.r-lib.org/reference/tidy.html):
+  [`tidy()`](https://generics.r-lib.org/reference/tidy.html). The column
+  is left out when no interval could be padded (`pad = "none"`, or a
+  radius of 0):
 
   - [`select_ncvreg()`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md):
     `gamma * lambda` for MCP/SCAD with `"zero_side"`, `lambda` with
@@ -102,5 +104,5 @@ infer_boot(
 an `inferrer` object; see
 [`tidy.inferrer()`](https://petersonr.github.io/selectInferToolkit/reference/inferrer-methods.md).
 Its inferences include `prop_selected` (the proportion of resamples in
-which each term was selected) and `null_radius` (the padding radius; see
-`pad`).
+which each term was selected) and, when intervals are padded,
+`null_radius` (the padding radius; see `pad`).

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">selectInferToolkit</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,8 +37,20 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.4.4" id="selectinfertoolkit-044">selectInferToolkit 0.4.4<a class="anchor" aria-label="anchor" href="#selectinfertoolkit-044"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.5.0" id="selectinfertoolkit-050">selectInferToolkit 0.5.0<a class="anchor" aria-label="anchor" href="#selectinfertoolkit-050"></a></h2>
+<p>This release replaces <code><a href="../reference/infer_boot.html">infer_boot()</a></code>’s <code>debias</code> with a new <code>pad</code> method, rebuilds the predictor matrix on <code><a href="https://rdrr.io/r/stats/model.matrix.html" class="external-link">model.matrix()</a></code> (dropping <code>recipes</code>, <code>purrr</code> and <code>forcats</code>), and fixes several bugs. Results for a given <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> change for anything using cross-validation or the bootstrap. The two biggest changes are listed first.</p>
 <ul><li>
+<p><strong>Breaking:</strong> <code><a href="../reference/infer_boot.html">infer_boot()</a></code> gains <code>pad</code>, and loses <code>debias</code> and <code>estimation_data</code>. Because a non-selected coefficient is recorded as 0 in each replicate, the percentile interval of a small, rarely selected coefficient collapses toward <code>[0, 0]</code>. <code>pad</code> fixes this:</p>
+<ul><li>
+<code>"zero_side"</code> (the new default) pushes the endpoints of any interval that contains 0 out to at least <code>-delta</code> / <code>delta</code>, a region of “reasonably confident null” that shrinks with <code>n</code>. Intervals that exclude 0 are unchanged, so large effects pay nothing.</li>
+<li>
+<code>"all"</code> widens every interval by <code>delta</code>.</li>
+<li>
+<code>"none"</code> keeps the previous (<code>debias = FALSE</code>) behavior.</li>
+</ul><p><code>delta</code> is set from the selector: <code>gamma * lambda</code> for MCP/SCAD (<code>lambda</code> with <code>"all"</code>), <code>lambda</code> for the lasso, <code>sqrt(k)</code> times the full-model standard error for stepwise IC, and 0 for the full and null models. It is returned in a new <code>null_radius</code> column of <code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code>, unscaled along with the intervals when <code>scale_coef = FALSE</code>; the column is left out when nothing is padded (<code>pad = "none"</code>, or the full and null models). Zero-side padding warns for lasso selectors, whose bias does not vanish for large effects (use <code>pad = "all"</code>), and any padding warns for an elastic net and for non-gaussian families.</p>
+<p><code>debias = TRUE</code> (refitting OLS within each replicate, with uncertain-null refits for non-selections) is removed; padding needs the selector’s own thresholded estimates. <code>estimation_data</code> only chose the data that refit used, so it is removed too. <code><a href="../reference/ciratio.html">ciratio()</a></code> takes <code>pad</code> in place of <code>debias</code>.</p>
+</li>
+<li>
 <p>The predictor matrix is now built the way <code><a href="https://rdrr.io/r/stats/model.matrix.html" class="external-link">model.matrix()</a></code> builds it, and one internal term map drives <code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code>, <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>, <code><a href="../reference/reselect.html">reselect()</a></code> and every <code>infer_*</code> method, instead of <code>recipes</code> plus name-matching (#29). As a result:</p>
 <ul><li>Factor levels that start with a digit (e.g. <code>factor(am)</code>, giving <code>am1</code>) are no longer reported as unselected with coefficient 0.</li>
 <li>Columns keep their <code><a href="https://rdrr.io/r/stats/model.matrix.html" class="external-link">model.matrix()</a></code> names, e.g. <code>spmuch less</code> rather than <code>spmuch.less</code>.</li>
@@ -66,17 +78,6 @@
 <li><p><code>boot()</code>, the worker behind <code><a href="../reference/infer_boot.html">infer_boot()</a></code>, is no longer exported, so it no longer masks <code><a href="https://rdrr.io/pkg/boot/man/boot.html" class="external-link">boot::boot()</a></code> (#25).</p></li>
 <li><p><code><a href="../reference/select_ncvreg.html">select_ncvreg()</a></code> selectors now default to <code><a href="../reference/infer_boot.html">infer_boot()</a></code> in <code><a href="../reference/infer.html">infer()</a></code> (was the experimental <code><a href="../reference/infer_pipe.html">infer_pipe()</a></code>), since zero-side padding targets MCP (#24). <code><a href="../reference/infer_pipe.html">infer_pipe()</a></code> is still available directly.</p></li>
 <li><p><code><a href="../reference/infer.html">infer()</a></code> passes <code>nonselection</code> only to methods that take it (<code><a href="../reference/infer_upsi.html">infer_upsi()</a></code>, <code><a href="../reference/infer_selective.html">infer_selective()</a></code>). When the default method has no such option (<code><a href="../reference/infer_boot.html">infer_boot()</a></code>, <code><a href="../reference/infer_pipe.html">infer_pipe()</a></code>) and <code>nonselection</code> is supplied, it now warns that it is ignored instead of silently dropping it (#24). The three <code>nonselection</code> modes are now defined in <code><a href="../reference/infer_upsi.html">?infer_upsi</a></code>.</p></li>
-<li>
-<p><strong>Breaking:</strong> <code><a href="../reference/infer_boot.html">infer_boot()</a></code> gains <code>pad</code>, and loses <code>debias</code> and <code>estimation_data</code>. Because a non-selected coefficient is recorded as 0 in each replicate, the percentile interval of a small, rarely selected coefficient collapses toward <code>[0, 0]</code>. <code>pad</code> fixes this:</p>
-<ul><li>
-<code>"zero_side"</code> (the new default) pushes the endpoints of any interval that contains 0 out to at least <code>-delta</code> / <code>delta</code>, a region of “reasonably confident null” that shrinks with <code>n</code>. Intervals that exclude 0 are unchanged, so large effects pay nothing.</li>
-<li>
-<code>"all"</code> widens every interval by <code>delta</code>.</li>
-<li>
-<code>"none"</code> keeps the previous (<code>debias = FALSE</code>) behavior.</li>
-</ul><p><code>delta</code> is set from the selector: <code>gamma * lambda</code> for MCP/SCAD (<code>lambda</code> with <code>"all"</code>), <code>lambda</code> for the lasso, <code>sqrt(k)</code> times the full-model standard error for stepwise IC, and 0 for the full and null models. It is returned in a new <code>null_radius</code> column of <code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code>, unscaled along with the intervals when <code>scale_coef = FALSE</code>. Zero-side padding warns for lasso selectors, whose bias does not vanish for large effects (use <code>pad = "all"</code>), and any padding warns for an elastic net and for non-gaussian families.</p>
-<p><code>debias = TRUE</code> (refitting OLS within each replicate, with uncertain-null refits for non-selections) is removed; padding needs the selector’s own thresholded estimates. <code>estimation_data</code> only chose the data that refit used, so it is removed too. <code><a href="../reference/ciratio.html">ciratio()</a></code> takes <code>pad</code> in place of <code>debias</code>.</p>
-</li>
 <li><p><code><a href="../reference/infer_selective.html">infer_selective()</a></code> for <code>glmnet</code> selectors now conditions on a refit of the lasso at the selected lambda with a tight convergence tolerance (<code>thresh = 1e-14</code>) (#18). With glmnet’s default tolerance, the active set and signs on correlated designs can be slightly off, and the polyhedral intervals silently undercovered (false coverage rate 0.076 vs. a 0.05 target in the issue’s example; 0.044 after this change). The previous “exact” refit via <code>coef(..., exact = TRUE)</code> never actually refit, because glmnet skips it when lambda is already on the path. When the refit’s active set or signs differ from the selector’s, <code>on_mismatch</code> controls whether this warns (default), is silent, or errors; the warning suggests re-selecting with <code>control = list(thresh = 1e-14)</code>.</p></li>
 <li><p><code><a href="../reference/infer_selective.html">infer_selective()</a></code> now works for <code><a href="../reference/select_glmnet.html">select_glmnet()</a></code> selectors with <code>family = "binomial"</code> (#19). <code><a href="https://rdrr.io/pkg/selectiveInference/man/fixedLassoInf.html" class="external-link">selectiveInference::fixedLassoInf()</a></code> requires the intercept in <code>beta</code> for the binomial family (and its absence for gaussian), and the binomial result has no <code>vmat</code>, so estimates are taken from its debiased <code>coef0</code> instead.</p></li>
 <li>

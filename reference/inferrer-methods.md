@@ -63,8 +63,9 @@ tibble with one row per candidate term (plus the intercept):
   the proportion of resamples in which the term was selected.
 
 - `null_radius`: from
-  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md),
-  the padding radius (see its `pad` argument).
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
+  when intervals are padded, the padding radius (see its `pad`
+  argument).
 
 How non-selected terms are filled in depends on the method's
 `nonselection` (see
