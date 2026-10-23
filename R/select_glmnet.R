@@ -12,7 +12,11 @@
 #'
 #' Only the lasso (`alpha = 1`) is supported by [infer_selective()].
 #'
-#' @param formula a formula
+#' @param formula a model formula, as for [lm()]. It may include
+#'   interactions (`x * z`) and in-formula transformations (`log(x)`,
+#'   `poly(x, 2)`); factor, logical and character predictors are
+#'   treatment-coded. Ordered factors and missing values are not supported.
+#'   See [tidy.selector()] for how the columns are standardized and named.
 #' @param data a data frame
 #' @param family outcome distributional family
 #' @param lambda `"best"` (default) or `"compact"`, both chosen by
@@ -69,57 +73,17 @@ select_glmnet <- function(
     if(!length(dots) && length(meta$ellipses))
       dots <- meta$ellipses
 
-    if(missing(formula))
-      formula <- attr(fitted_selector, "recipe_obj")
+    formula <- attr(fitted_selector, "orig_formula")
   }
 
-  # Initial pre-processing
-  rec_obj <- formula
-
-  # If a typical formula is supplied, will center/scale
-  if(!inherits(rec_obj, "recipe")) {
-
-    rec_obj <- recipe(formula, data = data) %>%
-      step_dummy(all_factor_predictors(),
-                 naming = function(...) dummy_names(..., sep = "")) %>%
-      step_zv(all_predictors()) %>%
-      step_center(all_numeric_predictors()) %>%
-      step_scale(all_numeric_predictors()) %>%
-       prep()
-
-      # bake first observation for names
-      y1 <- bake(rec_obj, new_data = data[1,,drop = FALSE], all_outcomes())
-      X1 <- bake(rec_obj, new_data = data[1,,drop=FALSE], all_predictors())
-      df1 <- bake(rec_obj, new_data = data[1,,drop = FALSE])
-
-
-      # collect all terms
-      formula_full <- as.formula(paste0(names(y1), " ~ ", paste0(names(X1), collapse = " + ")))
-      mm <- model.matrix(formula, data = data)
-      all_terms <- make.names(colnames(mm))
-      if(all_terms[1] =="X.Intercept.") all_terms[1] = "(Intercept)"
-
-      # add additional zero variance step
-      rec_obj <- rec_obj %>%
-        step_zv() %>%
-        prep()
-
-      attr(rec_obj, "prepped_selector_recipe") <- TRUE
-  } else if(!attr(rec_obj, "prepped_selector_recipe")) {
-    stop("custom recipes not yet supported")
-  } else {
-    # May need to read additional things here if this is re-called later
-    all_terms <- attr(fitted_selector, "all_terms")
-  }
-
-  # Create model matrix
-  X <- bake(rec_obj, new_data = data, all_predictors())
-  y <- bake(rec_obj, new_data = data, all_outcomes())
-  df <- bake(rec_obj, new_data = data)
+  design <- if (is.null(fitted_selector)) design_build(formula, data) else
+    attr(fitted_selector, "design")
+  X <- design_X(design, data)
+  y <- design_y(design, data)
 
   if(is.character(lambda)) {
     fit <- do.call(cv.glmnet, c(
-      list(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
+      list(x = X, y = as.numeric(y),
            family = family, keep = TRUE, standardize = FALSE, alpha = alpha),
       dots))
     lambda_used <- if(lambda == "best") fit[["lambda.min"]] else fit[["lambda.1se"]]
@@ -129,7 +93,7 @@ select_glmnet <- function(
 
   } else {
     fit <- do.call(glmnet, c(
-      list(x = as.matrix(as.data.frame(X)), y = as.numeric(y[[1]]),
+      list(x = X, y = as.numeric(y),
            family = family, lambda = lambda, standardize = FALSE, alpha = alpha),
       dots))
     lambda_used <- lambda
@@ -150,7 +114,7 @@ select_glmnet <- function(
   )
 
   as_selector(fit, "glmnet", label = "Penalized `glmnet`-based",
-              all_terms = all_terms, recipe_obj = rec_obj,
+              design = design,
                orig_formula =formula,
               selected_terms = names(selected_coefs),
               selected_coefs = selected_coefs,

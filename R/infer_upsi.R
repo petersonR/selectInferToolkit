@@ -39,32 +39,18 @@ infer_upsi <- function(
 
   nonselection <- match.arg(nonselection)
 
-  if( attr(object, "name") == "stepwise_ic"){
-    selected_vars <-   attr(object, "selected_terms")
-    selected_vars <- selected_vars [! selected_vars  %in% c("(Intercept)")]
-  } else{selected_vars <- names(coef(object)[-1])}
-
-  rec_obj <- attr(object, "recipe_obj")
+  design <- attr(object, "design")
   meta <- attr(object, "meta")
-  outcome_name <- rec_obj$var_info %>%
-    filter(.data$role == "outcome") %>%
-    pull("variable")
-  all_terms <- attr(object, "all_terms")
+  X <- design_X(design, data)
+  y <- design_y(design, data)
 
-  df <- bake(rec_obj, new_data = data)
-
-  selected_formula <- formula(paste0(outcome_name, "~", paste0(c(1, selected_vars), collapse = "+")))
-  fit_selected <- glm(selected_formula, data = df, family = meta$family)
-  results_selected <- tidy(fit_selected, conf.int = TRUE, conf.level = conf.level) %>%
-    select("term", "estimate", ci_low = "conf.low",
-           ci_high = "conf.high", p_value = "p.value")
-  results_selected$term <- make.names(results_selected$term )
-  if(results_selected$term[1] =="X.Intercept.") results_selected$term[1] = "(Intercept)"
-
+  selected_cols <- setdiff(names(coef(object)), "(Intercept)")
+  fit_selected <- fit_on_columns(X, y, selected_cols, meta$family)
+  results_selected <- tidy_on_columns(fit_selected, conf.level) %>%
+    select("term", "estimate", "ci_low", "ci_high", "p_value")
 
   results <- tidy(object, scale_coef = TRUE) %>%
     left_join(results_selected, by = "term")
-
 
   if(nonselection == "confident_nulls") {
     results <- results %>%
@@ -75,33 +61,8 @@ infer_upsi <- function(
       )
   }
   if(nonselection == "uncertain_nulls") {
-
-    rec_obj <- attr(object, "recipe_obj")
-
-    if( attr(object, "name") == "stepwise_ic"){
-       if( attr(object, "meta")$select_factors_together ){
-      rec_obj <- rec_obj  %>%
-        step_dummy(all_factor_predictors(),
-                   naming = function(...) dummy_names(..., sep = "")) %>%
-        prep()
-        }
-    }
-
-    X <- bake(rec_obj, new_data = data, all_predictors())
-    y <- bake(rec_obj, new_data = data, all_outcomes())[[1]]
-
-
-    term_to_col <- tibble(
-      term = results$term,
-      col  = colnames(X)[
-        match(make.names(results$term),
-              make.names(colnames(X)))]
-       )%>%filter(!is.na(col))
-
     results <- fill_in_nonselections(results, object, nonselection,
-                                     X = X, y = y, conf.level = conf.level,
-                                     term_to_col = term_to_col     )
-
+                                     X = X, y = y, conf.level = conf.level)
   }
 
   as_inferrer(

@@ -1,5 +1,66 @@
 # selectInferToolkit 0.4.4
 
+- The predictor matrix is now built the way `model.matrix()` builds it, and
+  one internal term map drives `tidy()`, `predict()`, `reselect()` and every
+  `infer_*` method, instead of `recipes` plus name-matching (#29). As a
+  result:
+  - Factor levels that start with a digit (e.g. `factor(am)`, giving `am1`)
+    are no longer reported as unselected with coefficient 0.
+  - Columns keep their `model.matrix()` names, e.g. `spmuch less` rather than
+    `spmuch.less`.
+  - Character predictors work with every selector and are treated as
+    factors, as in `lm()`. Previously `select_full_model()` and
+    `select_ncvreg()` errored on them, and `select_glmnet()` silently dropped
+    them.
+  - Formulas may now include interactions (`x * z`) and transformations
+    (`log(x)`, `poly(x, 2)`). Numeric variables are centered before
+    interactions are formed.
+  - Ordered factors now error, asking for a conversion to numeric scores or
+    unordered levels; previously some selectors errored and
+    `select_glmnet()` silently dropped them.
+  - Missing values now error in every selector, with a suggestion to impute
+    or drop rows. Previously `select_stepwise_ic()` silently dropped
+    incomplete rows. `predict()` still returns `NA` for incomplete rows of new
+    data.
+  - A factor level unseen when the selector was fit now gives a clear error
+    in `predict()`.
+  - With `select_stepwise_ic(select_factors_together = TRUE)`, dummies are now
+    standardized like every other column, so `tidy(scale_coef = TRUE)` is on
+    a per-SD metric for them too. Their bootstrap intervals were previously
+    `NA` for levels whose names were not syntactic.
+  - `select_stepwise_ic()` no longer re-estimates centering and scaling on
+    each `reselect()`, matching the other selectors and `?reselect`. This
+    changes the scaled metric of its bootstrap draws, not which terms are
+    selected.
+  - `recipes`, `purrr` and `forcats` are no longer dependencies, and the
+    test suite runs in about half the time.
+
+- Results for a given `set.seed()` change for anything using
+  cross-validation or the bootstrap. `recipes` drew a random number for every
+  recipe step it created, which shifted the CV folds and the bootstrap
+  resamples.
+
+- `reselect()` on a `select_ncvreg()` selector now replays the arguments
+  originally passed through `...`. Previously it dropped them, so a
+  `penalty = "lasso"` or `"SCAD"` selector was refit, and bootstrapped, with
+  ncvreg's default MCP penalty.
+
+- `infer_upsi()` intervals for gaussian models now use t quantiles, matching
+  their p-values; they previously used normal quantiles, so they were
+  slightly too narrow. The same applies to the intervals that
+  `nonselection = "uncertain_nulls"` fills in for unselected terms.
+
+- Logical predictors now work with every selector. They are coded like a
+  two-level factor, giving a column named `xTRUE`, as in `model.matrix()`.
+  Previously
+  `select_full_model()` errored, and `select_glmnet()` and `select_ncvreg()`
+  reported them as unselected even when they were in the model.
+
+- Coefficients that `glm()` cannot estimate (aliased columns, e.g. a factor
+  level absent from a bootstrap resample or a `reselect()` subset) are no
+  longer reported as selected with coefficient 0 by `select_full_model()` and
+  `select_stepwise_ic()`, and no longer make `predict()` return `NA`.
+
 - The selector help pages and README were corrected and updated (#27). Among
   other fixes, `?select_glmnet` and `?select_ncvreg` now explain
   `lambda = "best"` / `"compact"`; `select_ncvreg()`'s `lambda` is documented

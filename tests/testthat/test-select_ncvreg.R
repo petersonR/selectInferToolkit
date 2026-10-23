@@ -184,7 +184,7 @@ test_that("MCP works", {
   expect_lt(rsel_error, .05)
   # Try to re-fit with re-select to "new" data
   rsel2 <- reselect(sel, newdata = hers[-7,])
-  set.seed(1)
+  set.seed(12)
   sel_rep <- select_ncvreg(hdl1 ~ .,  hers, penalty ="MCP", alpha=1)
   # No variance across same method with same seed
   expect_equal(tidy( sel_rep ), tidy(sel))

@@ -8,8 +8,7 @@ as_selector(
   x,
   name,
   label = name,
-  all_terms,
-  recipe_obj,
+  design,
   orig_formula,
   selected_terms,
   selected_coefs,
@@ -24,9 +23,9 @@ as_selector(
 
 \item{label}{label of the selector (for pretty printing)}
 
-\item{all_terms}{a slot containing names of all terms}
-
-\item{recipe_obj}{preprocessor trained from recipes package}
+\item{design}{the selector's design (internal): how the formula and data
+become the standardized predictor matrix, and the term map behind
+\code{tidy()}}
 
 \item{orig_formula}{Original formula provided by user}
 

@@ -87,8 +87,8 @@ infer_selective <- function(
   on_mismatch <- match.arg(on_mismatch)
 
   # grab useful components from model
-  X <- bake(attr(object, "recipe_obj"), new_data = data, all_predictors())
-  y <- bake(attr(object, "recipe_obj"), new_data = data, all_outcomes())[[1]]
+  X <- design_X(attr(object, "design"), data)
+  y <- design_y(attr(object, "design"), data)
   beta <- coef(object)
   meta <- attr(object, "meta")
 
@@ -162,7 +162,7 @@ infer_selective <- function(
         alpha = 1 - conf.level,
         ...
       ), warning = si_sigma_warning)
-      names(res$vars) <- names(X)[res$vars]
+      names(res$vars) <- colnames(X)[res$vars]
       bb <- res$sign* as.vector(res$vmat %*% y)
 
       # fsInf(type = "aic") re-runs its own stopping rule, which does not always
@@ -215,7 +215,7 @@ infer_selective <- function(
           alpha = 1 - conf.level,
           ...
         )
-        names(res$vars) <- names(X)[res$vars]
+        names(res$vars) <- colnames(X)[res$vars]
         bb <- res$sign* as.vector(res$vmat %*% y)
       }
 
@@ -307,13 +307,9 @@ infer_selective <- function(
 
 
   # Handle non-selections
-  term_to_col <- tibble(
-    term =  colnames(X),
-    col  = colnames(X))
-
   results <- fill_in_nonselections(inferences, object,
                                    nonselection = nonselection, X = X, y = y,
-                                   conf.level = conf.level, term_to_col = term_to_col )
+                                   conf.level = conf.level)
 
   # Return inferrer class
   as_inferrer(
@@ -350,7 +346,7 @@ refit_glmnet_tight <- function(object, X, y, thresh = 1e-14) {
          "gamma", "relax", "trace.it")] <- NULL
 
   fit <- do.call(glmnet::glmnet, c(
-    list(x = as.matrix(as.data.frame(X)), y = as.numeric(y),
+    list(x = X, y = as.numeric(y),
          family = meta$family, lambda = path, standardize = FALSE,
          alpha = meta$alpha %||% 1),
     dots))

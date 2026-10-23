@@ -13,9 +13,13 @@ select_null_model(
 )
 }
 \arguments{
-\item{formula}{a formula.}
+\item{formula}{a model formula, as for \code{\link[=lm]{lm()}}. It may include
+interactions (\code{x * z}) and in-formula transformations (\code{log(x)},
+\code{poly(x, 2)}); factor, logical and character predictors are
+treatment-coded. Ordered factors and missing values are not supported.
+See \code{\link[=tidy.selector]{tidy.selector()}} for how the columns are standardized and named.}
 
-\item{data}{data set}
+\item{data}{a data frame}
 
 \item{family}{outcome distributional family}
 

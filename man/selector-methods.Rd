@@ -53,19 +53,24 @@ The objects returned by the \verb{select_*} functions support:
 }
 \section{Scale of the coefficients}{
 
-Before selection, every \verb{select_*} function standardizes the predictors
-with a \code{recipes} recipe: factors are dummy-coded, then all numeric
-predictors (dummies included) are centered and divided by their standard
-deviation. The outcome is not transformed. So, by default
+Before selection, every \verb{select_*} function builds the model matrix as
+\code{\link[=model.matrix]{model.matrix()}} would (factors, logicals and character predictors are
+treatment-coded, so the columns are named e.g. \code{g3mid}, \code{am1}, \code{fTRUE}),
+then centers each column and divides it by its standard deviation, dummies
+included. The outcome is not transformed. So, by default
 (\code{scale_coef = TRUE}), a coefficient is the change in the outcome per
-standard deviation of that predictor. With \code{scale_coef = FALSE}, slopes are
-divided by the predictor's standard deviation, giving the usual per-unit
-change. (A factor kept whole by
-\code{select_stepwise_ic(select_factors_together = TRUE)} is not scaled, so it
-is the same either way.)
+standard deviation of that column. With \code{scale_coef = FALSE}, slopes are
+divided by the column's standard deviation, giving the usual per-unit
+change. The centers and standard deviations come from the data the
+selector was first fit to, and are reused by \code{\link[=reselect]{reselect()}} and \code{predict()}.
 
-The intercept is never unscaled: because the predictors are centered, it is
-the predicted outcome (on the link scale) at the predictor means, not the
-intercept \code{lm()} would report on the raw data.
+The intercept is never unscaled: it is the predicted outcome (on the link
+scale) at the means of the predictors, not the intercept \code{lm()} would
+report on the raw data. (\code{\link[=select_stepwise_ic]{select_stepwise_ic()}} leaves dummies uncentered,
+so there it is the prediction at each factor's reference level.)
+
+Ordered factors are not supported (convert them to numeric scores or
+unordered factors first), nor are missing values in the outcome or
+predictors.
 }
 

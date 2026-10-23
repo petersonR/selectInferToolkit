@@ -549,7 +549,10 @@ test_that("backward selection works  individual factors", {
 
 
 
-skip()
+# The binomial tests below take about 35 s, so they run locally and on CI but
+# not on CRAN. (A bare skip() here used to skip them everywhere.)
+skip_on_cran()
+
 ###### Test IRIS data binary outcome ########
 
 iris_binary = iris
@@ -1130,10 +1133,8 @@ test_that("criterion = 'cp' records sigma and replays it through reselect()", {
 
   auto <- select_stepwise_ic(y ~ ., data = d, direction = "forward",
                              penalty = "AIC", criterion = "cp")
-  Xb <- as.matrix(recipes::bake(attr(auto, "recipe_obj"), new_data = d,
-                                recipes::all_predictors()))
-  yb <- recipes::bake(attr(auto, "recipe_obj"), new_data = d,
-                      recipes::all_outcomes())[[1]]
+  Xb <- design_X(attr(auto, "design"), d)
+  yb <- design_y(attr(auto, "design"), d)
   ref <- suppressWarnings(selectiveInference::fsInf(
     selectiveInference::fs(Xb, yb), sigma = NULL, type = "aic",
     mult = 2, ntimes = 1))
