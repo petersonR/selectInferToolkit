@@ -448,17 +448,17 @@
     Code
       print(x, row.names = FALSE, digits = 6)
     Output
-              term selected       coef  estimate    ci_low    ci_high prop_selected null_radius
-       (Intercept)        1  0.6237050  0.932573  0.303707  1.4559500             1          NA
-                x1        1  1.5256700  1.539030  1.338360  1.8021400             1          NA
-                x2        1 -1.2219200 -1.287740 -1.371620 -1.1546600             1          NA
-                x3        0  0.0000000        NA        NA         NA            NA          NA
-                x4        0  0.0000000        NA        NA         NA            NA          NA
-             g3mid        1 -0.0430835 -0.134261 -0.288564  0.0358052             1          NA
-              g3hi        1  0.4973340  0.454575  0.326440  0.6275710             1          NA
-            spmore        1  0.4258410  0.402841  0.200536  0.6296490             1          NA
-       spmuch.less        1 -0.2241520 -0.220083 -0.461738  0.1392570             1          NA
-            binyes        0  0.0000000        NA        NA         NA            NA          NA
+              term selected       coef  estimate    ci_low    ci_high prop_selected
+       (Intercept)        1  0.6237050  0.932573  0.303707  1.4559500             1
+                x1        1  1.5256700  1.539030  1.338360  1.8021400             1
+                x2        1 -1.2219200 -1.287740 -1.371620 -1.1546600             1
+                x3        0  0.0000000        NA        NA         NA            NA
+                x4        0  0.0000000        NA        NA         NA            NA
+             g3mid        1 -0.0430835 -0.134261 -0.288564  0.0358052             1
+              g3hi        1  0.4973340  0.454575  0.326440  0.6275710             1
+            spmore        1  0.4258410  0.402841  0.200536  0.6296490             1
+       spmuch.less        1 -0.2241520 -0.220083 -0.461738  0.1392570             1
+            binyes        0  0.0000000        NA        NA         NA            NA
 
 # golden: stepwise binomial
 

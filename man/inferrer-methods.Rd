@@ -32,8 +32,8 @@ resamples for \code{\link[=infer_boot]{infer_boot()}}.
 \item \code{p_value}: from \code{\link[=infer_upsi]{infer_upsi()}}, \code{\link[=infer_selective]{infer_selective()}} and \code{\link[=infer_pipe]{infer_pipe()}}.
 \item \code{prop_selected}: from \code{\link[=infer_boot]{infer_boot()}}, the proportion of resamples in
 which the term was selected.
-\item \code{null_radius}: from \code{\link[=infer_boot]{infer_boot()}}, the padding radius (see its \code{pad}
-argument).
+\item \code{null_radius}: from \code{\link[=infer_boot]{infer_boot()}} when intervals are padded, the
+padding radius (see its \code{pad} argument).
 }
 
 How non-selected terms are filled in depends on the method's

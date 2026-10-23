@@ -300,7 +300,7 @@ test_that("basic inferrer bootstrap functionality; glmnet padding options", {
                        inference_target = "all")
     vals3 <- tidy(inf3)
   })
-  expect_true(all(is.na(vals3$null_radius)))
+  expect_false("null_radius" %in% names(vals3))
 })
 
 test_that("basic inferrer UPSI functionality", {

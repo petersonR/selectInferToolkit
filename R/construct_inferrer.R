@@ -73,8 +73,8 @@ as_inferrer <- function(
 #' * `p_value`: from [infer_upsi()], [infer_selective()] and [infer_pipe()].
 #' * `prop_selected`: from [infer_boot()], the proportion of resamples in
 #'   which the term was selected.
-#' * `null_radius`: from [infer_boot()], the padding radius (see its `pad`
-#'   argument).
+#' * `null_radius`: from [infer_boot()] when intervals are padded, the
+#'   padding radius (see its `pad` argument).
 #'
 #' How non-selected terms are filled in depends on the method's
 #' `nonselection` (see [infer_upsi()]) or, for [infer_boot()],

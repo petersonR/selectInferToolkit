@@ -45,7 +45,7 @@ test_that("MCP zero-side padding uses gamma * lambda and spares large effects", 
   slopes <- zs$term != "(Intercept)"
   expect_equal(zs$null_radius[slopes], rep(gamma * lam, sum(slopes)))
   expect_equal(all$null_radius[slopes], rep(lam, sum(slopes)))
-  expect_true(all(is.na(none$null_radius)))
+  expect_false("null_radius" %in% names(none))
   expect_true(is.na(zs$null_radius[!slopes]))
 
   # the strong signal's interval excludes 0, so it is not padded
@@ -125,4 +125,13 @@ test_that("infer_boot() rejects unknown and reserved arguments (#25)", {
                "not yet implemented")
   expect_warning(infer_boot(sel, d, B = 2, n_cores = 2), "no effect")
   expect_false("boot" %in% getNamespaceExports("selectInferToolkit"))
+})
+
+test_that("null_radius is only reported when padding can change an interval", {
+  d <- make_sparse()
+  sel <- select_full_model(y ~ ., d)
+  set.seed(3)
+  inf <- infer_boot(sel, d, B = 5)
+  expect_false("null_radius" %in% names(tidy(inf)))
+  expect_false("null_radius" %in% names(tidy(inf, scale_coef = FALSE)))
 })

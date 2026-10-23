@@ -15,7 +15,8 @@
 #'   * `"all"`: every interval is widened by `delta` on both sides.
 #'
 #'   The radius `delta` is set from the selector (scaled metric) and returned
-#'   in the `null_radius` column of `tidy()`:
+#'   in the `null_radius` column of `tidy()`. The column is left out when no
+#'   interval could be padded (`pad = "none"`, or a radius of 0):
 #'
 #'   * `select_ncvreg()`: `gamma * lambda` for MCP/SCAD with `"zero_side"`,
 #'     `lambda` with `"all"`.
@@ -40,7 +41,8 @@
 #'   ignored.
 #' @return an `inferrer` object; see [tidy.inferrer()]. Its inferences include
 #'   `prop_selected` (the proportion of resamples in which each term was
-#'   selected) and `null_radius` (the padding radius; see `pad`).
+#'   selected) and, when intervals are padded, `null_radius` (the padding
+#'   radius; see `pad`).
 #' @importFrom dplyr right_join group_by summarize bind_rows
 #'
 #' @export
@@ -187,6 +189,10 @@ boot <- function(object, data, B,
   radius <- pad_radius(object, pad, X_full, y_full, results$term)
   results$null_radius <- unname(radius[results$term])
   results <- pad_intervals(results, pad)
+  # Only report the radius when padding could have changed an interval
+  # (not for pad = "none", nor for the full and null models' radius of 0)
+  if (!any(results$null_radius > 0, na.rm = TRUE))
+    results$null_radius <- NULL
 
   meta_information <- list(
     B = B,

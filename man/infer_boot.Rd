@@ -36,7 +36,8 @@ that shrinks with \code{n}.
 }
 
 The radius \code{delta} is set from the selector (scaled metric) and returned
-in the \code{null_radius} column of \code{tidy()}:
+in the \code{null_radius} column of \code{tidy()}. The column is left out when no
+interval could be padded (\code{pad = "none"}, or a radius of 0):
 \itemize{
 \item \code{select_ncvreg()}: \code{gamma * lambda} for MCP/SCAD with \code{"zero_side"},
 \code{lambda} with \code{"all"}.
@@ -69,7 +70,8 @@ ignored.}
 \value{
 an \code{inferrer} object; see \code{\link[=tidy.inferrer]{tidy.inferrer()}}. Its inferences include
 \code{prop_selected} (the proportion of resamples in which each term was
-selected) and \code{null_radius} (the padding radius; see \code{pad}).
+selected) and, when intervals are padded, \code{null_radius} (the padding
+radius; see \code{pad}).
 }
 \description{
 Inference for \code{selector} via bootstrapping
