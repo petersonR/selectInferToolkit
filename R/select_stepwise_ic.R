@@ -107,7 +107,8 @@ select_stepwise_ic <- function(
   # tidy(scale_coef = TRUE) reports every coefficient on a common per-SD metric
   rec_spec <- recipe(formula, data = data) %>%
     step_zv(all_predictors()) %>%
-    step_center(all_numeric_predictors())
+    step_center(all_numeric_predictors()) %>%
+    step_logical_to_indicator(data)
 
   if (!select_factors_together) {
     rec_spec <- rec_spec %>%
@@ -194,8 +195,11 @@ select_stepwise_ic <- function(
   all_terms <- make.names(colnames(mm))
   if(all_terms[1] =="X.Intercept.") all_terms[1] = "(Intercept)"
 
+  # drop aliased (NA) coefficients, and any term left with none
+  selected_coefs <- drop_aliased(coef(selected_model))
   selected_terms <- attr(terms(selected_model), "term.labels")
-  selected_coefs <- coef(selected_model)
+  aliased <- setdiff(names(coef(selected_model)), names(selected_coefs))
+  selected_terms <- selected_terms[!gsub("`", "", selected_terms) %in% aliased]
 
   meta_information <- list(
     family = family,

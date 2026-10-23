@@ -63,6 +63,37 @@ si_sigma_warning <- function(w) {
   invokeRestart("muffleWarning")
 }
 
+# Logical predictors become a 0/1 indicator named `xTRUE`, the name
+# model.matrix() gives them. (Not a factor: step_dummy() would run the level
+# through make.names(), giving `xTRUE.`, as TRUE is a reserved word.) Done
+# inside the recipe so that bake() converts new data too; add it after any
+# centering step that indicators should skip.
+#' @importFrom stats setNames
+step_logical_to_indicator <- function(rec, data) {
+  preds <- rec$var_info$variable[rec$var_info$role == "predictor"]
+  lgl <- preds[vapply(data[preds], is.logical, logical(1))]
+  if (!length(lgl)) return(rec)
+  exprs <- lapply(lgl, function(v) rlang::expr(as.numeric(!!rlang::sym(v))))
+  rec %>%
+    step_mutate(!!!setNames(exprs, paste0(lgl, "TRUE"))) %>%
+    step_rm(dplyr::all_of(lgl))
+}
+
+# Coefficients glm() could not estimate (aliased columns) come back NA; they
+# are not selected
+drop_aliased <- function(coefs) coefs[!is.na(coefs)]
+
+# Refit used for UPSI-style intervals. Gaussian models go through lm() so that
+# broom's intervals use t quantiles, matching the p-values; tidy() on a
+# gaussian glm() gives normal-quantile intervals but t-based p-values.
+#' @importFrom stats lm glm
+fit_lm_or_glm <- function(formula, data, family) {
+  if (family == "gaussian")
+    lm(formula, data = data)
+  else
+    glm(formula, data = data, family = family)
+}
+
 #' @importFrom rlang .data
 fill_in_nonselections <- function(inferences, selector_obj,
                                   nonselection, X, y, conf.level,
@@ -101,7 +132,7 @@ fill_in_nonselections <- function(inferences, selector_obj,
 
         # construct formula with selected columns + current nonselected column(s)
         formula_str <- paste0("y ~ ", paste0("`", all_terms, "`", collapse = " + "))
-        fit <- glm(as.formula(formula_str), data = df, family = attr(selector_obj, "meta")$family)
+        fit <- fit_lm_or_glm(as.formula(formula_str), df, family)
 
         # extract coefficient info for this term
         fit_tidy <- tidy(fit, conf.int = TRUE, conf.level = conf.level)

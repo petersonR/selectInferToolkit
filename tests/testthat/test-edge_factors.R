@@ -45,10 +45,7 @@ known_bugs <- c(
   "ordered/ncvreg"     = "ordered factors error in select_ncvreg()",
   "character/full"     = "character predictors error in select_full_model()",
   "character/glmnet"   = "character predictors silently dropped by select_glmnet()",
-  "character/ncvreg"   = "character predictors error in select_ncvreg()",
-  "logical/full"       = "logical predictors error in select_full_model()",
-  "logical/glmnet"     = "logical predictors reported as unselected",
-  "logical/ncvreg"     = "logical predictors reported as unselected"
+  "character/ncvreg"   = "character predictors error in select_ncvreg()"
 )
 
 for (type in names(edge_types)) {
@@ -73,6 +70,22 @@ for (type in names(edge_types)) {
   }
 }
 
+test_that("logical predictors act as a 0/1 indicator named xTRUE", {
+  d <- edge_data(edge_types$logical)
+  ref <- coef(lm(y ~ ., d))
+  for (sel in list(select_full_model(y ~ ., d),
+                   select_stepwise_ic(y ~ ., d, direction = "backward"),
+                   { set.seed(1); select_glmnet(y ~ ., d, lambda = "compact") })) {
+    td <- tidy(sel, scale_coef = FALSE)
+    expect_true("fTRUE" %in% td$term[td$selected == 1])
+    # predict() converts logical new data through the recipe
+    expect_true(all(is.finite(predict(sel, d[1:5, ]))))
+  }
+  # with no selection, the unscaled slope is the lm() coefficient
+  td <- tidy(select_full_model(y ~ ., d), scale_coef = FALSE)
+  expect_equal(td$coef[td$term == "fTRUE"], unname(ref["fTRUE"]))
+})
+
 test_that("a single-level factor errors rather than returning nonsense", {
   d <- edge_data(function(n) factor(rep("a", n)))
   expect_error(select_full_model(y ~ ., d))
@@ -92,10 +105,16 @@ test_that("reselect() on a resample missing a level keeps the design fixed", {
   expect_no_error(rsel_g <- reselect(sel_g, part))
   expect_equal(tidy(rsel_g)$term, tidy(sel_g)$term)
 
-  # the absent level's dummy cannot be estimated, so it should not be
-  # selected; currently its NA coefficient is reported as selected with 0
-  expect_known_bug(tidy(rsel)$selected[tidy(rsel)$term == "fmid"] == 0,
-                   "aliased (NA) coefficients reported as selected")
+  # the absent level's dummy cannot be estimated, so it is not selected,
+  # and predictions stay finite
+  expect_equal(tidy(rsel)$selected[tidy(rsel)$term == "fmid"], 0)
+  expect_true(all(is.finite(predict(rsel, d))))
+
+  # same for a stepwise fit that keeps the factor
+  sel_s <- select_stepwise_ic(y ~ ., d, direction = "backward")
+  rsel_s <- reselect(sel_s, part)
+  expect_false(anyNA(coef(rsel_s)))
+  expect_true(all(is.finite(predict(rsel_s, d))))
 })
 
 test_that("predict() with a level unseen in training does not return a number silently", {

@@ -43,6 +43,7 @@ select_full_model <- function(
   if(!inherits(rec_obj, "recipe")) {
 
     rec_obj <- recipe(formula, data = data) %>%
+      step_logical_to_indicator(data) %>%
       step_dummy(all_factor_predictors(),
                  naming = function(...) dummy_names(..., sep = "")) %>%
       step_zv(all_predictors()) %>%
@@ -100,8 +101,10 @@ select_full_model <- function(
 
 
   meta_information <- list(family = family)
-  selected_coefs <- coef(fit)
-  selected_terms <- rownames(fit[["coefficients"]])
+  # aliased columns (e.g. a factor level absent from a resample) have NA
+  # coefficients: they were not estimated, so they are not selected
+  selected_coefs <- drop_aliased(coef(fit))
+  selected_terms <- names(selected_coefs)
 
   as_selector(fit, name = "full_model", label = "Full model (no selection)",
               all_terms = all_terms, recipe_obj = rec_obj,

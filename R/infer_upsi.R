@@ -54,7 +54,7 @@ infer_upsi <- function(
   df <- bake(rec_obj, new_data = data)
 
   selected_formula <- formula(paste0(outcome_name, "~", paste0(c(1, selected_vars), collapse = "+")))
-  fit_selected <- glm(selected_formula, data = df, family = meta$family)
+  fit_selected <- fit_lm_or_glm(selected_formula, df, meta$family)
   results_selected <- tidy(fit_selected, conf.int = TRUE, conf.level = conf.level) %>%
     select("term", "estimate", ci_low = "conf.low",
            ci_high = "conf.high", p_value = "p.value")

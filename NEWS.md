@@ -1,5 +1,20 @@
 # selectInferToolkit 0.4.4
 
+- `infer_upsi()` intervals for gaussian models now use t quantiles, matching
+  their p-values; they previously used normal quantiles, so they were
+  slightly too narrow. The same applies to the intervals that
+  `nonselection = "uncertain_nulls"` fills in for unselected terms.
+
+- Logical predictors now work with every selector. They become a 0/1
+  indicator named `xTRUE`, as in `model.matrix()`. Previously
+  `select_full_model()` errored, and `select_glmnet()` and `select_ncvreg()`
+  reported them as unselected even when they were in the model.
+
+- Coefficients that `glm()` cannot estimate (aliased columns, e.g. a factor
+  level absent from a bootstrap resample or a `reselect()` subset) are no
+  longer reported as selected with coefficient 0 by `select_full_model()` and
+  `select_stepwise_ic()`, and no longer make `predict()` return `NA`.
+
 - The selector help pages and README were corrected and updated (#27). Among
   other fixes, `?select_glmnet` and `?select_ncvreg` now explain
   `lambda = "best"` / `"compact"`; `select_ncvreg()`'s `lambda` is documented

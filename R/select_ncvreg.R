@@ -57,6 +57,7 @@ select_ncvreg <- function(
   if(!inherits(rec_obj, "recipe")) {
 
     rec_obj <- recipe(formula, data = data) %>%
+      step_logical_to_indicator(data) %>%
       step_dummy(all_factor_predictors(),
                  naming = function(...) dummy_names(..., sep = "")) %>%
       step_zv(all_predictors()) %>%

@@ -104,18 +104,19 @@ test_that("UPSI: estimates and p-values equal lm() on the selected hand-scaled c
   expect_equal(un$ci_high - un$ci_low, (inf$ci_high - inf$ci_low) / sds[S],
                ignore_attr = TRUE)
 
-  # Gaussian intervals come from glm() via broom, which uses normal
-  # quantiles, while the p-values (summary.glm) use t: the intervals are
-  # slightly too narrow and can disagree with the p-values
-  expect_known_bug(isTRUE(all.equal(inf$ci_low, unname(ref_ci[, 1]))),
-                   "UPSI gaussian intervals use z, not t")
+  # gaussian intervals use t quantiles, matching the p-values
+  expect_equal(inf$ci_low, unname(ref_ci[, 1]))
+  expect_equal(inf$ci_high, unname(ref_ci[, 2]))
 
   # uncertain_nulls: a nonselected term gets the estimate from adding it
   # alone to the selected model
   j <- setdiff(colnames(X_std), S)[1]
-  ref_j <- coef(lm(d$y ~ X_std[, c(S, j)]))[length(S) + 2]
+  fit_j <- lm(d$y ~ X_std[, c(S, j)])
   unc <- tidy(infer_upsi(sel, d, nonselection = "uncertain_nulls"))
-  expect_equal(unc$estimate[norm_names(unc$term) == j], unname(ref_j))
+  unc <- unc[norm_names(unc$term) == j, ]
+  expect_equal(unc$estimate, unname(coef(fit_j)[length(S) + 2]))
+  expect_equal(c(unc$ci_low, unc$ci_high),
+               unname(confint(fit_j)[length(S) + 2, ]))
 })
 
 test_that("UPSI binomial: estimates equal glm() on the selected hand-scaled columns", {
