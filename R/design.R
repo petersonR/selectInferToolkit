@@ -111,8 +111,8 @@ design_y <- function(design, data) {
   mf <- design_frame(design$terms, data, xlev = design$xlev)
   y <- model.response(mf)
   if (anyNA(y))
-    stop("The outcome has missing values; remove those rows first.",
-         call. = FALSE)
+    stop("The outcome has missing values; impute them or remove those rows ",
+         "first.", call. = FALSE)
   unname(y)
 }
 
