@@ -57,7 +57,7 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>The <code>selectInferToolkit</code> package aims to addresses a critical challenge in modern statistical modeling: <strong>conducting valid inference after performing model selection.</strong> In the era of big data and complex regression problems, researchers often employ model selection procedures like stepwise regression or penalized methods (e.g., lasso) to identify important variables. However, classical statistical inference assumes the model was chosen <em>a priori</em>—independent of the data. When this assumption is violated, standard statistical tests and confidence intervals can become overly optimistic, leading to unreliable conclusions.<code>selectInferToolkit</code> provides a user-friendly framework in R to facilitate post-selection inferential methods.</p>
+<p>The <code>selectInferToolkit</code> package addresses a critical challenge in modern statistical modeling: <strong>conducting valid inference after performing model selection.</strong> In the era of big data and complex regression problems, researchers often employ model selection procedures like stepwise regression or penalized methods (e.g., lasso) to identify important variables. However, classical statistical inference assumes the model was chosen <em>a priori</em>—independent of the data. When this assumption is violated, standard statistical tests and confidence intervals can become overly optimistic, leading to unreliable conclusions.<code>selectInferToolkit</code> provides a user-friendly framework in R to facilitate post-selection inferential methods.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -77,7 +77,7 @@
 <li>
 <strong>Stepwise Regression:</strong> Implement forward, backward, and bidirectional stepwise regression. User can use either the <strong>Akaike Information Criterion (AIC)</strong> or the <strong>Bayesian Information Criterion (BIC)</strong> as selection criteria, leveraging the <code>stepAIC</code> function from the <code>MASS</code> package.</li>
 <li>
-<strong>Penalized Regression:</strong> Perform lasso, ridge, and elastic net regressions using the powerful <code>ncvreg</code> or <code>glmnet</code> packages. <code>selectInferToolkit</code> simplifies the process of obtaining models associated with either <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>λ</mi><mrow><mi>m</mi><mi>i</mi><mi>n</mi></mrow></msub><annotation encoding="application/x-tex">\lambda_{min}</annotation></semantics></math> or <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>λ</mi><mrow><mn>1</mn><mi>s</mi><mi>e</mi></mrow></msub><annotation encoding="application/x-tex">\lambda_{1se}</annotation></semantics></math>.
+<strong>Penalized Regression:</strong> Perform lasso and elastic net regression with <code>glmnet</code>, or MCP, SCAD, and lasso regression with <code>ncvreg</code>. <code>selectInferToolkit</code> simplifies the process of obtaining models associated with either <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>λ</mi><mrow><mi>m</mi><mi>i</mi><mi>n</mi></mrow></msub><annotation encoding="application/x-tex">\lambda_{min}</annotation></semantics></math> or <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>λ</mi><mrow><mn>1</mn><mi>s</mi><mi>e</mi></mrow></msub><annotation encoding="application/x-tex">\lambda_{1se}</annotation></semantics></math>.
 <ul>
 <li>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>λ</mi><mrow><mi>m</mi><mi>i</mi><mi>n</mi></mrow></msub><annotation encoding="application/x-tex">\lambda_{min}</annotation></semantics></math> represents the regularization parameter <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>λ</mi><annotation encoding="application/x-tex">\lambda</annotation></semantics></math> that minimizes the cross-validation error, aiming for the best predictive performance.</li>
@@ -90,7 +90,7 @@
 <div class="section level3">
 <h3 id="post-selection-inference-methods">Post-Selection Inference Methods<a class="anchor" aria-label="anchor" href="#post-selection-inference-methods"></a>
 </h3>
-<p>The core contribution of <code>selectInferToolkit</code> lies in its ability to provide straightforward implementations of three distinct post-selection inference methods, applicable after you’ve performed model selection using one of the methods above:</p>
+<p>The core contribution of <code>selectInferToolkit</code> lies in its ability to provide straightforward implementations of four post-selection inference methods, applicable after you’ve performed model selection using one of the methods above:</p>
 <ol style="list-style-type: decimal">
 <li>
 <strong>UPSI</strong>: A baseline approach that performs no adjustment for the selection process. We refer to this as “unadjusted post-selection inference”, or “UPSI” for short. Others refer to this as “hybrid-OLS” (in the Gaussian outcome case).</li>
@@ -105,7 +105,7 @@
 <div class="section level3">
 <h3 id="handling-non-selected-variables">Handling Non-Selected Variables<a class="anchor" aria-label="anchor" href="#handling-non-selected-variables"></a>
 </h3>
-<p><code>selectInferToolkit</code> is explicity in its handling of non-selections, which can be set to be:</p>
+<p><code>selectInferToolkit</code> is explicit in its handling of non-selections. For <code><a href="reference/infer_upsi.html">infer_upsi()</a></code> and <code><a href="reference/infer_selective.html">infer_selective()</a></code>, the <code>nonselection</code> argument can be set to:</p>
 <ul>
 <li>
 <strong>Ignored:</strong> Treating non-selected variables as irrelevant.</li>
@@ -114,6 +114,7 @@
 <li>
 <strong>Uncertain nulls:</strong> Aim to make inference on all variables but without the assumption that non-selections certainly have a null effect</li>
 </ul>
+<p>The bootstrap handles non-selections through its <code>inference_target</code> and <code>pad</code> arguments instead (below), and PIPE gives inference for every variable. See <code><a href="reference/infer_upsi.html">?infer_upsi</a></code> for exactly what each <code>nonselection</code> mode returns.</p>
 </div>
 <div class="section level3">
 <h3 id="bootstrapping-considerations">Bootstrapping considerations<a class="anchor" aria-label="anchor" href="#bootstrapping-considerations"></a>
@@ -170,7 +171,7 @@
 <span><span class="co">#&gt; Residual standard error: 2.65 on 21 degrees of freedom</span></span>
 <span><span class="co">#&gt; Multiple R-squared:  0.869,  Adjusted R-squared:  0.8066 </span></span>
 <span><span class="co">#&gt; F-statistic: 13.93 on 10 and 21 DF,  p-value: 3.793e-07</span></span></code></pre></div>
-<p>Hmm, <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>R</mi><mn>2</mn></msup><annotation encoding="application/x-tex">R^2</annotation></semantics></math> is high but nothing is “significant”. What is going on? The model is probably over-specified. Let’s use <code>selectInferToolkit</code> to narrow in on what we think the most important factors are. The <code>step_ic</code> function can do forwards and backwards selection via AIC by default.</p>
+<p>Hmm, <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>R</mi><mn>2</mn></msup><annotation encoding="application/x-tex">R^2</annotation></semantics></math> is high but nothing is “significant”. What is going on? The model is probably over-specified. Let’s use <code>selectInferToolkit</code> to narrow in on what we think the most important factors are. The <code><a href="reference/select_stepwise_ic.html">select_stepwise_ic()</a></code> function does forward selection via AIC by default (backward and bidirectional searches are available through <code>direction</code>).</p>
 <div class="section level3">
 <h3 id="stepwise-selection">Stepwise selection<a class="anchor" aria-label="anchor" href="#stepwise-selection"></a>
 </h3>
@@ -201,10 +202,11 @@
 <span><span class="co">#&gt;  9 am                 0  0   </span></span>
 <span><span class="co">#&gt; 10 gear               0  0   </span></span>
 <span><span class="co">#&gt; 11 carb               0  0</span></span></code></pre></div>
+<p>Note that the predictors are standardized before selection, so by default these coefficients are the change in <code>mpg</code> per standard deviation of each predictor. Use <code>tidy(fit_aic, scale_coef = FALSE)</code> for per-unit effects (see <code><a href="reference/selector-methods.html">?tidy.selector</a></code>).</p>
 <p>So we find that AIC selects <code>wt</code>, <code>cyl</code>, and <code>hp</code>. But where are the p-values?!</p>
 <p>This is where post-selection inference comes in; p-values that do not adjust for the selective process will be too small. Again, we call this “unadjusted post-selection inference” (or UPSI, for short).</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_aic_infer_upsi</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer.html">infer_upsi</a></span><span class="op">(</span><span class="va">fit_aic</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">fit_aic_infer_upsi</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_upsi.html">infer_upsi</a></span><span class="op">(</span><span class="va">fit_aic</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="va">fit_aic_infer_upsi</span></span>
 <span><span class="co">#&gt; Unadjusted Post-Selection Inference (UPSI) inference applied post Stepwise IC-based Selection </span></span>
 <span><span class="co">#&gt; 3 of 10 variables selected. </span></span>
@@ -247,9 +249,10 @@
 <span><span class="co">#&gt;  9 am                 0  0      NA      NA      NA            NA           1.45</span></span>
 <span><span class="co">#&gt; 10 gear               0  0      NA      NA      NA            NA           1.56</span></span>
 <span><span class="co">#&gt; 11 carb               0  0      NA      NA      NA            NA           1.89</span></span></code></pre></div>
-<p>These results are less promising. Here we can also use a wrapper for <code>selectiveInference</code> method:</p>
+<p>These results are less promising. Here we can also use a wrapper for the <code>selectiveInference</code> method. Selective inference for stepwise selection conditions on the Mallows-Cp form of the criterion, so we select with <code>criterion = "cp"</code> to make the selection and the inference agree (with the default <code>criterion = "deviance"</code>, the two can stop at different steps, and <code><a href="reference/infer_selective.html">infer_selective()</a></code> warns and falls back to conditioning on a fixed number of steps):</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_aic_SI</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer.html">infer_selective</a></span><span class="op">(</span><span class="va">fit_aic</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">fit_aic_cp</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/select_stepwise_ic.html">select_stepwise_ic</a></span><span class="op">(</span><span class="va">mpg</span> <span class="op">~</span> <span class="va">.</span>, data <span class="op">=</span> <span class="va">mtcars</span>, penalty <span class="op">=</span> <span class="st">"AIC"</span>, criterion <span class="op">=</span> <span class="st">"cp"</span><span class="op">)</span></span>
+<span><span class="va">fit_aic_SI</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_selective.html">infer_selective</a></span><span class="op">(</span><span class="va">fit_aic_cp</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="va">fit_aic_SI</span> </span>
 <span><span class="co">#&gt; Selective inference applied post Stepwise IC-based Selection </span></span>
 <span><span class="co">#&gt; 3 of 10 variables selected. </span></span>
@@ -271,8 +274,8 @@
 <span><span class="co">#&gt;  9 am                 0  0       NA      NA     NA     NA    </span></span>
 <span><span class="co">#&gt; 10 gear               0  0       NA      NA     NA     NA    </span></span>
 <span><span class="co">#&gt; 11 carb               0  0       NA      NA     NA     NA</span></span></code></pre></div>
-<p>Here we see that after adjusting for the selective process, we are unable to claim significance of any of these effects (and have quite large CIs).</p>
-<p>Lastly, as stated above for each post-selection inference method, we provide three approaches to handling non-selections: <code>ignored</code> (ignoring them), <code>confident_nulls</code> (treating them as confident (point-mass) degenerate nulls at zero), and <code>uncertain_nulls</code> (treating them as uncertain). For details about each of theses methods, see the package vignette.</p>
+<p>Here we see that after adjusting for the selective process, we are unable to claim significance of any of these effects, and the CIs are very wide (some are infinite).</p>
+<p>Lastly, as stated above, <code><a href="reference/infer_upsi.html">infer_upsi()</a></code> and <code><a href="reference/infer_selective.html">infer_selective()</a></code> provide three approaches to handling non-selections: <code>ignored</code> (ignoring them), <code>confident_nulls</code> (treating them as confident (point-mass) degenerate nulls at zero), and <code>uncertain_nulls</code> (treating them as uncertain). For details about each of these, see <code><a href="reference/infer_upsi.html">?infer_upsi</a></code>.</p>
 </div>
 <div class="section level3">
 <h3 id="penalized-regression">Penalized regression<a class="anchor" aria-label="anchor" href="#penalized-regression"></a>
@@ -304,9 +307,9 @@
 <span><span class="co">#&gt;  9 am                 1  0.169 </span></span>
 <span><span class="co">#&gt; 10 gear               0  0     </span></span>
 <span><span class="co">#&gt; 11 carb               1 -0.0934</span></span></code></pre></div>
-<p>The lasso also selects the same 3 variables. The lasso alone does not provide any p-value or CI to do inference, but UPSIs aside we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.</p>
+<p>The lasso selects the same 3 variables as stepwise AIC, plus <code>am</code> and <code>carb</code> (with small coefficients). The lasso alone does not provide any p-value or CI to do inference, but UPSIs aside we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_lasso_infer_upsi</span> <span class="op">&lt;-</span><span class="fu"><a href="reference/infer.html">infer_upsi</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span> </span>
+<code class="sourceCode R"><span><span class="va">fit_lasso_infer_upsi</span> <span class="op">&lt;-</span><span class="fu"><a href="reference/infer_upsi.html">infer_upsi</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span> </span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_lasso_infer_upsi</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
 <span><span class="co">#&gt;    term        selected    coef estimate ci_low ci_high   p_value</span></span>
@@ -322,10 +325,10 @@
 <span><span class="co">#&gt;  9 am                 1  0.169     1.04  -0.470   2.54   1.89e- 1</span></span>
 <span><span class="co">#&gt; 10 gear               0  0        NA     NA      NA     NA       </span></span>
 <span><span class="co">#&gt; 11 carb               1 -0.0934   -0.815 -2.30    0.666  2.91e- 1</span></span></code></pre></div>
-<p>These results should look familiar: since the model selected by lasso is the same as that selected by stepwise AIC, the UPSI inference method is identical; <code>wt</code> is still seemingly significant.</p>
+<p>These results are close to the UPSI results for stepwise AIC, since the two selected models share <code>cyl</code>, <code>hp</code>, and <code>wt</code>; <code>wt</code> is still seemingly significant.</p>
 <p><em>Selective inference</em></p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_lasso_infer_SI</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer.html">infer_selective</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">fit_lasso_infer_SI</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_selective.html">infer_selective</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_lasso_infer_SI</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
 <span><span class="co">#&gt;    term        selected    coef estimate ci_low ci_high  p_value</span></span>
@@ -341,12 +344,12 @@
 <span><span class="co">#&gt;  9 am                 1  0.169     1.04  -13.6    2.25   0.710  </span></span>
 <span><span class="co">#&gt; 10 gear               0  0        NA      NA     NA     NA      </span></span>
 <span><span class="co">#&gt; 11 carb               1 -0.0934   -0.815  -2.20  24.2    0.834</span></span></code></pre></div>
-<p>Here we see that after adjusting for the selective process with selective inference, we are able to assert a significant effect of <code>wt</code> even after the selective process. The CI for this term is only slightly wide than in the full model.</p>
+<p>Here we see that after adjusting for the selective process with selective inference, we are able to assert a significant effect of <code>wt</code> even after the selective process, though its CI is considerably wider than the UPSI interval.</p>
 <p><em>Bootstrapping</em></p>
 <p>The lasso’s bias does not vanish for large effects, so for a lasso selector the uniformly valid choice is to pad every interval by <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>λ</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\hat\lambda</annotation></semantics></math>:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">fit_lasso_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, pad <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span> </span>
+<span><span class="va">fit_lasso_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, pad <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span> </span>
 <span><span class="co">#&gt; Bootstrapping with B = 100 replicates...</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_lasso_infer_boot</span><span class="op">)</span> </span>
 <span><span class="co">#&gt; # A tibble: 11 × 8</span></span>
@@ -366,7 +369,7 @@
 <p>Compare these to the raw percentile intervals (<code>pad = "none"</code>), where coefficients that are rarely selected collapse toward <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>0</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[0, 0]</annotation></semantics></math>:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">fit_lasso_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, pad <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> </span>
+<span><span class="va">fit_lasso_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_lso</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, pad <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> </span>
 <span><span class="co">#&gt; Bootstrapping with B = 100 replicates...</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_lasso_infer_boot</span><span class="op">)</span> </span>
 <span><span class="co">#&gt; # A tibble: 11 × 8</span></span>
@@ -395,7 +398,7 @@
 <span><span class="co">#&gt; Penalized `ncvreg`-based selector</span></span>
 <span><span class="co">#&gt; 3 of 10 variables selected: am, qsec, wt </span></span>
 <span><span class="co">#&gt; Meta information: family=gaussian, penalty=MCP, lambda=best, lambda_used=0.339, lambda_seq=list(...), cv_info=list(...), ellipses=list(...) </span></span>
-<span><span class="co">#&gt; Default `infer()` method: pipe</span></span>
+<span><span class="co">#&gt; Default `infer()` method: boot</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_mcp</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 3</span></span>
 <span><span class="co">#&gt;    term        selected  coef</span></span>
@@ -412,7 +415,7 @@
 <span><span class="co">#&gt; 10 gear               0  0   </span></span>
 <span><span class="co">#&gt; 11 carb               0  0</span></span></code></pre></div>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_mcp_infer_upsi</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer.html">infer_upsi</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span> </span>
+<code class="sourceCode R"><span><span class="va">fit_mcp_infer_upsi</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_upsi.html">infer_upsi</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span> </span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_mcp_infer_upsi</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
 <span><span class="co">#&gt;    term        selected  coef estimate  ci_low ci_high   p_value</span></span>
@@ -432,7 +435,7 @@
 <p>MCP is unbiased for large effects, so the default zero-side padding applies: intervals that contain 0 are padded out to <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>±</mi><mi>γ</mi><mover><mi>λ</mi><mo accent="true">̂</mo></mover></mrow><annotation encoding="application/x-tex">\pm\gamma\hat\lambda</annotation></semantics></math>, and the others are left alone.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12</span><span class="op">)</span></span>
-<span><span class="va">fit_mcp_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span> </span>
+<span><span class="va">fit_mcp_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span><span class="op">)</span> </span>
 <span><span class="co">#&gt; Bootstrapping with B = 100 replicates...</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_mcp_infer_boot</span><span class="op">)</span> </span>
 <span><span class="co">#&gt; # A tibble: 11 × 8</span></span>
@@ -451,7 +454,7 @@
 <span><span class="co">#&gt; 11 carb               0  0     -0.710   -3.57    1.02          0.52        1.02</span></span></code></pre></div>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">12</span><span class="op">)</span></span>
-<span><span class="va">fit_mcp_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, pad <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> </span>
+<span><span class="va">fit_mcp_infer_boot</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_boot.html">infer_boot</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span>, B <span class="op">=</span> <span class="fl">100</span>, inference_target <span class="op">=</span> <span class="st">"all"</span>, pad <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span> </span>
 <span><span class="co">#&gt; Bootstrapping with B = 100 replicates...</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_mcp_infer_boot</span><span class="op">)</span> </span>
 <span><span class="co">#&gt; # A tibble: 11 × 8</span></span>
@@ -470,7 +473,7 @@
 <span><span class="co">#&gt; 11 carb               0  0     -0.710   -3.57   0              0.52          NA</span></span></code></pre></div>
 <p><em>PIPE</em>: available for <code>ncvreg</code> only</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit_mcp_infer_pipe</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer.html">infer_pipe</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">fit_mcp_infer_pipe</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/infer_pipe.html">infer_pipe</a></span><span class="op">(</span><span class="va">fit_mcp</span>, data <span class="op">=</span> <span class="va">mtcars</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy</a></span><span class="op">(</span><span class="va">fit_mcp_infer_pipe</span><span class="op">)</span></span>
 <span><span class="co">#&gt; # A tibble: 11 × 7</span></span>
 <span><span class="co">#&gt;    term        selected  coef estimate  ci_low ci_high       p_value</span></span>

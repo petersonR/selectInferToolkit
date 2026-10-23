@@ -111,7 +111,7 @@ Because non-selections are recorded as 0, a small nonzero coefficient
 that the selector rarely picks has a bootstrap distribution piled up at
 0, and its percentile interval collapses toward $`[0, 0]`$. The `pad`
 argument of
-[`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md)
+[`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
 corrects this:
 
 - `"zero_side"` (default): if an interval contains 0, each endpoint is

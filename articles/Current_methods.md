@@ -50,17 +50,17 @@ approaches:
 
 | Function | Method | Key options |
 |----|----|----|
-| [`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md) | Unadjusted post-selection inference (UPSI) | `nonselection` |
-| [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md) | Selective inference: exact conditioning on the selection event; currently requires lasso or forward stepwise selection | `nonselection` |
-| [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md) | Bootstrap-based inference: resamples the full selection + estimation pipeline | `inference_target`, `pad` |
-| [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md) | PIPE: projection-based test statistics and intervals for a penalized fit (wraps [`ncvreg::intervals()`](https://pbreheny.github.io/ncvreg/reference/intervals.html)); currently requires `ncvreg` selection, and is experimental | — |
+| [`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer_upsi.md) | Unadjusted post-selection inference (UPSI) | `nonselection` |
+| [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md) | Selective inference: exact conditioning on the selection event; currently requires lasso or forward stepwise selection | `nonselection` |
+| [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md) | Bootstrap-based inference: resamples the full selection + estimation pipeline | `inference_target`, `pad` |
+| [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer_pipe.md) | PIPE: projection-based test statistics and intervals for a penalized fit (wraps [`ncvreg::intervals()`](https://pbreheny.github.io/ncvreg/reference/intervals.html)); currently requires `ncvreg` selection, and is experimental | — |
 
 ### The `nonselection` argument
 
 For
-[`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+[`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer_upsi.md)
 and
-[`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md),
+[`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md),
 variables that were *not* selected present a choice about how to handle
 their inference:
 

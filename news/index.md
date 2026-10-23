@@ -2,8 +2,80 @@
 
 ## selectInferToolkit 0.4.4
 
+- The selector help pages and README were corrected and updated (#27).
+  Among other fixes,
+  [`?select_glmnet`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md)
+  and
+  [`?select_ncvreg`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md)
+  now explain `lambda = "best"` / `"compact"`;
+  [`select_ncvreg()`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md)’s
+  `lambda` is documented as `"best"` or `"compact"` only (a numeric
+  value was documented but never accepted); and the README’s stepwise
+  selective-inference example uses `criterion = "cp"`.
+
+- [`?tidy.inferrer`](https://petersonr.github.io/selectInferToolkit/reference/inferrer-methods.md)
+  and
+  [`?tidy.selector`](https://petersonr.github.io/selectInferToolkit/reference/selector-methods.md)
+  now document every output column and explain the scaled metric: by
+  default coefficients are per standard deviation of each predictor,
+  `scale_coef = FALSE` gives per-unit slopes, and the intercept is
+  always at the predictor means (#23).
+
+- Help pages reorganized (#26): each `infer_*` function has its own
+  page, the `selector` and `inferrer` methods
+  ([`tidy()`](https://generics.r-lib.org/reference/tidy.html),
+  [`predict()`](https://rdrr.io/r/stats/predict.html),
+  [`coef()`](https://rdrr.io/r/stats/coef.html),
+  [`print()`](https://rdrr.io/r/base/print.html)) have “Methods for …”
+  pages, and
+  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
+  has its own. The constructors
+  [`as_selector()`](https://petersonr.github.io/selectInferToolkit/reference/as_selector.md)
+  and
+  [`as_inferrer()`](https://petersonr.github.io/selectInferToolkit/reference/as_inferrer.md)
+  stay exported for writing new methods but are marked internal. Stale
+  Value sections were replaced.
+
+- [`ciratio()`](https://petersonr.github.io/selectInferToolkit/reference/ciratio.md)
+  is no longer exported; it remains available as
+  `selectInferToolkit:::ciratio()` (#26).
+
+- [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
+  now errors on any unrecognized argument instead of silently ignoring
+  it through `...`. `type = "residual"` errors as not yet implemented,
+  and supplying `n_cores` warns that it currently has no effect (it is
+  reserved for \#5) (#25).
+
+- `boot()`, the worker behind
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md),
+  is no longer exported, so it no longer masks
+  [`boot::boot()`](https://rdrr.io/pkg/boot/man/boot.html) (#25).
+
+- [`select_ncvreg()`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md)
+  selectors now default to
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
+  in
+  [`infer()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  (was the experimental
+  [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer_pipe.md)),
+  since zero-side padding targets MCP (#24).
+  [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer_pipe.md)
+  is still available directly.
+
+- [`infer()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  passes `nonselection` only to methods that take it
+  ([`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer_upsi.md),
+  [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)).
+  When the default method has no such option
+  ([`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md),
+  [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer_pipe.md))
+  and `nonselection` is supplied, it now warns that it is ignored
+  instead of silently dropping it (#24). The three `nonselection` modes
+  are now defined in
+  [`?infer_upsi`](https://petersonr.github.io/selectInferToolkit/reference/infer_upsi.md).
+
 - **Breaking:**
-  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md)
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
   gains `pad`, and loses `debias` and `estimation_data`. Because a
   non-selected coefficient is recorded as 0 in each replicate, the
   percentile interval of a small, rarely selected coefficient collapses
@@ -33,7 +105,7 @@
   [`ciratio()`](https://petersonr.github.io/selectInferToolkit/reference/ciratio.md)
   takes `pad` in place of `debias`.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   for `glmnet` selectors now conditions on a refit of the lasso at the
   selected lambda with a tight convergence tolerance (`thresh = 1e-14`)
   (#18). With glmnet’s default tolerance, the active set and signs on
@@ -46,7 +118,7 @@
   whether this warns (default), is silent, or errors; the warning
   suggests re-selecting with `control = list(thresh = 1e-14)`.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   now works for
   [`select_glmnet()`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md)
   selectors with `family = "binomial"` (#19).
@@ -63,7 +135,7 @@
   `RSS + mult*sigma^2*df` that `selectiveInference` conditions on.
 
   Selecting with `criterion = "cp"` means
-  [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   conditions on exactly the model that was selected. Across every
   setting tested this eliminated the fallback described below.
 
@@ -73,12 +145,12 @@
   [`selectiveInference::fsInf()`](https://rdrr.io/pkg/selectiveInference/man/fsInf.html)
   derives is used and recorded, so selection and inference condition on
   an identical criterion.
-  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/selector.md)
+  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
   replays the argument rather than the resolved value, so a `NULL` sigma
   is re-estimated per bootstrap resample. Supplying a known sigma did
   not measurably change type I error relative to the estimated default.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   gains `on_mismatch`, controlling what happens when the selector’s
   stopping point and `selectiveInference`’s disagree. The options are:
   `"silent-fall-back"`, `warn-fall-back` (default), and `"stop"`.
@@ -86,7 +158,7 @@
   the selector to more carefully match the inferrer’s structural
   conditions (e.g. adding `criterion = "cp"` to `select_stepwise_ic`).
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   no longer estimates sigma with
   [`selectiveInference::estimateSigma()`](https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html)
   for `stepwise_ic` selectors when `p > n/2`, reverting a 0.4.3 change.
@@ -101,7 +173,7 @@
   same caveat about [`set.seed()`](https://rdrr.io/r/base/Random.html)
   still applies.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   restates `selectiveInference`’s “p \> n/2, and sd(y) used as an
   estimate of sigma” warning in terms of this package’s arguments. The
   original points at
@@ -112,7 +184,7 @@
   outcome. Other warnings from `selectiveInference` pass through
   unchanged.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   no longer emits that warning twice on the fallback path. It called
   `fsInf()` a second time with `sigma = NULL`, so the sigma was
   re-derived and re-warned about; the second call now reuses the value
@@ -138,7 +210,7 @@
   gains an explicit `alpha` argument. It was previously reachable only
   through `...`, and is now recorded on the fitted selector.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   gains a `sigma` argument for supplying a known or pre-computed
   residual standard deviation. Since the automatic estimate calls
   [`selectiveInference::estimateSigma()`](https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html),
@@ -150,20 +222,20 @@
 
 - [`select_glmnet()`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md)
   now carries `alpha` through re-selection. Previously
-  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/selector.md)
+  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
   fell back to the default `alpha = 1`, so every bootstrap replicate in
-  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md)
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
   refit a lasso even when the original selector was a ridge or elastic
   net fit.
 
 - [`select_glmnet()`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md)
   now replays the arguments originally passed through `...` on
   re-selection.
-  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/selector.md)
+  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
   calls the selector with only `data` and `fitted_selector`, so
   `penalty.factor`, `weights`, `nlambda`, `intercept` and friends were
   silently dropped and every
-  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md)
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
   replicate fit a plain unweighted model rather than the estimator the
   user selected with.
 
@@ -198,7 +270,7 @@
   realistic case. The assignment now only patches terms that are still
   missing, which is what it was meant to do.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   passes `ntimes = 1` to
   [`selectiveInference::fsInf()`](https://rdrr.io/pkg/selectiveInference/man/fsInf.html)
   again. Without it fsInf uses its default of 2 and no longer stops
@@ -209,7 +281,7 @@
   the IC stopping rule at all. The chosen conditioning event is now
   recorded as `attr(x, "meta")$conditioning`.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   estimates sigma with
   [`selectiveInference::estimateSigma()`](https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html)
   when `p > n/2` for `glmnet` selectors as well, not just stepwise ones.
@@ -217,13 +289,13 @@
   `sd(y)`, which contains the signal variance and produced badly
   over-covered intervals.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   forwards `conf.level` to the intercept-only fallback. When no
   variables were selected the interval was always computed at the 95%
   default while the returned object still reported the level the user
   asked for.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   now signals the no-selection fallback with a warning rather than a
   message, and records `attr(x, "meta")$unadjusted_fallback`. Messages
   are swallowed by knitr,
@@ -231,7 +303,7 @@
   simulation loops, so unadjusted intervals could be collected under a
   “Selective” label without any visible signal.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   now produces intervals at the requested `conf.level`. It passed
   `(1 - conf.level) / 2` as the `alpha` argument of
   [`selectiveInference::fsInf()`](https://rdrr.io/pkg/selectiveInference/man/fsInf.html)
@@ -244,7 +316,7 @@
   under `nonselection = "uncertain_nulls"`, which were already using
   `conf.level` directly.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   no longer fails when
   [`selectiveInference::fsInf()`](https://rdrr.io/pkg/selectiveInference/man/fsInf.html)’s
   own AIC/BIC stopping rule stops at a different step than
@@ -253,35 +325,35 @@
   [`select_stepwise_ic()`](https://petersonr.github.io/selectInferToolkit/reference/select_stepwise_ic.md)
   actually returned.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   handles selectors that chose no variables, returning unadjusted
   inference for the intercept-only model instead of erroring.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   now rejects `glmnet` selectors with `alpha != 1` up front. Selective
   inference is only valid for the lasso here, and these fits previously
   produced invalid intervals rather than an error.
 
-- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
   estimates sigma with
   [`selectiveInference::estimateSigma()`](https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html)
   when `p > n/2`, where the `fsInf()` default is unsuitable.
 
-- [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+- [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer_pipe.md)
   records its nonselection mode as `"uncertain_nulls"`; it previously
   recorded `"uncertain"`, which is not one of the supported values.
 
 ### Other changes
 
 - The default for `debias` in
-  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md)
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
   is now `FALSE` (was `TRUE`).
 
 - The package no longer depends on `hdrm`, which is not available on
   CRAN.
 
 - Clearer error message from
-  [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
+  [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer_pipe.md)
   when given an unsupported selector.
 
 - Fixed a warning showing up in tests due to deprecation in tidyselect

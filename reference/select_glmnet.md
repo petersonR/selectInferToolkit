@@ -1,7 +1,12 @@
-# Fit an (relaxed) lasso or elastic net penalized regression via glmnet
+# Lasso or elastic net selection via `glmnet`
 
-A wrapper for `glmnet` and `cv.glmnet`. It runs CV by default so
-remember to set your seed for reproducibility.
+A wrapper for
+[`glmnet::cv.glmnet()`](https://glmnet.stanford.edu/reference/cv.glmnet.html)
+(or
+[`glmnet::glmnet()`](https://glmnet.stanford.edu/reference/glmnet.html)
+at a fixed `lambda`). Cross-validation is random, so set a seed for
+reproducibility. Predictors are standardized first; see
+[`tidy.selector()`](https://petersonr.github.io/selectInferToolkit/reference/selector-methods.md).
 
 ## Usage
 
@@ -25,7 +30,7 @@ select_glmnet(
 
 - data:
 
-  data set
+  a data frame
 
 - family:
 
@@ -33,58 +38,40 @@ select_glmnet(
 
 - lambda:
 
-  can be `best`, `compact` (which use CV), or a single numeric value
-  giving a fixed penalty. See details.
+  `"best"` (default) or `"compact"`, both chosen by cross-validation
+  (see Details), or a single number giving a fixed penalty.
 
 - fitted_selector:
 
-  a previously fit `selector`, used for resampling
+  a previously fit `selector`, used by
+  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
 
 - alpha:
 
-  The elasticnet mixing parameter, passed to `glmnet`
+  the elastic net mixing parameter, passed to `glmnet`: 1 (default) is
+  the lasso
 
 - ...:
 
-  Additional arguments that can be passed to `glmnet`
+  additional arguments passed to
+  [`glmnet::cv.glmnet()`](https://glmnet.stanford.edu/reference/cv.glmnet.html)
+  or
+  [`glmnet::glmnet()`](https://glmnet.stanford.edu/reference/glmnet.html),
+  e.g. `nfolds`, `penalty.factor`
 
 ## Value
 
-A `selector` object wrapping `glmnet` containing:
+a `selector` wrapping the `cv.glmnet` (or `glmnet`) fit; see
+[`tidy.selector()`](https://petersonr.github.io/selectInferToolkit/reference/selector-methods.md).
+Its default inference method is
+[`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md).
 
-- beta:
+## Details
 
-  a tibble containing term names and coefficients
+With `lambda = "best"` the penalty is `lambda.min`, the value minimizing
+cross-validated error; with `"compact"` it is `lambda.1se`, the largest
+value whose cross-validated error is within one standard error of the
+minimum, which gives a sparser model.
 
-- std:
-
-  Was desing matrix standadrized
-
-- penalty:
-
-  penalty used (lasso or MCP)
-
-- lambda:
-
-  are the coefficeint associated with "lambda.min" or "lambda.1se"
-
-- lambda.select:
-
-  numeric value of selected lambda
-
-- fold:
-
-  Which fold each observation belongs to. By default the observations
-  are randomly assigned.
-
-- x:
-
-  the model dataframe used
-
-- y:
-
-  repsonse used
-
-- alpha:
-
-  The elasticnet mixing parameter passed to `glmnet`
+Only the lasso (`alpha = 1`) is supported by
+[`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md).

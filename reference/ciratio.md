@@ -1,8 +1,10 @@
-# Computing mean/median CI ratio and significant Discoveries
+# Compare CI lengths and discoveries across selectors and inference methods
 
-Perfroms full model boostrap, stepwise AIC, stepwise BIc, lasso and MCP
-and gives average CI for variables adjusting for post-selectino
-inference using hybrid, bootstrap and selective inference
+A research helper: fits the full model, stepwise AIC and BIC, lasso and
+MCP (each with `lambda = "best"` and `"compact"`), runs UPSI, the
+bootstrap and (where supported) selective inference on each, and
+tabulates the mean and median CI length and the number of significant
+terms. Internal; call it as `selectInferToolkit:::ciratio()`.
 
 ## Usage
 
@@ -30,7 +32,7 @@ ciratio(
 
 - data:
 
-  data set
+  a data frame
 
 - family:
 
@@ -38,9 +40,8 @@ ciratio(
 
 - nonselection:
 
-  A character string specifying how to handle variables not selected by
-  model selection procedure. One of "ignored", "confident_nulls" or
-  "uncertain_nulls" supported
+  how UPSI and selective inference handle non-selected variables; see
+  [`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer_upsi.md)
 
 - conf.level:
 
@@ -48,42 +49,45 @@ ciratio(
 
 - B:
 
-  Number of bootstraps
+  number of bootstrap resamples
 
 - direction:
 
-  the mode of step wise search, can be one of "both", "backward", or
-  "forward", with a default of "forward"
+  stepwise search direction: `"forward"` (default), `"backward"` or
+  `"both"`
 
 - select_factors_together:
 
-  should categorical variables be jointly selected?
+  should categorical variables be jointly selected (stepwise)?
 
 - pad:
 
   how bootstrap intervals are padded; see
-  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/boot.md)
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
 
 - inference_target:
 
-  is inference requested on all or selected only
+  bootstrap inference target; see
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
 
 - ...:
 
-  additional arguments
+  passed to the full-model and MCP selectors
 
 ## Value
 
-A list with following data frames
+a list of three matrices, each with one row per selector and columns
+`UPSI`, `Bootstrap` and `Selective Inference` (`NA` where a method
+doesn't apply). All exclude the intercept.
 
 - avg_ci_ln:
 
-  Mean of CI length across all variables in model excluding intercept
+  mean CI length
 
 - med_ci_ln:
 
-  Median of CI length across all variables in model excluding intercept
+  median CI length
 
 - no_sign_disc:
 
-  \# of significant discoveries in model excluding intercept
+  number of terms with p \< 0.05 (bootstrap: CI excluding 0)

@@ -1,7 +1,9 @@
-# Stepwise forward/backward/bidirectional selection with AIC/BIC
+# Stepwise selection with AIC or BIC
 
-This function implements forward/backward/bidirectional stepwise
-regression, for use in the `selectInferToolkit` package
+Forward, backward or bidirectional stepwise selection via
+[`MASS::stepAIC()`](https://rdrr.io/pkg/MASS/man/stepAIC.html).
+Predictors are standardized first; see
+[`tidy.selector()`](https://petersonr.github.io/selectInferToolkit/reference/selector-methods.md).
 
 ## Usage
 
@@ -25,45 +27,49 @@ select_stepwise_ic(
 
 - formula:
 
-  a formula.
+  a formula
 
 - data:
 
-  data set
+  a data frame
 
 - family:
 
-  outcome distributional family
+  outcome distributional family: `"gaussian"` or `"binomial"`
+  (`"poisson"` is not yet supported)
 
 - select_factors_together:
 
-  should categorical variables be jointly selected?
+  should the dummy columns of a factor enter or leave the model
+  together?
 
 - penalty:
 
-  AIC, BIC
+  `"AIC"` (default) or `"BIC"`
 
 - direction:
 
-  the mode of step wise search, can be one of "both", "backward", or
-  "forward", with a default of "forward"
+  the search direction: `"forward"` (default), `"backward"` or `"both"`
 
 - criterion:
 
-  which form of the information criterion to minimize. `"deviance"`
-  (default) mirrors
-  [`MASS::stepAIC()`](https://rdrr.io/pkg/MASS/man/stepAIC.html) `"cp"`
-  is the Mallows-Cp form, mirrors `selectiveInference`
+  which form of the information criterion to minimize:
 
-  The two may disagree, in which case the results returned by
-  [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer.md)
-  has to fall back from passing `type = "aic"` to selectiveInference to
-  `type = "active"`, which may have minor inferential consequences as it
-  doesn't account for uncertainty in the number of selected features,
-  proceeding as though the number of steps taken by the algorithm was
-  pre-ordained. The effect of this seems to be minor.
+  - `"deviance"` (default): `n * log(RSS / n) + k * df`, as in
+    [`MASS::stepAIC()`](https://rdrr.io/pkg/MASS/man/stepAIC.html).
 
-  Requires `family = "gaussian"`, `direction = "forward"` and
+  - `"cp"`: the Mallows-Cp form `RSS + k * sigma^2 * df`, which is what
+    `selectiveInference` conditions on.
+
+  Here `k = 2` for AIC and `log(n)` for BIC.
+
+  The two can stop at different steps. When they do,
+  [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
+  falls back from conditioning on the IC stopping rule (`type = "aic"`)
+  to conditioning on a fixed number of steps (`type = "active"`), which
+  treats the number of selected terms as fixed in advance; the effect of
+  this seems to be minor. `"cp"` avoids the fallback. It requires
+  `family = "gaussian"`, `direction = "forward"` and
   `select_factors_together = FALSE`.
 
 - sigma:
@@ -75,16 +81,22 @@ select_stepwise_ic(
 
 - trace:
 
-  passed to MASS::stepAIC
+  passed to
+  [`MASS::stepAIC()`](https://rdrr.io/pkg/MASS/man/stepAIC.html)
 
 - fitted_selector:
 
-  a previously fit `selector`, used for resampling
+  a previously fit `selector`, used by
+  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
 
 - ...:
 
-  Additional arguments
+  additional arguments passed to
+  [`MASS::stepAIC()`](https://rdrr.io/pkg/MASS/man/stepAIC.html)
 
 ## Value
 
-A `selector` object
+a `selector`; see
+[`tidy.selector()`](https://petersonr.github.io/selectInferToolkit/reference/selector-methods.md).
+Its default inference method is
+[`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md).

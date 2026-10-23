@@ -31,7 +31,8 @@ select_null_model(
 
 - fitted_selector:
 
-  a previously fit `selector`, used for resampling
+  a previously fit `selector`, used by
+  [`reselect()`](https://petersonr.github.io/selectInferToolkit/reference/reselect.md)
 
 - ...:
 

@@ -1,98 +1,21 @@
-# Constructor for `inferrer`s
-
-Create an `inferrer` wrapper around post-selection inference algorithms
-so they can be used with the `selectInferToolkit` package and can
-harmonize results across various selection algorithms (`inferrer`s).
-This is not a user-facing function.
+# Post-selection inference
 
 This function performs a `selector`'s default inference method.
 Alternative inference methods may be available via `infer_*`, which you
 should use instead if you want to do specific tuning.
 
-A wrapper for the `selectiveInference` functions on `selector` objects
-
-UPSI is sometimes referred to as "hybrid-OLS", but essentially we re-fit
-the selected model to the data as though we never used that same data to
-fit the model. It is common, easy, and ill-advised.
-
 ## Usage
 
 ``` r
-as_inferrer(
-  x,
-  name,
-  label = name,
-  nonselection,
-  inferences,
-  conf.level,
-  selector,
-  meta = list()
-)
-
 infer(
   object,
   data,
-  nonselection = c("ignored", "uncertain_nulls", "confident_nulls"),
-  ...
-)
-
-infer_pipe(object, data, conf.level = 0.95, ...)
-
-infer_selective(
-  object,
-  data,
   nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
-  conf.level = 0.95,
-  use_cv_sigma = FALSE,
-  sigma = NULL,
-  on_mismatch = c("warn-fall-back", "silent-fall-back", "stop"),
   ...
-)
-
-infer_upsi(
-  object,
-  data,
-  nonselection = c("ignored", "confident_nulls", "uncertain_nulls"),
-  conf.level = 0.95
 )
 ```
 
 ## Arguments
-
-- x:
-
-  a slot for the main inferential object
-
-- name:
-
-  brief name for method
-
-- label:
-
-  label for method
-
-- nonselection:
-
-  A character string specifying how to handle variables not selected by
-  model selection procedure. One of "ignored", "confident_nulls" or
-  "uncertain_nulls" supported
-
-- inferences:
-
-  a slot for post-selection inferences that should have confidence
-  intervals (at least)
-
-- conf.level:
-
-  .95 by default
-
-- selector:
-
-  a carried-forward `selector` object
-
-- meta:
-
-  a list containing important meta-information from the method
 
 - object:
 
@@ -100,107 +23,41 @@ infer_upsi(
 
 - data:
 
-  data must be passed to `infer` methods
-
-- ...:
-
-  arguments passed to `selectiveInference` function(s)
-
-- use_cv_sigma:
-
-  estimate Sigma via CV (if FALSE, uses SI defaults)
-
-- sigma:
-
-  optional known or pre-computed residual standard deviation. When
-  supplied it is passed straight through to the `selectiveInference`
-  function and no sigma is estimated. The automatic estimate used when
-  `p > n/2` calls
-  [`selectiveInference::estimateSigma()`](https://rdrr.io/pkg/selectiveInference/man/estimateSigma.html)
-  (for `glmnet`), which runs cross-validation, thus important to
-  [`set.seed()`](https://rdrr.io/r/base/Random.html).
-
-- on_mismatch:
-
-  what to report when the selector's stopping point and
-  `selectiveInference`'s disagree. For `stepwise_ic` selectors the two
-  minimize **slightly** different criteria and can disagree. Inference
-  falls back to the model the selector returned, by conditioning on a
-  fixed number of steps; this argument controls how loudly that is
-  reported:
-
-  - `"warn-fall-back"` (default) warns and points at
-    `select_stepwise_ic(criterion = "cp")`, which makes the two rules
-    agree.
-
-  - `"silent-fall-back"` falls back quietly.
-
-  - `"stop"` errors instead.
-
-  The fallback does not account for uncertainty in how many variables
-  were selected, proceeding as though the number of steps had been
-  pre-ordained; the effect of this appears to be minor.
-
-  For `glmnet` selectors, inference always conditions on a refit of the
-  lasso at the selected lambda with a tight convergence tolerance
-  (`thresh = 1e-14`), since glmnet's default tolerance can leave the
-  active set or signs slightly off on correlated designs, which makes
-  intervals undercover. If the refit's active set or signs differ from
-  the selector's, the same three options control whether this is
-  reported with a warning, silently, or as an error.
-
-## Value
-
-An S3 object (list) of class `inferrer`
-
-A list of class `infer_*` containing:'
-
-- ci_avg_ratio:
-
-  Average CI length across all variables in model
-
-- ci_median_ratio:
-
-  median CI length across all variables in model
+  the data used to fit the selector
 
 - nonselection:
 
-  method chosen to deal with non selection
+  how to handle variables the selector did not select; see
+  [`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer_upsi.md).
+  Used only when the default method takes it
+  ([`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer_upsi.md),
+  [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)).
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
+  and
+  [`infer_pipe()`](https://petersonr.github.io/selectInferToolkit/reference/infer_pipe.md)
+  have no `nonselection` option, so supplying it there warns and it is
+  ignored.
 
-- infmethod:
+- ...:
 
-  Inference method chosen
+  additional arguments passed to the default `infer_*` method
 
-- selection_method:
+## Value
 
-  Stepwsie,returned for selector_stepwise_ic class only
+an `inferrer` object; see
+[`tidy.inferrer()`](https://petersonr.github.io/selectInferToolkit/reference/inferrer-methods.md)
 
-- direction:
+## Details
 
-  the mode of step wise search, returned for selector_stepwise_ic class
-  only
+The default method is set by the selector:
 
-- penalty:
+- [`select_stepwise_ic()`](https://petersonr.github.io/selectInferToolkit/reference/select_stepwise_ic.md),
+  [`select_ncvreg()`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md):
+  [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
 
-  penalty used (AIC or BIC), returned for selector_stepwise_ic class
-  only
+- [`select_glmnet()`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md):
+  [`infer_selective()`](https://petersonr.github.io/selectInferToolkit/reference/infer_selective.md)
 
-- lambda:
-
-  selected lambda for inference , either "lambda.min" or "lambda.1se";
-  returned for selector_pen class only
-
-- alpha:
-
-  selected alpha for inference, returned for selector_pen class only
-
-- B:
-
-  The number of bootstrap replicates used (only for bootstrap selection
-  method)
-
-an `inferror` object
-
-`inferrer` object
-
-`inferrer` object
+- [`select_full_model()`](https://petersonr.github.io/selectInferToolkit/reference/select_full_model.md),
+  [`select_null_model()`](https://petersonr.github.io/selectInferToolkit/reference/select_null_model.md):
+  [`infer_upsi()`](https://petersonr.github.io/selectInferToolkit/reference/infer_upsi.md)

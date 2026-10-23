@@ -67,7 +67,7 @@
                         <h4 data-toc-skip class="author">Jinal Shah
 &amp; Ryan Peterson</h4>
             
-            <h4 data-toc-skip class="date">2026-10-22</h4>
+            <h4 data-toc-skip class="date">2026-10-23</h4>
       
 
       <div class="d-none name"><code>Current_methods.Rmd</code></div>
@@ -172,18 +172,18 @@ approaches:</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><code><a href="../reference/infer.html">infer_upsi()</a></code></td>
+<td><code><a href="../reference/infer_upsi.html">infer_upsi()</a></code></td>
 <td>Unadjusted post-selection inference (UPSI)</td>
 <td><code>nonselection</code></td>
 </tr>
 <tr class="even">
-<td><code><a href="../reference/infer.html">infer_selective()</a></code></td>
+<td><code><a href="../reference/infer_selective.html">infer_selective()</a></code></td>
 <td>Selective inference: exact conditioning on the selection event;
 currently requires lasso or forward stepwise selection</td>
 <td><code>nonselection</code></td>
 </tr>
 <tr class="odd">
-<td><code><a href="../reference/boot.html">infer_boot()</a></code></td>
+<td><code><a href="../reference/infer_boot.html">infer_boot()</a></code></td>
 <td>Bootstrap-based inference: resamples the full selection + estimation
 pipeline</td>
 <td>
@@ -191,7 +191,7 @@ pipeline</td>
 </td>
 </tr>
 <tr class="even">
-<td><code><a href="../reference/infer.html">infer_pipe()</a></code></td>
+<td><code><a href="../reference/infer_pipe.html">infer_pipe()</a></code></td>
 <td>PIPE: projection-based test statistics and intervals for a penalized
 fit (wraps <code><a href="https://pbreheny.github.io/ncvreg/reference/intervals.html" class="external-link">ncvreg::intervals()</a></code>); currently requires
 <code>ncvreg</code> selection, and is experimental</td>
@@ -203,7 +203,7 @@ fit (wraps <code><a href="https://pbreheny.github.io/ncvreg/reference/intervals.
 <div class="section level3">
 <h3 id="the-nonselection-argument">The <code>nonselection</code> argument<a class="anchor" aria-label="anchor" href="#the-nonselection-argument"></a>
 </h3>
-<p>For <code><a href="../reference/infer.html">infer_upsi()</a></code> and <code><a href="../reference/infer.html">infer_selective()</a></code>,
+<p>For <code><a href="../reference/infer_upsi.html">infer_upsi()</a></code> and <code><a href="../reference/infer_selective.html">infer_selective()</a></code>,
 variables that were <em>not</em> selected present a choice about how to
 handle their inference:</p>
 <ul>

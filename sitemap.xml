@@ -7,17 +7,23 @@
 <url><loc>https://petersonr.github.io/selectInferToolkit/authors.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/index.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/news/index.html</loc></url>
-<url><loc>https://petersonr.github.io/selectInferToolkit/reference/boot.html</loc></url>
+<url><loc>https://petersonr.github.io/selectInferToolkit/reference/as_inferrer.html</loc></url>
+<url><loc>https://petersonr.github.io/selectInferToolkit/reference/as_selector.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/reference/ciratio.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/reference/hers.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/reference/index.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/reference/infer.html</loc></url>
-<url><loc>https://petersonr.github.io/selectInferToolkit/reference/inferrer.html</loc></url>
+<url><loc>https://petersonr.github.io/selectInferToolkit/reference/infer_boot.html</loc></url>
+<url><loc>https://petersonr.github.io/selectInferToolkit/reference/infer_pipe.html</loc></url>
+<url><loc>https://petersonr.github.io/selectInferToolkit/reference/infer_selective.html</loc></url>
+<url><loc>https://petersonr.github.io/selectInferToolkit/reference/infer_upsi.html</loc></url>
+<url><loc>https://petersonr.github.io/selectInferToolkit/reference/inferrer-methods.html</loc></url>
+<url><loc>https://petersonr.github.io/selectInferToolkit/reference/reselect.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/reference/select_full_model.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/reference/select_null_model.html</loc></url>
 <url><loc>https://petersonr.github.io/selectInferToolkit/reference/select_stepwise_ic.html</loc></url>
-<url><loc>https://petersonr.github.io/selectInferToolkit/reference/selector.html</loc></url>
+<url><loc>https://petersonr.github.io/selectInferToolkit/reference/selector-methods.html</loc></url>
 </urlset>
 
