@@ -17,8 +17,6 @@ edge_types <- list(
   spaces    = function(n) factor(sample(c("much less", "same", "more"), n, TRUE)),
   punct     = function(n) factor(sample(c("a-b", "c/d", "e+f"), n, TRUE)),
   digit     = function(n) factor(sample(c("0", "1"), n, TRUE)),
-  ordered   = function(n) factor(sample(c("lo", "mid", "hi"), n, TRUE),
-                                 levels = c("lo", "mid", "hi"), ordered = TRUE),
   character = function(n) sample(c("p", "q"), n, TRUE),
   logical   = function(n) sample(c(TRUE, FALSE), n, TRUE),
   empty_lev = function(n) factor(sample(c("a", "b"), n, TRUE),
@@ -34,19 +32,9 @@ edge_selectors <- list(
   ncvreg   = function(d) { set.seed(1); select_ncvreg(y ~ ., d) }
 )
 
-# Known failures as of this writing, "type/selector" -> description
-known_bugs <- c(
-  "digit/full"         = "#29 digit-leading levels reported as unselected",
-  "digit/stepwise"     = "#29 digit-leading levels reported as unselected",
-  "digit/glmnet"       = "#29 digit-leading levels reported as unselected",
-  "digit/ncvreg"       = "#29 digit-leading levels reported as unselected",
-  "ordered/full"       = "ordered factors error in select_full_model()",
-  "ordered/glmnet"     = "ordered factors silently dropped by select_glmnet()",
-  "ordered/ncvreg"     = "ordered factors error in select_ncvreg()",
-  "character/full"     = "character predictors error in select_full_model()",
-  "character/glmnet"   = "character predictors silently dropped by select_glmnet()",
-  "character/ncvreg"   = "character predictors error in select_ncvreg()"
-)
+# Known failures as of this writing, "type/selector" -> description (none
+# at present; add entries here, and they turn into failures once fixed)
+known_bugs <- character(0)
 
 for (type in names(edge_types)) {
   for (s in names(edge_selectors)) {
@@ -117,11 +105,64 @@ test_that("reselect() on a resample missing a level keeps the design fixed", {
   expect_true(all(is.finite(predict(rsel_s, d))))
 })
 
-test_that("predict() with a level unseen in training does not return a number silently", {
+test_that("predict() with a level unseen in training errors", {
   d <- edge_data(edge_types$syntactic)
   sel <- select_full_model(y ~ ., d)
   new <- d[1:3, ]
   new$f <- factor(c("lo", "mid", "new"))
-  p <- tryCatch(suppressWarnings(predict(sel, new)), error = function(e) NULL)
-  expect_true(is.null(p) || is.na(p[3]))
+  expect_error(predict(sel, new), "appeared when it was fit")
+})
+
+test_that("digit-leading levels keep their model.matrix() names (#29)", {
+  d <- edge_data(edge_types$digit)
+  for (sel in list(select_full_model(y ~ ., d),
+                   select_stepwise_ic(y ~ ., d, direction = "backward"),
+                   { set.seed(1); select_glmnet(y ~ ., d) })) {
+    td <- tidy(sel)
+    expect_equal(td$term, c("(Intercept)", "x1", "x2", "f1"))
+    expect_equal(td$selected[td$term == "f1"], 1)
+  }
+})
+
+test_that("ordered factors error, asking for a conversion", {
+  d <- edge_data(function(n) factor(sample(c("lo", "mid", "hi"), n, TRUE),
+                                    levels = c("lo", "mid", "hi"),
+                                    ordered = TRUE))
+  for (s in names(edge_selectors))
+    expect_error(edge_selectors[[s]](d), "Ordered factor", info = s)
+})
+
+test_that("missing values error in every selector", {
+  d <- edge_data(edge_types$syntactic)
+  d$x2[3] <- NA
+  for (s in names(edge_selectors))
+    expect_error(edge_selectors[[s]](d), "Missing values in `x2`", info = s)
+  d <- edge_data(edge_types$syntactic)
+  d$y[3] <- NA
+  expect_error(select_full_model(y ~ ., d), "Missing values in `y`")
+
+  # but predict() gives NA for incomplete rows of new data
+  sel <- select_full_model(y ~ ., edge_data(edge_types$syntactic))
+  new <- d[1:3, ]
+  new$x1[2] <- NA
+  expect_equal(is.na(predict(sel, new)), c(FALSE, TRUE, FALSE))
+})
+
+test_that("interactions and in-formula transforms work", {
+  d <- edge_data(edge_types$syntactic)
+  d$x3 <- exp(rnorm(nrow(d)))
+  sel <- select_full_model(y ~ x1 * f + log(x3) + poly(x2, 2), d)
+  td <- tidy(sel, scale_coef = FALSE)
+  expect_true(all(c("x1:flo", "log(x3)", "poly(x2, 2)2") %in% td$term))
+
+  # slopes not involved in an interaction match lm(); main effects within
+  # one are at the mean of the other variable, as numeric variables are
+  # centered before interactions are formed
+  ref <- coef(lm(y ~ x1 * f + log(x3) + poly(x2, 2), d))
+  expect_equal(td$coef[td$term == "log(x3)"], unname(ref["log(x3)"]))
+  expect_equal(td$coef[td$term == "x1:flo"], unname(ref["x1:flo"]))
+  expect_equal(predict(sel, d), unname(predict(lm(y ~ x1 * f + log(x3) +
+                                                   poly(x2, 2), d))))
+  # poly() on new data uses the training basis
+  expect_equal(predict(sel, d[1:5, ]), predict(sel, d)[1:5])
 })

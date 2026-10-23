@@ -51,20 +51,11 @@ as_inferrer <- function(
 #' `print()`, which summarizes them.
 #'
 #' @section Scale of the coefficients:
-#' Before selection, every `select_*` function standardizes the predictors
-#' with a `recipes` recipe: factors are dummy-coded, then all numeric
-#' predictors (dummies included) are centered and divided by their standard
-#' deviation. The outcome is not transformed. So, by default
-#' (`scale_coef = TRUE`), a coefficient is the change in the outcome per
-#' standard deviation of that predictor. With `scale_coef = FALSE`, slopes are
-#' divided by the predictor's standard deviation, giving the usual per-unit
-#' change. (A factor kept whole by
-#' `select_stepwise_ic(select_factors_together = TRUE)` is not scaled, so it
-#' is the same either way.)
-#'
-#' The intercept is never unscaled: because the predictors are centered, it is
-#' the predicted outcome (on the link scale) at the predictor means, not the
-#' intercept `lm()` would report on the raw data.
+#' Coefficients, estimates and intervals are on the same metric as the
+#' selector's; see "Scale of the coefficients" in [tidy.selector()]. By
+#' default (`scale_coef = TRUE`) they are per standard deviation of each
+#' design column; with `scale_coef = FALSE` they are per unit. The intercept
+#' is never unscaled.
 #'
 #' Intervals and `null_radius` are converted along with the estimates.
 #'
@@ -109,16 +100,8 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
   inferences <- attr(x, "inferences")
   selector_obj <- attr(x, "selector")
   results <- tidy(selector_obj, scale_coef = scale_coef)
-  rec_obj <- attr(selector_obj, "recipe_obj")
-
-  scale_step_idx <- which(tidy(rec_obj)$type == "scale")
-
-  if(length(scale_step_idx)) {
-    sds <- tidy(rec_obj, number = scale_step_idx) %>%
-      select(term = "terms", sd = "value")
-  } else {
-    stop("a scaling step is required")
-  }
+  sd_vec <- design_sds(attr(selector_obj, "design"))
+  sds <- tibble(term = names(sd_vec), sd = unname(sd_vec))
 
   tidy_inferences <- inferences %>%
     left_join(sds, by = "term") %>%
@@ -132,24 +115,21 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
         .data$term == "(Intercept)"  ~ estimate_scaled,
         is.na(.data$estimate_scaled) ~ NA_real_,
         !is.na(.data$sd)             ~ estimate_scaled / sd,
-        # sd is NA whenever a term never went through the scale step, i.e. a
-        # factor kept whole by select_factors_together. Unscaled == scaled there.
+        # sd is NA only for zero-variance columns, which are never estimated
         is.na(.data$sd)              ~ estimate_scaled
       ),
       ci_low_unscaled = case_when(
         .data$term == "(Intercept)" ~ .data$ci_low_scaled,
         is.na(ci_low_scaled)  ~ NA_real_,
         !is.na(sd)           ~ .data$ci_low_scaled / .data$sd,
-        # sd is NA whenever a term never went through the scale step, i.e. a
-        # factor kept whole by select_factors_together. Unscaled == scaled there.
+        # sd is NA only for zero-variance columns, which are never estimated
         is.na(sd)            ~ .data$ci_low_scaled
       ),
       ci_high_unscaled = case_when(
         term == "(Intercept)"  ~ .data$ci_high_scaled,
         is.na(ci_high_scaled)  ~ NA_real_,
         !is.na(sd)             ~ .data$ci_high_scaled / .data$sd,
-        # sd is NA whenever a term never went through the scale step, i.e. a
-        # factor kept whole by select_factors_together. Unscaled == scaled there.
+        # sd is NA only for zero-variance columns, which are never estimated
         is.na(sd)              ~ .data$ci_high_scaled
       )
     )

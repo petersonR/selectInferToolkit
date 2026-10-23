@@ -7,8 +7,9 @@
 #' @param x an object from a selection algorithm
 #' @param name name of the selector
 #' @param label label of the selector (for pretty printing)
-#' @param all_terms a slot containing names of all terms
-#' @param recipe_obj preprocessor trained from recipes package
+#' @param design the selector's design (internal): how the formula and data
+#'   become the standardized predictor matrix, and the term map behind
+#'   `tidy()`
 #' @param orig_formula Original formula provided by user
 #' @param selected_terms names of selected variables
 #' @param selected_coefs a vector of only selected coefficients
@@ -21,20 +22,19 @@
 #' @keywords internal
 #' @export
 
-as_selector <- function(x, name, label = name, all_terms,
-                        recipe_obj, orig_formula,
-                        selected_terms,selected_coefs,
+as_selector <- function(x, name, label = name, design, orig_formula,
+                        selected_terms, selected_coefs,
                         default_infer, meta = list()) {
 
   stopifnot(is.list(meta))
-  stopifnot(is.character(all_terms))
+  stopifnot(inherits(design, "selector_design"))
 
   structure(x,
             class = c("selector", class(x)),
             name = name,
             label = label,
-            all_terms = all_terms,
-            recipe_obj = recipe_obj,
+            all_terms = design_terms(design),
+            design = design,
             orig_formula=  orig_formula,
             selected_terms=selected_terms,
             selected_coefs = selected_coefs,
@@ -53,20 +53,25 @@ as_selector <- function(x, name, label = name, all_terms,
 #' * `print()`: a short summary of the selection.
 #'
 #' @section Scale of the coefficients:
-#' Before selection, every `select_*` function standardizes the predictors
-#' with a `recipes` recipe: factors are dummy-coded, then all numeric
-#' predictors (dummies included) are centered and divided by their standard
-#' deviation. The outcome is not transformed. So, by default
+#' Before selection, every `select_*` function builds the model matrix as
+#' [model.matrix()] would (factors, logicals and character predictors are
+#' treatment-coded, so the columns are named e.g. `g3mid`, `am1`, `fTRUE`),
+#' then centers each column and divides it by its standard deviation, dummies
+#' included. The outcome is not transformed. So, by default
 #' (`scale_coef = TRUE`), a coefficient is the change in the outcome per
-#' standard deviation of that predictor. With `scale_coef = FALSE`, slopes are
-#' divided by the predictor's standard deviation, giving the usual per-unit
-#' change. (A factor kept whole by
-#' `select_stepwise_ic(select_factors_together = TRUE)` is not scaled, so it
-#' is the same either way.)
+#' standard deviation of that column. With `scale_coef = FALSE`, slopes are
+#' divided by the column's standard deviation, giving the usual per-unit
+#' change. The centers and standard deviations come from the data the
+#' selector was first fit to, and are reused by [reselect()] and `predict()`.
 #'
-#' The intercept is never unscaled: because the predictors are centered, it is
-#' the predicted outcome (on the link scale) at the predictor means, not the
-#' intercept `lm()` would report on the raw data.
+#' The intercept is never unscaled: it is the predicted outcome (on the link
+#' scale) at the means of the predictors, not the intercept `lm()` would
+#' report on the raw data. ([select_stepwise_ic()] leaves dummies uncentered,
+#' so there it is the prediction at each factor's reference level.)
+#'
+#' Ordered factors are not supported (convert them to numeric scores or
+#' unordered factors first), nor are missing values in the outcome or
+#' predictors.
 #'
 #' @return
 #' * `tidy()`: a tibble with columns `term` (every candidate term, plus the
@@ -91,22 +96,10 @@ predict.selector <- function(object, newdata, ...) {
   if(missing(newdata))
     stop("Please provide newdata")
 
-  rec_obj <- attr(object, "recipe_obj")
-
-  newdata<- bake(rec_obj, new_data = newdata) %>%
-    as.data.frame()
-
-  if (attr(object, "name") =="stepwise_ic") {
-    formula_used <- formula(object)
-    X <- model.matrix(formula_used, newdata)
-    beta <- coef(object)
-    XX <- X[, names(beta), drop = FALSE]
-  } else {
-    beta <- attr(object, "selected_coefs")
-    XX <- cbind(1, as.matrix( newdata[,names(beta)[-1]]))
-  }
-
-    return(as.vector(XX %*% beta))
+  beta <- coef(object)
+  X <- design_X(attr(object, "design"), newdata, allow_na = TRUE)
+  XX <- cbind(1, X[, names(beta)[-1], drop = FALSE])
+  as.vector(XX %*% beta)
 }
 
 
@@ -126,58 +119,24 @@ predict.selector <- function(object, newdata, ...) {
 #' @export
 tidy.selector <- function(x, scale_coef = TRUE, ...) {
 
-  all_terms <- attr(x, "all_terms")
-  if (c("(Intercept)")%in% all_terms ){all_terms=all_terms}else
-     {all_terms=c("(Intercept)",all_terms)}
+  design <- attr(x, "design")
+  beta <- coef(x)
+  terms <- design_terms(design)
 
-  rec_obj <- attr(x, "recipe_obj")
-
-  # Coefficients from selected model
-  coef_df <- tibble(term = names(coef(x)),
-    estimate = as.numeric(coef(x)),
-    selected =1)
-  coef_df$term <- make.names(coef_df$term )
-  if(coef_df$term[1] =="X.Intercept.") coef_df$term[1] = "(Intercept)"
-
-  # Drop intercept for term-level table
-  selected_terms <- coef_df $term
-
-  base <- tibble(
-    term = all_terms,
-    selected1 = as.integer(all_terms %in% selected_terms)) %>%
-    left_join(coef_df, by = "term")
-
-
-  scale_step_idx <- which(tidy(rec_obj)$type == "scale")
-  if(length(scale_step_idx)) {
-    sds <- tidy(rec_obj, number = scale_step_idx) %>%
-      select(term = "terms", sd = "value")
-  } else {
-    stop("a scaling step is required")
+  coef <- unname(beta[terms])
+  if (!scale_coef) {
+    # per-unit slopes; the intercept stays as is (see "Scale of the
+    # coefficients")
+    sds <- design_sds(design)[terms]
+    slope <- terms != "(Intercept)"
+    coef[slope] <- coef[slope] / sds[slope]
   }
 
-  results <- base %>%
-    left_join(sds, by = "term") %>%
-    mutate(
-      coef_scaled = .data$estimate,
-      coef_unscaled = if_else(
-        !is.na(.data$sd),
-        .data$coef_scaled / .data$sd,
-        .data$coef_scaled   ))
-
-  if (scale_coef) {
-    results <- results %>%
-      mutate(coef = ifelse(is.na(.data$coef_scaled), 0, .data$coef_scaled),
-            selected =ifelse(is.na(.data$selected),0,.data$selected))
-  } else {
-    results <- results %>%
-     mutate(coef = ifelse(is.na(.data$coef_unscaled), 0, .data$coef_unscaled),
-              selected =ifelse(is.na(.data$selected),0,.data$selected))
-  }
-
-  results %>%
-    select("term", "selected", "coef")
-
+  tibble(
+    term = terms,
+    selected = as.numeric(terms %in% names(beta)),
+    coef = ifelse(is.na(coef), 0, coef)
+  )
 }
 
 
@@ -222,9 +181,9 @@ coef.selector <- function(object, use_native = FALSE, ...) {
 #' Re-run a selection on new data
 #'
 #' Re-does the selection, possibly on new data, with the same settings as the
-#' original. The pre-processing is not re-estimated: the original recipe from
-#' `selector_obj` (including its centering and scaling) is applied to
-#' `newdata`. This is what [infer_boot()] calls on each resample.
+#' original. The pre-processing is not re-estimated: the design of
+#' `selector_obj` (its columns, factor levels, centers and scales) is applied
+#' to `newdata`. This is what [infer_boot()] calls on each resample.
 #'
 #' @param selector_obj a `selector`
 #' @param newdata a data frame (or the same one)

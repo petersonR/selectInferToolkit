@@ -157,7 +157,7 @@ tidy(fit_lso)
 
 ```
 
-The lasso selects the same 3 variables as stepwise AIC, plus `am` and `carb` (with small coefficients). The lasso alone does not provide any p-value or CI to do inference, but UPSIs aside we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.
+The lasso selects the same 3 variables as stepwise AIC, with coefficients shrunk toward zero. The lasso alone does not provide any p-value or CI to do inference, but UPSIs aside we can again perform a (questionable) hybrid inferential process where ordinary least squares theory is used for inference as though we never used the data for selection.
 
 ```{r}
 fit_lasso_infer_upsi <-infer_upsi(fit_lso, data = mtcars) 

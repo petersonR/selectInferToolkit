@@ -102,12 +102,10 @@ infer_boot <- function(
 #' @importFrom broom tidy
 #' @importFrom stats lm model.frame model.matrix na.pass
 #' @importFrom tibble tibble
-#' @importFrom purrr map
 #' @importFrom MASS stepAIC
 #' @importFrom rlang sym
 #' @importFrom parallel detectCores clusterExport clusterEvalQ makeCluster
 #' @importFrom pbapply pblapply
-#' @importFrom forcats fct_inorder
 #' @importFrom stats as.formula glm coef formula median quantile sd terms
 #' @importFrom utils tail
 #' @importFrom rlang .data
@@ -119,34 +117,9 @@ boot <- function(object, data, B,
   stopifnot(inherits(object, "selector"))
   pad <- match.arg(pad)
 
-  rec_obj <- attr(object, "recipe_obj")
-
-  outcome_name <- rec_obj$var_info |>
-    filter(.data$role == "outcome") |>
-    pull("variable")
-
-  # if cat var selected togther, expand them
-  if (attr(object, "name") == "stepwise_ic" &&
-      attr(object, "meta")$select_factors_together) {
-
-    rec_obj <- rec_obj |> step_dummy(all_factor_predictors(),
-                                     naming = function(...) dummy_names(..., sep = "")
-    ) |>prep()
-  }
-
-  X_full <- bake(rec_obj, new_data = data, recipes::all_predictors())
-  y_full <- bake(rec_obj, new_data = data, recipes::all_outcomes())[[1]]
-
-  # term to  column mapping (CRITICAL for when factors are selected togther)
-  tidy0 <- tidy(object)
-
-  # align column names
-  term_to_col <- tibble(
-    term = tidy0$term
-  ) |>
-    mutate(
-      col = map(.data$term, ~ intersect(.x, colnames(X_full)))
-    )
+  design <- attr(object, "design")
+  X_full <- design_X(design, data)
+  y_full <- design_y(design, data)
 
   # Uncomment after debug
   # # do with parallel computing, Number of cores to use
@@ -211,7 +184,7 @@ boot <- function(object, data, B,
 
 
   # Pad the percentile intervals (scaled metric; the intercept is never padded)
-  radius <- pad_radius(object, pad, X_full, y_full, term_to_col)
+  radius <- pad_radius(object, pad, X_full, y_full, results$term)
   results$null_radius <- unname(radius[results$term])
   results <- pad_intervals(results, pad)
 
@@ -236,8 +209,7 @@ boot <- function(object, data, B,
 
 # Null-zone radius for each term, on the scaled metric; NA for the intercept
 # (never padded). See the `pad` documentation in infer_boot().
-pad_radius <- function(object, pad, X, y, term_to_col) {
-  terms <- term_to_col$term
+pad_radius <- function(object, pad, X, y, terms) {
   radius <- stats::setNames(rep(NA_real_, length(terms)), terms)
   slopes <- terms != "(Intercept)"
   if (pad == "none" || !any(slopes)) return(radius)
@@ -278,17 +250,11 @@ pad_radius <- function(object, pad, X, y, term_to_col) {
       stop("pad = \"", pad, "\" for stepwise selection needs the full-model ",
            "standard errors, which require n > p + 1. Use pad = \"none\".",
            call. = FALSE)
-    df <- as.data.frame(X)
-    df$.y <- y
-    fit <- glm(.y ~ ., data = df, family = meta$family)
+    fit <- fit_on_columns(X, y, colnames(X), meta$family)
     se <- summary(fit)$coefficients[, "Std. Error"]
-    names(se) <- gsub("`", "", names(se))
-    for (i in which(slopes)) {
-      cols <- unlist(term_to_col$col[i])
-      if (length(cols) && all(cols %in% names(se)))
-        radius[i] <- sqrt(k) * max(se[cols])
-    }
-
+    names(se) <- attr(fit, "column_names")[names(se)]
+    cols <- intersect(terms[slopes], names(se))
+    radius[cols] <- sqrt(k) * se[cols]
   } else {
     stop("Padding is not defined for selector \"", name, "\"; ",
          "use pad = \"none\".", call. = FALSE)

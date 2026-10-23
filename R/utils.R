@@ -63,133 +63,79 @@ si_sigma_warning <- function(w) {
   invokeRestart("muffleWarning")
 }
 
-# Logical predictors become a 0/1 indicator named `xTRUE`, the name
-# model.matrix() gives them. (Not a factor: step_dummy() would run the level
-# through make.names(), giving `xTRUE.`, as TRUE is a reserved word.) Done
-# inside the recipe so that bake() converts new data too; add it after any
-# centering step that indicators should skip.
-#' @importFrom stats setNames
-step_logical_to_indicator <- function(rec, data) {
-  preds <- rec$var_info$variable[rec$var_info$role == "predictor"]
-  lgl <- preds[vapply(data[preds], is.logical, logical(1))]
-  if (!length(lgl)) return(rec)
-  exprs <- lapply(lgl, function(v) rlang::expr(as.numeric(!!rlang::sym(v))))
-  rec %>%
-    step_mutate(!!!setNames(exprs, paste0(lgl, "TRUE"))) %>%
-    step_rm(dplyr::all_of(lgl))
-}
-
 # Coefficients glm() could not estimate (aliased columns) come back NA; they
 # are not selected
 drop_aliased <- function(coefs) coefs[!is.na(coefs)]
 
-# Refit used for UPSI-style intervals. Gaussian models go through lm() so that
-# broom's intervals use t quantiles, matching the p-values; tidy() on a
-# gaussian glm() gives normal-quantile intervals but t-based p-values.
-#' @importFrom stats lm glm
-fit_lm_or_glm <- function(formula, data, family) {
-  if (family == "gaussian")
-    lm(formula, data = data)
-  else
-    glm(formula, data = data, family = family)
+# Fit y on columns `cols` of the design matrix X. The columns enter under
+# syntactic stand-in names (v1, v2, ...), so any column name works without
+# backticks or make.names(); coef_on_columns() and tidy_on_columns() translate
+# back. For inference (lm_for_gaussian = TRUE), gaussian models go through
+# lm() so that broom's intervals use t quantiles, matching the p-values
+# (tidy() on a gaussian glm() gives normal-quantile intervals but t-based
+# p-values).
+#' @importFrom stats lm glm reformulate setNames
+fit_on_columns <- function(X, y, cols, family, lm_for_gaussian = TRUE) {
+  ids <- sprintf("v%d", seq_along(cols))  # character(0) when no columns
+  df <- data.frame(.y = y)
+  for (k in seq_along(cols)) df[[ids[k]]] <- X[, cols[k]]
+  f <- if (length(ids)) reformulate(ids, ".y") else .y ~ 1
+  fit <- if (family == "gaussian" && lm_for_gaussian) lm(f, data = df) else
+    glm(f, data = df, family = family)
+  attr(fit, "column_names") <- setNames(c("(Intercept)", cols),
+                                        c("(Intercept)", ids))
+  fit
+}
+
+coef_on_columns <- function(fit) {
+  cf <- stats::coef(fit)
+  names(cf) <- attr(fit, "column_names")[names(cf)]
+  cf
+}
+
+# broom::tidy() of a fit_on_columns() fit, with column names and the
+# package's column names for the interval
+tidy_on_columns <- function(fit, conf.level) {
+  td <- tidy(fit, conf.int = TRUE, conf.level = conf.level)
+  tibble::tibble(term = unname(attr(fit, "column_names")[td$term]),
+                 estimate = td$estimate, std_error = td$std.error,
+                 ci_low = td$conf.low, ci_high = td$conf.high,
+                 p_value = td$p.value)
 }
 
 #' @importFrom rlang .data
 fill_in_nonselections <- function(inferences, selector_obj,
-                                  nonselection, X, y, conf.level,
-                                  term_to_col = NULL) {
+                                  nonselection, X, y, conf.level) {
 
   family <- attr(selector_obj, "meta")$family
   val <- tidy(selector_obj) %>%
     left_join(inferences, by = c("term", "selected"))
 
-
   if(nonselection == "confident_nulls") {
-    val$estimate <- ifelse(val$selected, val$estimate, 0)
-
     val$estimate = ifelse(val$selected, val$estimate, 0)
     val$ci_low = ifelse(val$selected, val$ci_low, 0)
     val$ci_high = ifelse(val$selected, val$ci_high, 0)
     val$p_value = ifelse(val$selected, val$p_value, 1)
-
   }
 
   if(nonselection == "uncertain_nulls") {
-    selected_terms <- term_to_col$col[term_to_col$term %in% val$term[val$selected==1]]
-    nonselected_terms <- val$term[!val$selected]
+    # each nonselected column gets the interval from adding it, alone, to the
+    # selected model; zero-variance columns are not in X and stay NA
+    selected_cols <- intersect(val$term[val$selected == 1], colnames(X))
+    nonselected_cols <- intersect(val$term[val$selected == 0], colnames(X))
 
-    if(length(nonselected_terms)) {
+    for(col in nonselected_cols) {
+      fit <- fit_on_columns(X, y, c(selected_cols, col), family)
+      coef_row <- tidy_on_columns(fit, conf.level)
+      coef_row <- coef_row[coef_row$term == col, ]
+      if(nrow(coef_row) == 0) next  # aliased
 
-      df <- X
-      df$y <- y
-
-      for(term in nonselected_terms) {
-
-        cols <- term_to_col$col[term_to_col$term == term]
-        if(length(cols) == 0) next  # skip if no match
-
-        all_terms <- c(selected_terms, cols)
-
-        # construct formula with selected columns + current nonselected column(s)
-        formula_str <- paste0("y ~ ", paste0("`", all_terms, "`", collapse = " + "))
-        fit <- fit_lm_or_glm(as.formula(formula_str), df, family)
-
-        # extract coefficient info for this term
-        fit_tidy <- tidy(fit, conf.int = TRUE, conf.level = conf.level)
-        coef_row <- fit_tidy[fit_tidy$term %in% cols, ]
-        if(nrow(coef_row) == 0) next
-
-        val$estimate[val$term == term] <- coef_row$estimate
-        val$ci_low[val$term == term] <- coef_row$conf.low
-        val$ci_high[val$term == term] <- coef_row$conf.high
-        val$p_value[val$term == term] <- coef_row$p.value
-
-      }
+      val$estimate[val$term == col] <- coef_row$estimate
+      val$ci_low[val$term == col] <- coef_row$ci_low
+      val$ci_high[val$term == col] <- coef_row$ci_high
+      val$p_value[val$term == col] <- coef_row$p_value
     }
   }
 
   val
-}
-
-
-order_terms_like_data <- function(baked_X, orig_data, outcome = NULL, rec_obj = NULL) {
-  baked_names <- colnames(baked_X)
-  outcome <- outcome %||% names(orig_data)[1]
-
-  # original variable names (drop outcome)
-  orig_vars <- setdiff(colnames(orig_data), outcome)
-
-  dummy_map <- list()
-
-  if (!is.null(rec_obj)) {
-    dummy_steps <- rec_obj$steps[vapply(rec_obj$steps, inherits, logical(1), "step_dummy")]
-
-    if (length(dummy_steps) > 0) {
-      dummy_step <- dummy_steps[[1]]
-
-      for (varname in names(dummy_step$levels)) {
-        # Match any dummy column that starts with the factor name
-        # Allow additional characters like . or letters after it
-        matches <- grep(paste0("^", varname), baked_names, value = TRUE)
-
-        # If multiple columns, keep all
-        dummy_map[[varname]] <- matches
-      }
-    }
-  }
-
-  # Build ordered terms following the original data column order
-  ordered_terms <- c()
-  for (v in orig_vars) {
-    if (v %in% baked_names) {
-      ordered_terms <- c(ordered_terms, v)
-    } else if (!is.null(dummy_map[[v]])) {
-      ordered_terms <- c(ordered_terms, dummy_map[[v]])
-    }
-  }
-
-  # Ensure all terms exist in baked_names
-  ordered_terms <- ordered_terms[ordered_terms %in% baked_names]
-
-  ordered_terms
 }

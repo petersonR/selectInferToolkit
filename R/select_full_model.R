@@ -3,8 +3,12 @@
 #' This function simply attempts a full model and returns a `selector` object
 #' as a useful comparison.
 #'
-#' @param formula a formula.
-#' @param data data set
+#' @param formula a model formula, as for [lm()]. It may include
+#'   interactions (`x * z`) and in-formula transformations (`log(x)`,
+#'   `poly(x, 2)`); factor, logical and character predictors are
+#'   treatment-coded. Ordered factors and missing values are not supported.
+#'   See [tidy.selector()] for how the columns are standardized and named.
+#' @param data a data frame
 #' @param family outcome distributional family
 #' @param ... Additional arguments
 #' @param fitted_selector a previously fit `selector`, used by [reselect()]
@@ -13,7 +17,6 @@
 #' @importFrom dplyr mutate_if select
 #' @importFrom broom tidy
 #'
-#' @import recipes
 #' @return A  `selector` object
 #'
 #' @export
@@ -27,90 +30,27 @@ select_full_model <- function(
     family = match.arg(family)
     if(missing(formula))
       stop("Must supply formula")
-
+    design <- design_build(formula, data)
   } else {
-    meta <- attr(fitted_selector, "meta")
-    family <- meta$family
-
-    if(missing(formula))
-      formula <- attr(fitted_selector, "recipe_obj")
+    family <- attr(fitted_selector, "meta")$family
+    design <- attr(fitted_selector, "design")
+    formula <- attr(fitted_selector, "orig_formula")
   }
 
-  # Initial pre-processing
-  rec_obj <- formula
+  X <- design_X(design, data)
+  y <- design_y(design, data)
+  fit <- fit_on_columns(X, y, colnames(X), family,
+                        lm_for_gaussian = FALSE)
 
-  # If a typical formula is supplied, will center/scale
-  if(!inherits(rec_obj, "recipe")) {
-
-    rec_obj <- recipe(formula, data = data) %>%
-      step_logical_to_indicator(data) %>%
-      step_dummy(all_factor_predictors(),
-                 naming = function(...) dummy_names(..., sep = "")) %>%
-      step_zv(all_predictors()) %>%
-      step_center(all_numeric_predictors()) %>%
-      step_scale(all_numeric_predictors()) %>%
-      prep()
-
-    # bake first observation for names
-    y1 <- bake(rec_obj, new_data = data[1,,drop = FALSE], all_outcomes())
-    X1 <- bake(rec_obj, new_data = data[1,,drop=FALSE], all_predictors())
-    df1 <- bake(rec_obj, new_data = data[1,,drop = FALSE])
-
-    # collect all terms
-    formula_full <- as.formula(paste0(names(y1), " ~ ", paste0(names(X1), collapse = " + ")))
-
-    mm <- model.matrix(formula, data = data)
-    all_terms <- make.names(colnames(mm))
-   if(all_terms[1] =="X.Intercept.") all_terms[1] = "(Intercept)"
-
-
-    # add additional zero variance step
-    rec_obj <- rec_obj %>%
-      step_zv() %>%
-      prep()
-
-    attr(rec_obj, "prepped_selector_recipe") <- TRUE
-
-  } else if(!attr(rec_obj, "prepped_selector_recipe")) {
-    stop("custom recipes not yet supported")
-  } else {
-    # May need to read additional things here if this is re-called later
-    rec_obj <- rec_obj %>%
-      step_zv() %>%
-      prep()
-
-    y1 <- bake(rec_obj, new_data = data[1,,drop = FALSE], all_outcomes())
-    X1 <- bake(rec_obj, new_data = data[1,,drop=FALSE], all_predictors())
-    df1 <- bake(rec_obj, new_data = data[1,,drop = FALSE])
-
-    # collect all terms
-    formula_full <- as.formula(paste0(names(y1), " ~ ", paste0(names(X1), collapse = " + ")))
-
-    all_terms <- attr(fitted_selector, "all_terms")
-
-  }
-
-  # Create model matrix
-  X <- bake(rec_obj, new_data = data, all_predictors())
-  y <- bake(rec_obj, new_data = data, all_outcomes())
-  df_for_fit <- bake(rec_obj, new_data = data)
-
-
-  fit <- glm(formula_full, data = df_for_fit, family = family,
-             x = TRUE, y = TRUE, model = TRUE)
-
-
-  meta_information <- list(family = family)
   # aliased columns (e.g. a factor level absent from a resample) have NA
   # coefficients: they were not estimated, so they are not selected
-  selected_coefs <- drop_aliased(coef(fit))
-  selected_terms <- names(selected_coefs)
+  selected_coefs <- drop_aliased(coef_on_columns(fit))
 
   as_selector(fit, name = "full_model", label = "Full model (no selection)",
-              all_terms = all_terms, recipe_obj = rec_obj,
+              design = design,
               orig_formula = formula,
-              selected_terms=selected_terms,
+              selected_terms = names(selected_coefs),
               selected_coefs = selected_coefs,
               default_infer = "upsi",
-              meta = meta_information)
+              meta = list(family = family))
 }

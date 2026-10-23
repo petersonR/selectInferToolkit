@@ -420,6 +420,8 @@ test_that("glmnet SI refits tightly and reports selector/refit mismatches (#18)"
   colnames(X) <- paste0("x", 1:p)
   b <- rep(0, p); b[1:4] <- c(1, -0.5, 0.2, 0.1)
   d <- data.frame(y = drop(X %*% b) + rnorm(n), X)
+  # CV folds for which the default tolerance does leave a mismatch
+  set.seed(36)
   sel <- select_glmnet(y ~ ., data = d)
 
   expect_warning(inf <- infer_selective(sel, data = d, sigma = 1),
@@ -431,6 +433,7 @@ test_that("glmnet SI refits tightly and reports selector/refit mismatches (#18)"
                "high-precision refit")
 
   # a selector fit at the tight tolerance agrees with the refit
+  set.seed(36)
   sel_tight <- select_glmnet(y ~ ., data = d, control = list(thresh = 1e-14))
   expect_no_warning(inf_tight <- infer_selective(sel_tight, data = d, sigma = 1))
   expect_null(attr(inf_tight, "meta")$refit_mismatch)

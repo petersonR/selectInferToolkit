@@ -4,7 +4,11 @@
 #' [MASS::stepAIC()]. Predictors are standardized first; see
 #' [tidy.selector()].
 #'
-#' @param formula a formula
+#' @param formula a model formula, as for [lm()]. It may include
+#'   interactions (`x * z`) and in-formula transformations (`log(x)`,
+#'   `poly(x, 2)`); factor, logical and character predictors are
+#'   treatment-coded. Ordered factors and missing values are not supported.
+#'   See [tidy.selector()] for how the columns are standardized and named.
 #' @param data a data frame
 #' @param family outcome distributional family: `"gaussian"` or
 #'   `"binomial"` (`"poisson"` is not yet supported)
@@ -42,7 +46,6 @@
 #' @importFrom broom tidy
 #' @importFrom stats lm  model.frame model.matrix na.pass
 #' @importFrom MASS stepAIC
-#' @import recipes
 #' @return a `selector`; see [tidy.selector()]. Its default inference method
 #'   is [infer_boot()].
 #' @export
@@ -98,43 +101,30 @@ select_stepwise_ic <- function(
 
   k_val <- if (penalty == "AIC") 2 else log(nrow(data))
 
-  # Build recipe: zv -> center -> dummy -> zv -> scale.
-  #
-  # step_center() deliberately runs before step_dummy(), so indicators are left
-  # uncentered and the intercept stays interpretable at "every indicator = 0",
-  # i.e. at the reference level of each factor. step_scale() runs after, so
-  # indicators are still divided by their standard deviation and
-  # tidy(scale_coef = TRUE) reports every coefficient on a common per-SD metric
-  rec_spec <- recipe(formula, data = data) %>%
-    step_zv(all_predictors()) %>%
-    step_center(all_numeric_predictors()) %>%
-    step_logical_to_indicator(data)
+  # Dummies are left uncentered (center_factors = FALSE), so the intercept
+  # stays interpretable at "every indicator = 0", i.e. at the reference level
+  # of each factor. They are still divided by their standard deviation, so
+  # tidy(scale_coef = TRUE) reports every coefficient on a common per-SD
+  # metric
+  design <- if (is.null(fitted_selector))
+    design_build(formula, data, center_factors = FALSE) else
+    attr(fitted_selector, "design")
+  X <- design_X(design, data)
+  y <- design_y(design, data)
 
-  if (!select_factors_together) {
-    rec_spec <- rec_spec %>%
-      step_dummy(all_factor_predictors(),
-                 naming = function(...) dummy_names(..., sep = ""))
-  }
+  # The units stepAIC adds and drops: each column on its own, or with
+  # select_factors_together, each formula term (all of a factor's dummies)
+  map <- design$map[design$map$kept, ]
+  units <- if (select_factors_together)
+    split(map$column, factor(map$term, levels = unique(map$term))) else
+    stats::setNames(as.list(map$column), map$column)
+  # syntactic stand-in names, for the formulas (and for stepAIC's trace); the
+  # way back to columns is by position, never by parsing these
+  unit_ids <- make.names(names(units), unique = TRUE)
+  unit_df <- stepwise_unit_frame(X, y, units, unit_ids)
 
-  rec_spec <- rec_spec %>%
-    step_zv(all_predictors()) %>%
-    step_scale(all_numeric_predictors())
-
-
-  ## prep on current data (important for reffiting)
-  rec_obj <- prep(rec_spec, training = data)
-  df <- bake(rec_obj, new_data = data)
-
-  y_name <- names(bake(rec_obj, data[1, , drop = FALSE], all_outcomes()))
-  x_names <- names(bake(rec_obj, data[1, , drop = FALSE], all_predictors()))
-
-  # term name cleaning
-  x_terms <- ifelse(grepl("[^a-zA-Z0-9._]", x_names),paste0("`", x_names, "`"),
-                    x_names)
-
-  # collect all terms
-  formula_full <- as.formula( paste0(y_name, " ~ ", paste(x_terms, collapse = " + ")))
-  formula_null <- as.formula(paste0(y_name, " ~ 1"))
+  formula_full <- reformulate(unit_ids, ".y")
+  formula_null <- .y ~ 1
   formula_start <- if (direction == "backward") formula_full else formula_null
 
   sigma_used <- NULL
@@ -154,10 +144,7 @@ select_stepwise_ic <- function(
       stop("criterion = \"cp\" requires select_factors_together = FALSE; ",
            "the Cp path operates on a numeric design matrix.")
 
-    Xmat <- as.matrix(bake(rec_obj, new_data = data, all_predictors()))
-    yvec <- bake(rec_obj, new_data = data, all_outcomes())[[1]]
-
-    fs_result <- selectiveInference::fs(Xmat, yvec)
+    fs_result <- selectiveInference::fs(X, y)
 
     si_fit <- suppressWarnings(selectiveInference::fsInf(
       fs_result, sigma = sigma, type = "aic", mult = k_val, ntimes = 1))
@@ -165,20 +152,17 @@ select_stepwise_ic <- function(
     sigma_used <- si_fit$sigma
     khat <- si_fit$khat
 
-    keep <- x_names[fs_result$action[seq_len(khat)]]
-    keep_terms <- ifelse(grepl("[^a-zA-Z0-9._]", keep), paste0("`", keep, "`"), keep)
-    formula_sel <- as.formula(paste0(y_name, " ~ ", paste(keep_terms, collapse = " + ")))
+    keep <- unit_ids[fs_result$action[seq_len(khat)]]
+    formula_sel <- if (length(keep)) reformulate(keep, ".y") else formula_null
 
-    selected_model <- glm(formula_sel, data = df, family = family, x = TRUE,
-                          y = TRUE, model = TRUE)
-    selected_model$call$data <- df
+    selected_model <- glm(formula_sel, data = unit_df, family = family)
+    selected_model$call$data <- unit_df
 
   } else {
 
-    model_start <- glm( formula_start, data = df, family = family, x = TRUE,
-                        y = TRUE, model = TRUE )
+    model_start <- glm(formula_start, data = unit_df, family = family)
 
-    model_start$call$data <- df
+    model_start$call$data <- unit_df
 
     selected_model <- MASS::stepAIC(
       model_start,
@@ -190,16 +174,13 @@ select_stepwise_ic <- function(
     )
   }
 
-  ## bookkeeping
-  mm <- model.matrix(formula, data = data)
-  all_terms <- make.names(colnames(mm))
-  if(all_terms[1] =="X.Intercept.") all_terms[1] = "(Intercept)"
-
-  # drop aliased (NA) coefficients, and any term left with none
-  selected_coefs <- drop_aliased(coef(selected_model))
-  selected_terms <- attr(terms(selected_model), "term.labels")
-  aliased <- setdiff(names(coef(selected_model)), names(selected_coefs))
-  selected_terms <- selected_terms[!gsub("`", "", selected_terms) %in% aliased]
+  ## bookkeeping: back from units to design columns. Aliased (NA)
+  ## coefficients are dropped, and so is any unit left with none
+  selected_coefs <- drop_aliased(stepwise_column_coefs(selected_model, units, unit_ids))
+  selected_units <- attr(terms(selected_model), "term.labels")
+  selected_terms <- names(units)[match(selected_units, unit_ids)]
+  selected_terms <- selected_terms[vapply(units[selected_terms], function(cols)
+    any(cols %in% names(selected_coefs)), logical(1))]
 
   meta_information <- list(
     family = family,
@@ -213,20 +194,45 @@ select_stepwise_ic <- function(
     sigma_used = sigma_used
   )
 
-  orig_formula =formula
-
   ## output
   as_selector(
     selected_model,
     name = "stepwise_ic",
     label = "Stepwise IC-based",
-    all_terms = all_terms,
-    recipe_obj = rec_obj,
+    design = design,
     default_infer = "boot",
-    #formula_full = formula_full,
     orig_formula = formula,
     selected_terms = selected_terms,
     selected_coefs = selected_coefs,
     meta = meta_information
   )
+}
+
+# A data frame with the outcome as `.y` and one variable per unit, named by
+# `ids`: a single column, or for a factor kept whole, the matrix of its dummy
+# columns, which glm() and stepAIC() treat as one term
+stepwise_unit_frame <- function(X, y, units, ids) {
+  df <- data.frame(.y = y)
+  for (k in seq_along(units)) {
+    cols <- units[[k]]
+    df[[ids[k]]] <- if (length(cols) == 1) X[, cols] else
+      unname(X[, cols, drop = FALSE])
+  }
+  df
+}
+
+# The fitted coefficients, named by design column. Each coefficient's unit
+# and position within it come from the model matrix's `assign` attribute, so
+# no names are parsed
+stepwise_column_coefs <- function(fit, units, ids) {
+  cf <- stats::coef(fit)
+  assign <- attr(stats::model.matrix(fit), "assign")
+  labels <- attr(terms(fit), "term.labels")
+  cols <- vapply(seq_along(cf), function(j) {
+    if (assign[j] == 0) return("(Intercept)")
+    unit <- units[[match(labels[assign[j]], ids)]]
+    pos <- sum(assign[seq_len(j)] == assign[j])
+    unit[pos]
+  }, character(1))
+  stats::setNames(unname(cf), cols)
 }

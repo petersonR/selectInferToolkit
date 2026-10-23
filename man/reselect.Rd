@@ -16,7 +16,7 @@ a new \code{selector}
 }
 \description{
 Re-does the selection, possibly on new data, with the same settings as the
-original. The pre-processing is not re-estimated: the original recipe from
-\code{selector_obj} (including its centering and scaling) is applied to
-\code{newdata}. This is what \code{\link[=infer_boot]{infer_boot()}} calls on each resample.
+original. The pre-processing is not re-estimated: the design of
+\code{selector_obj} (its columns, factor levels, centers and scales) is applied
+to \code{newdata}. This is what \code{\link[=infer_boot]{infer_boot()}} calls on each resample.
 }
