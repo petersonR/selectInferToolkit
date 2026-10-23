@@ -2,7 +2,7 @@
 % Please edit documentation in R/collat_fn.R
 \name{ciratio}
 \alias{ciratio}
-\title{Computing mean/median CI ratio and significant Discoveries}
+\title{Compare CI lengths and discoveries across selectors and inference methods}
 \usage{
 ciratio(
   formula,
@@ -21,35 +21,43 @@ ciratio(
 \arguments{
 \item{formula}{a formula}
 
-\item{data}{data set}
+\item{data}{a data frame}
 
 \item{family}{outcome distributional family}
 
-\item{nonselection}{A character string specifying how to handle variables
-not selected by model selection procedure. One of "ignored",
-"confident_nulls" or "uncertain_nulls" supported}
+\item{nonselection}{how UPSI and selective inference handle non-selected
+variables; see \code{\link[=infer_upsi]{infer_upsi()}}}
 
 \item{conf.level}{.95 by default}
 
-\item{B}{Number of bootstraps}
+\item{B}{number of bootstrap resamples}
 
-\item{direction}{the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"}
+\item{direction}{stepwise search direction: \code{"forward"} (default),
+\code{"backward"} or \code{"both"}}
 
-\item{select_factors_together}{should categorical variables be jointly selected?}
+\item{select_factors_together}{should categorical variables be jointly
+selected (stepwise)?}
 
 \item{pad}{how bootstrap intervals are padded; see \code{\link[=infer_boot]{infer_boot()}}}
 
-\item{inference_target}{is inference requested on all or selected only}
+\item{inference_target}{bootstrap inference target; see \code{\link[=infer_boot]{infer_boot()}}}
 
-\item{...}{additional arguments}
+\item{...}{passed to the full-model and MCP selectors}
 }
 \value{
-A list with following data frames
-\item{avg_ci_ln}{Mean of CI length across all variables in model excluding intercept}
-\item{med_ci_ln}{Median of CI length across all variables in model excluding intercept}
-\item{no_sign_disc}{# of significant discoveries in model excluding intercept}
+a list of three matrices, each with one row per selector and
+columns \code{UPSI}, \code{Bootstrap} and \verb{Selective Inference} (\code{NA} where a
+method doesn't apply). All exclude the intercept.
+\item{avg_ci_ln}{mean CI length}
+\item{med_ci_ln}{median CI length}
+\item{no_sign_disc}{number of terms with p < 0.05 (bootstrap: CI
+excluding 0)}
 }
 \description{
-Perfroms full model boostrap, stepwise AIC, stepwise BIc, lasso and MCP and gives average CI for variables
-adjusting for post-selectino inference using hybrid, bootstrap and selective inference
+A research helper: fits the full model, stepwise AIC and BIC, lasso and MCP
+(each with \code{lambda = "best"} and \code{"compact"}), runs UPSI, the bootstrap and
+(where supported) selective inference on each, and tabulates the mean and
+median CI length and the number of significant terms. Internal; call it as
+\code{selectInferToolkit:::ciratio()}.
 }
+\keyword{internal}

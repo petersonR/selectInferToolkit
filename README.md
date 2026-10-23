@@ -10,8 +10,8 @@
 coverage](https://codecov.io/gh/petersonR/selectInferToolkit/graph/badge.svg)](https://app.codecov.io/gh/petersonR/selectInferToolkit)
 <!-- badges: end -->
 
-The `selectInferToolkit` package aims to addresses a critical challenge
-in modern statistical modeling: **conducting valid inference after
+The `selectInferToolkit` package addresses a critical challenge in
+modern statistical modeling: **conducting valid inference after
 performing model selection.** In the era of big data and complex
 regression problems, researchers often employ model selection procedures
 like stepwise regression or penalized methods (e.g., lasso) to identify
@@ -45,8 +45,8 @@ techniques:
   Information Criterion (AIC)** or the **Bayesian Information Criterion
   (BIC)** as selection criteria, leveraging the `stepAIC` function from
   the `MASS` package.
-- **Penalized Regression:** Perform lasso, ridge, and elastic net
-  regressions using the powerful `ncvreg` or `glmnet` packages.
+- **Penalized Regression:** Perform lasso and elastic net regression
+  with `glmnet`, or MCP, SCAD, and lasso regression with `ncvreg`.
   `selectInferToolkit` simplifies the process of obtaining models
   associated with either $\lambda_{min}$ or $\lambda_{1se}$.
   - $\lambda_{min}$ represents the regularization parameter $\lambda$
@@ -60,9 +60,9 @@ techniques:
 ### Post-Selection Inference Methods
 
 The core contribution of `selectInferToolkit` lies in its ability to
-provide straightforward implementations of three distinct post-selection
-inference methods, applicable after you’ve performed model selection
-using one of the methods above:
+provide straightforward implementations of four post-selection inference
+methods, applicable after you’ve performed model selection using one of
+the methods above:
 
 1.  **UPSI**: A baseline approach that performs no adjustment for the
     selection process. We refer to this as “unadjusted post-selection
@@ -77,8 +77,9 @@ using one of the methods above:
 
 ### Handling Non-Selected Variables
 
-`selectInferToolkit` is explicity in its handling of non-selections,
-which can be set to be:
+`selectInferToolkit` is explicit in its handling of non-selections. For
+`infer_upsi()` and `infer_selective()`, the `nonselection` argument can
+be set to:
 
 - **Ignored:** Treating non-selected variables as irrelevant.
 - **Confident (point-mass) nulls:** Assuming these variables have
@@ -86,6 +87,11 @@ which can be set to be:
 - **Uncertain nulls:** Aim to make inference on all variables but
   without the assumption that non-selections certainly have a null
   effect
+
+The bootstrap handles non-selections through its `inference_target` and
+`pad` arguments instead (below), and PIPE gives inference for every
+variable. See `?infer_upsi` for exactly what each `nonselection` mode
+returns.
 
 ### Bootstrapping considerations
 
@@ -157,8 +163,10 @@ summary(fit_full)
 
 Hmm, $R^2$ is high but nothing is “significant”. What is going on? The
 model is probably over-specified. Let’s use `selectInferToolkit` to
-narrow in on what we think the most important factors are. The `step_ic`
-function can do forwards and backwards selection via AIC by default.
+narrow in on what we think the most important factors are. The
+`select_stepwise_ic()` function does forward selection via AIC by
+default (backward and bidirectional searches are available through
+`direction`).
 
 ### Stepwise selection
 
@@ -195,6 +203,11 @@ tidy(fit_aic)
 #> 10 gear               0  0   
 #> 11 carb               0  0
 ```
+
+Note that the predictors are standardized before selection, so by
+default these coefficients are the change in `mpg` per standard
+deviation of each predictor. Use `tidy(fit_aic, scale_coef = FALSE)` for
+per-unit effects (see `?tidy.selector`).
 
 So we find that AIC selects `wt`, `cyl`, and `hp`. But where are the
 p-values?!
@@ -260,11 +273,17 @@ tidy(fit_aic_infer_boot)
 #> 11 carb               0  0      NA      NA      NA            NA           1.89
 ```
 
-These results are less promising. Here we can also use a wrapper for
-`selectiveInference` method:
+These results are less promising. Here we can also use a wrapper for the
+`selectiveInference` method. Selective inference for stepwise selection
+conditions on the Mallows-Cp form of the criterion, so we select with
+`criterion = "cp"` to make the selection and the inference agree (with
+the default `criterion = "deviance"`, the two can stop at different
+steps, and `infer_selective()` warns and falls back to conditioning on a
+fixed number of steps):
 
 ``` r
-fit_aic_SI <- infer_selective(fit_aic, data = mtcars)
+fit_aic_cp <- select_stepwise_ic(mpg ~ ., data = mtcars, penalty = "AIC", criterion = "cp")
+fit_aic_SI <- infer_selective(fit_aic_cp, data = mtcars)
 fit_aic_SI 
 #> Selective inference applied post Stepwise IC-based Selection 
 #> 3 of 10 variables selected. 
@@ -289,15 +308,14 @@ tidy(fit_aic_SI)
 ```
 
 Here we see that after adjusting for the selective process, we are
-unable to claim significance of any of these effects (and have quite
-large CIs).
+unable to claim significance of any of these effects, and the CIs are
+very wide (some are infinite).
 
-Lastly, as stated above for each post-selection inference method, we
-provide three approaches to handling non-selections: `ignored` (ignoring
-them), `confident_nulls` (treating them as confident (point-mass)
-degenerate nulls at zero), and `uncertain_nulls` (treating them as
-uncertain). For details about each of theses methods, see the package
-vignette.
+Lastly, as stated above, `infer_upsi()` and `infer_selective()` provide
+three approaches to handling non-selections: `ignored` (ignoring them),
+`confident_nulls` (treating them as confident (point-mass) degenerate
+nulls at zero), and `uncertain_nulls` (treating them as uncertain). For
+details about each of these, see `?infer_upsi`.
 
 ### Penalized regression
 
@@ -334,11 +352,12 @@ tidy(fit_lso)
 #> 11 carb               1 -0.0934
 ```
 
-The lasso also selects the same 3 variables. The lasso alone does not
-provide any p-value or CI to do inference, but UPSIs aside we can again
-perform a (questionable) hybrid inferential process where ordinary least
-squares theory is used for inference as though we never used the data
-for selection.
+The lasso selects the same 3 variables as stepwise AIC, plus `am` and
+`carb` (with small coefficients). The lasso alone does not provide any
+p-value or CI to do inference, but UPSIs aside we can again perform a
+(questionable) hybrid inferential process where ordinary least squares
+theory is used for inference as though we never used the data for
+selection.
 
 ``` r
 fit_lasso_infer_upsi <-infer_upsi(fit_lso, data = mtcars) 
@@ -359,9 +378,9 @@ tidy(fit_lasso_infer_upsi)
 #> 11 carb               1 -0.0934   -0.815 -2.30    0.666  2.91e- 1
 ```
 
-These results should look familiar: since the model selected by lasso is
-the same as that selected by stepwise AIC, the UPSI inference method is
-identical; `wt` is still seemingly significant.
+These results are close to the UPSI results for stepwise AIC, since the
+two selected models share `cyl`, `hp`, and `wt`; `wt` is still seemingly
+significant.
 
 *Selective inference*
 
@@ -386,8 +405,8 @@ tidy(fit_lasso_infer_SI)
 
 Here we see that after adjusting for the selective process with
 selective inference, we are able to assert a significant effect of `wt`
-even after the selective process. The CI for this term is only slightly
-wide than in the full model.
+even after the selective process, though its CI is considerably wider
+than the UPSI interval.
 
 *Bootstrapping*
 
@@ -452,7 +471,7 @@ fit_mcp
 #> Penalized `ncvreg`-based selector
 #> 3 of 10 variables selected: am, qsec, wt 
 #> Meta information: family=gaussian, penalty=MCP, lambda=best, lambda_used=0.339, lambda_seq=list(...), cv_info=list(...), ellipses=list(...) 
-#> Default `infer()` method: pipe
+#> Default `infer()` method: boot
 tidy(fit_mcp)
 #> # A tibble: 11 × 3
 #>    term        selected  coef

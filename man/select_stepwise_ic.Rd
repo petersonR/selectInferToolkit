@@ -2,7 +2,7 @@
 % Please edit documentation in R/select_stepwise_ic.R
 \name{select_stepwise_ic}
 \alias{select_stepwise_ic}
-\title{Stepwise forward/backward/bidirectional selection with AIC/BIC}
+\title{Stepwise selection with AIC or BIC}
 \usage{
 select_stepwise_ic(
   formula,
@@ -19,47 +19,55 @@ select_stepwise_ic(
 )
 }
 \arguments{
-\item{formula}{a formula.}
+\item{formula}{a formula}
 
-\item{data}{data set}
+\item{data}{a data frame}
 
-\item{family}{outcome distributional family}
+\item{family}{outcome distributional family: \code{"gaussian"} or
+\code{"binomial"} (\code{"poisson"} is not yet supported)}
 
-\item{select_factors_together}{should categorical variables be jointly selected?}
+\item{select_factors_together}{should the dummy columns of a factor enter
+or leave the model together?}
 
-\item{penalty}{AIC, BIC}
+\item{penalty}{\code{"AIC"} (default) or \code{"BIC"}}
 
-\item{direction}{the mode of step wise search, can be one of "both", "backward", or "forward", with a default of "forward"}
+\item{direction}{the search direction: \code{"forward"} (default), \code{"backward"}
+or \code{"both"}}
 
-\item{criterion}{which form of the information criterion to minimize.
-\code{"deviance"} (default) mirrors \code{\link[MASS:stepAIC]{MASS::stepAIC()}}
-\code{"cp"} is the Mallows-Cp form, mirrors \code{selectiveInference}
+\item{criterion}{which form of the information criterion to minimize:
+\itemize{
+\item \code{"deviance"} (default): \code{n * log(RSS / n) + k * df}, as in
+\code{\link[MASS:stepAIC]{MASS::stepAIC()}}.
+\item \code{"cp"}: the Mallows-Cp form \code{RSS + k * sigma^2 * df}, which is what
+\code{selectiveInference} conditions on.
+}
 
-The two may disagree,
-in which case the results returned by \code{\link[=infer_selective]{infer_selective()}} has to fall
-back from passing \code{type = "aic"} to selectiveInference to \code{type = "active"},
-which may have minor inferential consequences as it doesn't account for
-uncertainty in the number of selected features, proceeding as though
-the number of steps taken by the algorithm was pre-ordained. The effect of
-this seems to be minor.
+Here \code{k = 2} for AIC and \code{log(n)} for BIC.
 
-Requires \code{family = "gaussian"}, \code{direction = "forward"} and
+The two can stop at different steps. When they do, \code{\link[=infer_selective]{infer_selective()}}
+falls back from conditioning on the IC stopping rule (\code{type = "aic"}) to
+conditioning on a fixed number of steps (\code{type = "active"}), which treats
+the number of selected terms as fixed in advance; the effect of this seems
+to be minor. \code{"cp"} avoids the fallback. It requires
+\code{family = "gaussian"}, \code{direction = "forward"} and
 \code{select_factors_together = FALSE}.}
 
 \item{sigma}{residual standard deviation defining the \code{criterion = "cp"}
 penalty. Ignored when \code{criterion = "deviance"}. When \code{NULL} the same rule
 \code{selectiveInference::fsInf()} uses is applied.}
 
-\item{trace}{passed to MASS::stepAIC}
+\item{trace}{passed to \code{\link[MASS:stepAIC]{MASS::stepAIC()}}}
 
-\item{fitted_selector}{a previously fit \code{selector}, used for resampling}
+\item{fitted_selector}{a previously fit \code{selector}, used by \code{\link[=reselect]{reselect()}}}
 
-\item{...}{Additional arguments}
+\item{...}{additional arguments passed to \code{\link[MASS:stepAIC]{MASS::stepAIC()}}}
 }
 \value{
-A  \code{selector} object
+a \code{selector}; see \code{\link[=tidy.selector]{tidy.selector()}}. Its default inference method
+is \code{\link[=infer_boot]{infer_boot()}}.
 }
 \description{
-This function implements forward/backward/bidirectional stepwise regression,
-for use in the \code{selectInferToolkit} package
+Forward, backward or bidirectional stepwise selection via
+\code{\link[MASS:stepAIC]{MASS::stepAIC()}}. Predictors are standardized first; see
+\code{\link[=tidy.selector]{tidy.selector()}}.
 }

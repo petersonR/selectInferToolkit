@@ -1,12 +1,16 @@
-#' Inference for selector_pen_cv class except bootstrap which is it's own function
+#' PIPE inference for `ncvreg` selectors (experimental)
 #'
-#' @param object model of selector_pen_cv class returned from  selector_pen_cv function
-#' @param data data must be passed to infer
+#' Pointwise inference for penalized estimators (PIPE), via
+#' [ncvreg::intervals()]. Gives an estimate, interval and p-value for every
+#' candidate term, selected or not, so there is no `nonselection` option.
+#' Currently only available for [select_ncvreg()] selectors.
+#'
+#' @param object a `selector` from [select_ncvreg()]
+#' @param data the data used to fit the selector
 #' @param conf.level .95 by default
-#' @param ... arguments passed to `ncvreg::intervals()` function
-#' @return an `inferror` object
+#' @param ... arguments passed to [ncvreg::intervals()]
+#' @return an `inferrer` object; see [tidy.inferrer()]
 #'
-#' @rdname infer
 #' @importFrom tibble tibble
 #' @importFrom ncvreg intervals
 #' @importFrom rlang .data

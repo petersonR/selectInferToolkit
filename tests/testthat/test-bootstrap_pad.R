@@ -115,3 +115,14 @@ test_that("removed infer_boot() arguments error instead of being ignored", {
   expect_error(infer_boot(sel, d, B = 2, estimation_data = "in-sample"),
                "`estimation_data` was removed")
 })
+
+test_that("infer_boot() rejects unknown and reserved arguments (#25)", {
+  d <- make_sparse()
+  sel <- select_ncvreg(y ~ ., d, penalty = "MCP")
+  expect_error(infer_boot(sel, d, B = 2, debais = TRUE),
+               "Unused argument\\(s\\) to infer_boot\\(\\): `debais`")
+  expect_error(infer_boot(sel, d, B = 2, type = "residual"),
+               "not yet implemented")
+  expect_warning(infer_boot(sel, d, B = 2, n_cores = 2), "no effect")
+  expect_false("boot" %in% getNamespaceExports("selectInferToolkit"))
+})

@@ -420,3 +420,28 @@ test_that("PIPE inference + ncvreg", {
 # time.taken <- round(end.time - start.time,2)
 # time.taken
 
+
+test_that("infer() passes nonselection only to methods that use it (#24)", {
+  sel_aic <- select_stepwise_ic(mpg ~ ., data = mtcars)
+  set.seed(1)
+  # default (bootstrap) with no nonselection supplied: no warning
+  expect_no_warning(suppressMessages(infer(sel_aic, data = mtcars, B = 5)))
+  # supplied explicitly to a method without the option: warns, still runs
+  expect_warning(
+    inf <- suppressMessages(infer(sel_aic, data = mtcars, B = 5,
+                                  nonselection = "uncertain_nulls")),
+    "has no `nonselection` option")
+  expect_equal(attr(inf, "name"), "boot")
+
+  # passed through where it applies
+  inf_upsi <- infer(sel4, data = mtcars, nonselection = "confident_nulls")
+  expect_equal(attr(inf_upsi, "nonselection"), "confident_nulls")
+})
+
+test_that("ncvreg selectors default to the bootstrap (#24)", {
+  sel_mcp <- select_ncvreg(mpg ~ ., data = mtcars)
+  expect_equal(attr(sel_mcp, "default_infer"), "boot")
+  set.seed(1)
+  inf <- suppressMessages(infer(sel_mcp, data = mtcars, B = 5))
+  expect_equal(attr(inf, "name"), "boot")
+})

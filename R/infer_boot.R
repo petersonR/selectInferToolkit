@@ -1,7 +1,7 @@
 #' Inference for `selector` via bootstrapping
 #'
 #' @param object a `selector` object
-#' @param data data must be passed to infer
+#' @param data the data used to fit the selector
 #' @param inference_target is inference requested on all or selected only
 #' @param pad how to pad the bootstrap percentile intervals, which otherwise
 #'   collapse toward `[0, 0]` for small nonzero coefficients the selector
@@ -29,13 +29,19 @@
 #'   Coverage guarantees are for the gaussian family in an orthonormal design;
 #'   other families warn.
 #' @param conf.level .95 by default
-#' @param type what type of bootstrap (currently only `paired` supported)
+#' @param type the bootstrap type. Only `"paired"` (resampling rows) is
+#'   implemented; `"residual"` is reserved and currently an error.
 #' @param B number of bootstrap resamples
-#' @param n_cores number of cores to use
-#' @return `inferrer` s3 class with things like...
+#' @param n_cores reserved for parallel bootstrapping (see GitHub issue #5).
+#'   Resampling is currently sequential, so this has no effect, and
+#'   supplying it warns.
+#' @param ... not used. Any argument passed here is an error, so that a
+#'   misspelled or removed argument (such as `debias`) can't be silently
+#'   ignored.
+#' @return an `inferrer` object; see [tidy.inferrer()]. Its inferences include
+#'   `prop_selected` (the proportion of resamples in which each term was
+#'   selected) and `null_radius` (the padding radius; see `pad`).
 #' @importFrom dplyr right_join group_by summarize bind_rows
-#'
-#' @rdname boot
 #'
 #' @export
 
@@ -54,38 +60,43 @@ infer_boot <- function(
     stop("`object` must be a `selector`. ",
          "Did you pass an `inferrer` by mistake? Use a select_* function first.")
 
-  # `...` would otherwise silently swallow these, changing results unannounced
-  removed <- intersect(names(list(...)), c("debias", "estimation_data"))
-  if (length(removed))
-    stop("`", paste(removed, collapse = "`, `"), "` ",
-         if (length(removed) > 1) "were" else "was",
-         " removed from infer_boot(); see `pad` for handling near-zero ",
-         "intervals.", call. = FALSE)
+  # `...` would otherwise silently swallow arguments, changing results
+  # unannounced
+  dots <- list(...)
+  if (length(dots)) {
+    nms <- names(dots)
+    if (is.null(nms)) nms <- rep("", length(dots))
+    removed <- intersect(nms, c("debias", "estimation_data"))
+    if (length(removed))
+      stop("`", paste(removed, collapse = "`, `"), "` ",
+           if (length(removed) > 1) "were" else "was",
+           " removed from infer_boot(); see `pad` for handling near-zero ",
+           "intervals.", call. = FALSE)
+    unknown <- ifelse(nzchar(nms), paste0("`", nms, "`"), "(unnamed)")
+    stop("Unused argument(s) to infer_boot(): ",
+         paste(unknown, collapse = ", "), call. = FALSE)
+  }
 
   # A bit of argument checking
   inference_target <- match.arg(inference_target)
   pad <- match.arg(pad)
   type <- match.arg(type)
 
-  stopifnot(type == "paired")
-  n_cores <- min(n_cores, parallel::detectCores() - 2)
+  if (type != "paired")
+    stop("type = \"", type, "\" is not yet implemented; use \"paired\".",
+         call. = FALSE)
+  if (!missing(n_cores))
+    warning("`n_cores` is reserved for parallel bootstrapping and currently ",
+            "has no effect.", call. = FALSE)
 
-  result <- boot(object, data=data, B=B, inference_target=inference_target,
-                 pad = pad,
-                 n_cores= n_cores, conf.level = conf.level, ...)
-  result
+  boot(object, data = data, B = B, inference_target = inference_target,
+       pad = pad, conf.level = conf.level)
 }
 
 
-#' Bootstrapping selection process
-#'
-#' @param object a `selector` object
-#' @param B The number of bootstrap replicates.
-#' @param inference_target is inference requested on all or selected only
-#' @param conf.level .95 by default
-#' @param n_cores number of cores for parallel computation
-#' @param ... 	any additional arguments to that can be passed to fitting engine
-#'
+# Internal worker behind infer_boot(): resample, reselect, and summarize.
+# Not exported, so it doesn't mask boot::boot().
+#
 #' @importFrom magrittr %>%
 #' @importFrom dplyr mutate_if filter select mutate summarise bind_rows rename arrange right_join transmute
 #' @importFrom broom tidy
@@ -100,15 +111,11 @@ infer_boot <- function(
 #' @importFrom stats as.formula glm coef formula median quantile sd terms
 #' @importFrom utils tail
 #' @importFrom rlang .data
-#' @return an `inferrer` object
-#'
-#' @rdname boot
-#' @export
-
+#' @noRd
 boot <- function(object, data, B,
                  inference_target = c("selections", "all"),
                  pad = c("zero_side", "none", "all"),
-                 conf.level, n_cores, ...) {
+                 conf.level) {
   stopifnot(inherits(object, "selector"))
   pad <- match.arg(pad)
 

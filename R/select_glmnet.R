@@ -1,30 +1,34 @@
-#' Fit an (relaxed) lasso or elastic net penalized regression via glmnet
+#' Lasso or elastic net selection via `glmnet`
 #'
-#' A wrapper for `glmnet` and `cv.glmnet`. It runs CV by default so remember to
-#' set your seed for reproducibility.
+#' A wrapper for [glmnet::cv.glmnet()] (or [glmnet::glmnet()] at a fixed
+#' `lambda`). Cross-validation is random, so set a seed for reproducibility.
+#' Predictors are standardized first; see [tidy.selector()].
+#'
+#' @details
+#' With `lambda = "best"` the penalty is `lambda.min`, the value minimizing
+#' cross-validated error; with `"compact"` it is `lambda.1se`, the largest
+#' value whose cross-validated error is within one standard error of the
+#' minimum, which gives a sparser model.
+#'
+#' Only the lasso (`alpha = 1`) is supported by [infer_selective()].
 #'
 #' @param formula a formula
-#' @param data data set
+#' @param data a data frame
 #' @param family outcome distributional family
-#' @param lambda can be `best`, `compact` (which use CV), or a single numeric
-#'   value giving a fixed penalty. See details.
-#' @param alpha The elasticnet mixing parameter, passed to `glmnet`
-#' @param ... Additional arguments that can be passed to `glmnet`
-#' @param fitted_selector a previously fit `selector`, used for resampling
+#' @param lambda `"best"` (default) or `"compact"`, both chosen by
+#'   cross-validation (see Details), or a single number giving a fixed
+#'   penalty.
+#' @param alpha the elastic net mixing parameter, passed to `glmnet`: 1
+#'   (default) is the lasso
+#' @param ... additional arguments passed to [glmnet::cv.glmnet()] or
+#'   [glmnet::glmnet()], e.g. `nfolds`, `penalty.factor`
+#' @param fitted_selector a previously fit `selector`, used by [reselect()]
 #'
 #' @importFrom magrittr %>%
 #' @importFrom glmnet cv.glmnet glmnet
 #'
-#' @return A `selector` object wrapping `glmnet` containing:
-#' \item{beta}{a tibble containing term names and coefficients}
-#' \item{std}{Was desing matrix standadrized}
-#' \item{penalty}{penalty used (lasso or MCP)}
-#' \item{lambda}{are the coefficeint associated with "lambda.min" or "lambda.1se"}
-#' \item{lambda.select}{numeric value of selected lambda}
-#' \item{fold}{Which fold each observation belongs to. By default the observations are randomly assigned.}
-#' \item{x}{ the model dataframe used}
-#' \item{y}{repsonse used}
-#' \item{alpha}{The elasticnet mixing parameter passed to `glmnet`}
+#' @return a `selector` wrapping the `cv.glmnet` (or `glmnet`) fit; see
+#'   [tidy.selector()]. Its default inference method is [infer_selective()].
 #' @export
 
 select_glmnet <- function(

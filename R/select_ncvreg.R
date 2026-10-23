@@ -1,19 +1,30 @@
-#' Fit an MCP- or SCAD-penalized regression via `ncvreg`
+#' MCP, SCAD or lasso selection via `ncvreg`
 #'
-#' A wrapper for `ncvreg` and `cv.ncvreg`. It runs CV by default so remember to
-#' set your seed for reproducibility.
+#' A wrapper for [ncvreg::cv.ncvreg()]. The penalty is ncvreg's default, MCP,
+#' unless `penalty = "SCAD"` or `"lasso"` is passed through `...`.
+#' Cross-validation is random, so set a seed for reproducibility. Predictors
+#' are standardized first; see [tidy.selector()].
+#'
+#' @details
+#' With `lambda = "best"` the penalty is `lambda.min`, the value minimizing
+#' cross-validated error; with `"compact"` it is `lambda.1se`, the largest
+#' value whose cross-validated error is within one standard error of the
+#' minimum, which gives a sparser model.
 #'
 #' @param formula a formula
-#' @param data data set
+#' @param data a data frame
 #' @param family outcome distributional family
-#' @param lambda can be `best`, `compact` (which use CV), or a numeric vector. See details.
-#' @param ... Additional arguments that can be passed to `ncvreg`, e.g. `penalty`, `alpha`
-#' @param fitted_selector a previously fit `selector`, used for resampling
+#' @param lambda `"best"` (default) or `"compact"`, both chosen by
+#'   cross-validation (see Details)
+#' @param ... additional arguments passed to [ncvreg::cv.ncvreg()], e.g.
+#'   `penalty`, `gamma`, `alpha`, `nfolds`
+#' @param fitted_selector a previously fit `selector`, used by [reselect()]
 #'
 #' @importFrom magrittr %>%
 #' @importFrom ncvreg cv.ncvreg ncvreg
 #'
-#' @return A `selector` object wrapping `ncvreg`
+#' @return a `selector` wrapping the `cv.ncvreg` fit; see [tidy.selector()].
+#'   Its default inference method is [infer_boot()].
 #' @export
 
 select_ncvreg <- function(
@@ -120,6 +131,6 @@ select_ncvreg <- function(
              orig_formula =formula,
               selected_terms =  names(selected_coefs),
               selected_coefs = selected_coefs,
-              default_infer = "pipe", meta = meta_information)
+              default_infer = "boot", meta = meta_information)
 }
 

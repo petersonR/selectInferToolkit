@@ -1,5 +1,44 @@
 # selectInferToolkit 0.4.4
 
+- The selector help pages and README were corrected and updated (#27). Among
+  other fixes, `?select_glmnet` and `?select_ncvreg` now explain
+  `lambda = "best"` / `"compact"`; `select_ncvreg()`'s `lambda` is documented
+  as `"best"` or `"compact"` only (a numeric value was documented but never
+  accepted); and the README's stepwise selective-inference example uses
+  `criterion = "cp"`.
+
+- `?tidy.inferrer` and `?tidy.selector` now document every output column and
+  explain the scaled metric: by default coefficients are per standard
+  deviation of each predictor, `scale_coef = FALSE` gives per-unit slopes, and
+  the intercept is always at the predictor means (#23).
+
+- Help pages reorganized (#26): each `infer_*` function has its own page, the
+  `selector` and `inferrer` methods (`tidy()`, `predict()`, `coef()`,
+  `print()`) have "Methods for ..." pages, and `reselect()` has its own. The
+  constructors `as_selector()` and `as_inferrer()` stay exported for writing
+  new methods but are marked internal. Stale Value sections were replaced.
+
+- `ciratio()` is no longer exported; it remains available as
+  `selectInferToolkit:::ciratio()` (#26).
+
+- `infer_boot()` now errors on any unrecognized argument instead of silently
+  ignoring it through `...`. `type = "residual"` errors as not yet implemented,
+  and supplying `n_cores` warns that it currently has no effect (it is reserved
+  for #5) (#25).
+
+- `boot()`, the worker behind `infer_boot()`, is no longer exported, so it no
+  longer masks `boot::boot()` (#25).
+
+- `select_ncvreg()` selectors now default to `infer_boot()` in `infer()`
+  (was the experimental `infer_pipe()`), since zero-side padding targets MCP
+  (#24). `infer_pipe()` is still available directly.
+
+- `infer()` passes `nonselection` only to methods that take it
+  (`infer_upsi()`, `infer_selective()`). When the default method has no such
+  option (`infer_boot()`, `infer_pipe()`) and `nonselection` is supplied, it
+  now warns that it is ignored instead of silently dropping it (#24). The three
+  `nonselection` modes are now defined in `?infer_upsi`.
+
 - **Breaking:** `infer_boot()` gains `pad`, and loses `debias` and
   `estimation_data`. Because a non-selected coefficient is recorded as 0 in
   each replicate, the percentile interval of a small, rarely selected
