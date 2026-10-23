@@ -16,10 +16,10 @@
 #   scale   value the centered column is divided by (its SD)
 #   kept    FALSE for zero-variance columns, which are left out of the matrix
 
-# @param center_factors if FALSE, columns of terms involving a factor are left
-#   uncentered, so that the intercept is the prediction at each factor's
-#   reference level (and the means of the numeric predictors). They are still
-#   divided by their SD.
+# With center_factors = FALSE, columns of terms involving a factor are left
+# uncentered, so that the intercept is the prediction at each factor's
+# reference level (and the means of the numeric predictors). They are still
+# divided by their SD.
 #' @importFrom stats model.frame model.matrix model.response terms
 #' @importFrom stats delete.response .getXlevels sd
 design_build <- function(formula, data, center_factors = TRUE) {
