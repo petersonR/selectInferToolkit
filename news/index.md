@@ -1,6 +1,6 @@
 # Changelog
 
-## selectInferToolkit 0.5.0.9000
+## selectInferToolkit 0.5.1
 
 - [`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
   replaces the reserved `n_cores` with `cluster`: pass a cluster from
