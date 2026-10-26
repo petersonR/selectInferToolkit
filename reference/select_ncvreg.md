@@ -69,3 +69,14 @@ With `lambda = "best"` the penalty is `lambda.min`, the value minimizing
 cross-validated error; with `"compact"` it is `lambda.1se`, the largest
 value whose cross-validated error is within one standard error of the
 minimum, which gives a sparser model.
+
+Cross-validated error is nearly flat over the stretch of the path where
+the selected model doesn't change, so the chosen penalty can sit at the
+top of that stretch, near the smallest selected effect rather than the
+noise level (see GitHub issue \#34). The selector also stores
+`lambda_eff`, the smallest penalty on the path next to the chosen one
+that gives the same selected model (in `attr(x, "meta")`). Predictions
+and [`coef()`](https://rdrr.io/r/stats/coef.html) use the chosen
+penalty;
+[`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
+refits its resamples at `lambda_eff` and pads with it.

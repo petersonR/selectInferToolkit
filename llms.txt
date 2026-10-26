@@ -97,13 +97,19 @@ Recording non-selections as 0 makes the percentile interval of a small,
 rarely selected coefficient collapse toward $`[0, 0]`$. The `pad`
 argument corrects this. The default, `pad = "zero_side"`, pushes the
 endpoints of any interval that contains 0 out to at least $`\pm\delta`$,
-a region of *reasonably confident null* that shrinks with $`n`$
-($`\delta = \gamma\hat\lambda`$ for MCP/SCAD,
+a region of *reasonably confident null* that tends to shrink as $`n`$
+grows ($`\delta = \gamma\lambda_{\text{eff}}`$ for MCP/SCAD,
 $`\sqrt{k}\cdot\mathrm{SE}`$ for stepwise IC); intervals that exclude 0
 are unchanged. `pad = "all"` widens every interval by $`\delta`$ (the
-valid choice for the lasso), and `pad = "none"` returns the raw
-percentile intervals (confident nulls). The radius is reported in the
-`null_radius` column.
+alternative to consider for the lasso, for which zero-side padding
+warns), and `pad = "none"` returns the raw percentile intervals
+(confident nulls). The radius is reported in the `null_radius` column.
+
+Resamples can be fit in parallel by passing a cluster you’ve made with
+the `parallel` package, e.g. `cl <- parallel::makeCluster(4)`, then
+`infer_boot(sel, data, cluster = cl)` and `parallel::stopCluster(cl)`
+when you’re done. Results for a given seed are the same with or without
+a cluster, and a progress bar is shown either way.
 
 ## Example
 
@@ -256,17 +262,17 @@ fit_aic_infer_boot
 #> 3 of 10 variables selected. 
 #> Nonselections were considered N/A 
 #> Meta information: B=100, inference_target=selections, pad=zero_side 
-#> Median CI length = 8; mean = 7.4; max = 10.7
+#> Median CI length = 6.8; mean = 6.4; max = 9.8
 tidy(fit_aic_infer_boot) 
 #> # A tibble: 11 × 8
 #>    term        selected  coef estimate ci_low ci_high prop_selected null_radius
 #>    <chr>          <dbl> <dbl>    <dbl>  <dbl>   <dbl>         <dbl>       <dbl>
-#>  1 (Intercept)        1 20.1    20.1    18.7    21.7           1          NA   
-#>  2 cyl                1 -1.68   -0.397  -4.19    3.99          0.51        2.64
+#>  1 (Intercept)        1 20.1    20.3    19.2    21.1           1          NA   
+#>  2 cyl                1 -1.68   -0.515  -3.65    3.90          0.56        2.64
 #>  3 disp               0  0      NA      NA      NA            NA           3.13
-#>  4 hp                 1 -1.24   -1.22   -5.70    2.11          0.5         2.11
+#>  4 hp                 1 -1.24   -0.706  -3.44    2.67          0.49        2.11
 #>  5 drat               0  0      NA      NA      NA            NA           1.24
-#>  6 wt                 1 -3.10   -3.12   -8.05    2.62          0.88        2.62
+#>  6 wt                 1 -3.10   -3.46   -7.19    2.62          0.94        2.62
 #>  7 qsec               0  0      NA      NA      NA            NA           1.85
 #>  8 vs                 0  0      NA      NA      NA            NA           1.50
 #>  9 am                 0  0      NA      NA      NA            NA           1.45
@@ -420,8 +426,8 @@ than the UPSI interval.
 
 *Bootstrapping*
 
-The lasso’s bias does not vanish for large effects, so for a lasso
-selector the uniformly valid choice is to pad every interval by
+The lasso’s bias does not vanish for large effects, so zero-side padding
+warns for a lasso selector. The alternative is to pad every interval by
 $`\hat\lambda`$:
 
 ``` r
@@ -433,17 +439,17 @@ tidy(fit_lasso_infer_boot)
 #> # A tibble: 11 × 8
 #>    term        selected   coef estimate ci_low ci_high prop_selected null_radius
 #>    <chr>          <dbl>  <dbl>    <dbl>  <dbl>   <dbl>         <dbl>       <dbl>
-#>  1 (Intercept)        1 20.1   20.1     19.2    21.0            1         NA    
-#>  2 cyl                1 -1.58  -1.32    -3.65    0.788          0.93       0.788
-#>  3 disp               0  0     -0.0602  -1.46    0.788          0.11       0.788
-#>  4 hp                 1 -0.801 -0.795   -2.88    0.788          0.8        0.788
-#>  5 drat               0  0      0.172   -0.788   1.91           0.38       0.788
-#>  6 wt                 1 -2.65  -2.39    -4.60    0.131          0.99       0.788
-#>  7 qsec               0  0      0.0411  -0.788   1.08           0.08       0.788
-#>  8 vs                 0  0      0.0415  -0.788   1.45           0.14       0.788
-#>  9 am                 0  0      0.166   -0.788   1.89           0.36       0.788
-#> 10 gear               0  0      0.00455 -0.788   0.847          0.04       0.788
-#> 11 carb               0  0     -0.115   -1.49    0.788          0.36       0.788
+#>  1 (Intercept)        1 20.1   20.3     19.3    21.0            1         NA    
+#>  2 cyl                1 -1.58  -1.29    -3.66    0.788          0.89       0.788
+#>  3 disp               0  0     -0.0466  -1.50    0.788          0.12       0.788
+#>  4 hp                 1 -0.801 -0.850   -2.90    0.788          0.83       0.788
+#>  5 drat               0  0      0.250   -0.788   2.05           0.4        0.788
+#>  6 wt                 1 -2.65  -2.31    -4.52    0.459          0.98       0.788
+#>  7 qsec               0  0      0.0500  -0.788   1.48           0.09       0.788
+#>  8 vs                 0  0      0.0591  -0.788   1.37           0.2        0.788
+#>  9 am                 0  0      0.229   -0.788   1.89           0.45       0.788
+#> 10 gear               0  0      0.00571 -0.788   0.788          0.02       0.788
+#> 11 carb               0  0     -0.182   -1.80    0.788          0.41       0.788
 ```
 
 Compare these to the raw percentile intervals (`pad = "none"`), where
@@ -455,20 +461,20 @@ set.seed(1)
 fit_lasso_infer_boot <- infer_boot(fit_lso, data = mtcars, B = 100, inference_target = "all", pad = "none") 
 #> Bootstrapping with B = 100 replicates...
 tidy(fit_lasso_infer_boot) 
-#> # A tibble: 11 × 8
-#>    term        selected   coef estimate ci_low ci_high prop_selected null_radius
-#>    <chr>          <dbl>  <dbl>    <dbl>  <dbl>   <dbl>         <dbl>       <dbl>
-#>  1 (Intercept)        1 20.1   20.1     19.2   21.0             1             NA
-#>  2 cyl                1 -1.58  -1.32    -2.87   0               0.93          NA
-#>  3 disp               0  0     -0.0602  -0.673  0               0.11          NA
-#>  4 hp                 1 -0.801 -0.795   -2.09   0               0.8           NA
-#>  5 drat               0  0      0.172    0      1.13            0.38          NA
-#>  6 wt                 1 -2.65  -2.39    -3.81  -0.657           0.99          NA
-#>  7 qsec               0  0      0.0411   0      0.288           0.08          NA
-#>  8 vs                 0  0      0.0415   0      0.661           0.14          NA
-#>  9 am                 0  0      0.166    0      1.10            0.36          NA
-#> 10 gear               0  0      0.00455  0      0.0593          0.04          NA
-#> 11 carb               0  0     -0.115   -0.699  0               0.36          NA
+#> # A tibble: 11 × 7
+#>    term        selected   coef estimate ci_low ci_high prop_selected
+#>    <chr>          <dbl>  <dbl>    <dbl>  <dbl>   <dbl>         <dbl>
+#>  1 (Intercept)        1 20.1   20.3     19.3    21.0            1   
+#>  2 cyl                1 -1.58  -1.29    -2.87    0              0.89
+#>  3 disp               0  0     -0.0466  -0.714   0              0.12
+#>  4 hp                 1 -0.801 -0.850   -2.11    0              0.83
+#>  5 drat               0  0      0.250    0       1.26           0.4 
+#>  6 wt                 1 -2.65  -2.31    -3.73   -0.329          0.98
+#>  7 qsec               0  0      0.0500   0       0.694          0.09
+#>  8 vs                 0  0      0.0591   0       0.584          0.2 
+#>  9 am                 0  0      0.229    0       1.10           0.45
+#> 10 gear               0  0      0.00571  0       0              0.02
+#> 11 carb               0  0     -0.182   -1.01    0              0.41
 ```
 
 For a more in depth tutorial and examples for different methods, please
@@ -483,7 +489,7 @@ fit_mcp <- select_ncvreg(mpg ~ ., data = mtcars)
 fit_mcp 
 #> Penalized `ncvreg`-based selector
 #> 3 of 10 variables selected: am, qsec, wt 
-#> Meta information: family=gaussian, penalty=MCP, lambda=best, lambda_used=0.389, lambda_seq=list(...), cv_info=list(...), ellipses=list(...) 
+#> Meta information: family=gaussian, penalty=MCP, lambda=best, lambda_used=0.389, lambda_seq=list(...), cv_info=list(...), ellipses=list(...), lambda_eff=0.339 
 #> Default `infer()` method: boot
 tidy(fit_mcp)
 #> # A tibble: 11 × 3
@@ -526,7 +532,10 @@ tidy(fit_mcp_infer_upsi)
 
 MCP is unbiased for large effects, so the default zero-side padding
 applies: intervals that contain 0 are padded out to
-$`\pm\gamma\hat\lambda`$, and the others are left alone.
+$`\pm\gamma\lambda_{\text{eff}}`$, and the others are left alone. Here
+$`\lambda_{\text{eff}}`$ is the smallest penalty giving the selected
+model, and the resamples are refit at it (see
+[`?infer_boot`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)).
 
 ``` r
 
@@ -537,17 +546,17 @@ tidy(fit_mcp_infer_boot)
 #> # A tibble: 11 × 8
 #>    term        selected  coef estimate ci_low ci_high prop_selected null_radius
 #>    <chr>          <dbl> <dbl>    <dbl>  <dbl>   <dbl>         <dbl>       <dbl>
-#>  1 (Intercept)        1 20.1   20.1     19.1    21.0           1          NA   
-#>  2 cyl                0  0     -0.867   -3.57    1.17          0.32        1.17
-#>  3 disp               0  0     -0.240   -3.25    1.17          0.08        1.17
-#>  4 hp                 0  0     -0.326   -3.99    1.17          0.09        1.17
-#>  5 drat               0  0      0.293   -1.17    2.11          0.18        1.17
-#>  6 wt                 1 -3.83  -2.90    -5.91    1.17          0.79        1.17
-#>  7 qsec               1  2.19   0.947   -1.17    3.37          0.48        1.17
-#>  8 vs                 0  0     -0.0350  -1.17    1.17          0.06        1.17
-#>  9 am                 1  1.46   0.723   -1.17    3.20          0.35        1.17
-#> 10 gear               0  0      0.104   -1.17    1.40          0.11        1.17
-#> 11 carb               0  0     -0.674   -3.06    1.17          0.48        1.17
+#>  1 (Intercept)        1 20.1  20.1      18.9    20.9           1          NA   
+#>  2 cyl                0  0    -0.791    -3.45    1.02          0.32        1.02
+#>  3 disp               0  0    -0.293    -3.40    1.02          0.09        1.02
+#>  4 hp                 0  0    -0.225    -2.91    1.02          0.08        1.02
+#>  5 drat               0  0     0.289    -1.02    2.35          0.21        1.02
+#>  6 wt                 1 -3.83 -2.75     -5.81    1.02          0.79        1.02
+#>  7 qsec               1  2.19  0.948    -1.02    2.91          0.49        1.02
+#>  8 vs                 0  0    -0.00186  -1.02    1.47          0.06        1.02
+#>  9 am                 1  1.46  0.897    -1.02    3.49          0.48        1.02
+#> 10 gear               0  0     0.145    -1.02    2.07          0.09        1.02
+#> 11 carb               0  0    -0.986    -3.20    1.02          0.58        1.02
 ```
 
 ``` r
@@ -556,20 +565,20 @@ set.seed(12)
 fit_mcp_infer_boot <- infer_boot(fit_mcp, data = mtcars, B = 100, inference_target = "all", pad = "none") 
 #> Bootstrapping with B = 100 replicates...
 tidy(fit_mcp_infer_boot) 
-#> # A tibble: 11 × 8
-#>    term        selected  coef estimate ci_low ci_high prop_selected null_radius
-#>    <chr>          <dbl> <dbl>    <dbl>  <dbl>   <dbl>         <dbl>       <dbl>
-#>  1 (Intercept)        1 20.1   20.1    19.1    21.0            1             NA
-#>  2 cyl                0  0     -0.867  -3.57    0              0.32          NA
-#>  3 disp               0  0     -0.240  -3.25    0              0.08          NA
-#>  4 hp                 0  0     -0.326  -3.99    0              0.09          NA
-#>  5 drat               0  0      0.293   0       2.11           0.18          NA
-#>  6 wt                 1 -3.83  -2.90   -5.91    0              0.79          NA
-#>  7 qsec               1  2.19   0.947   0       3.37           0.48          NA
-#>  8 vs                 0  0     -0.0350 -0.950   0.752          0.06          NA
-#>  9 am                 1  1.46   0.723   0       3.20           0.35          NA
-#> 10 gear               0  0      0.104   0       1.40           0.11          NA
-#> 11 carb               0  0     -0.674  -3.06    0              0.48          NA
+#> # A tibble: 11 × 7
+#>    term        selected  coef estimate ci_low ci_high prop_selected
+#>    <chr>          <dbl> <dbl>    <dbl>  <dbl>   <dbl>         <dbl>
+#>  1 (Intercept)        1 20.1  20.1      18.9    20.9           1   
+#>  2 cyl                0  0    -0.791    -3.45    0             0.32
+#>  3 disp               0  0    -0.293    -3.40    0             0.09
+#>  4 hp                 0  0    -0.225    -2.91    0             0.08
+#>  5 drat               0  0     0.289     0       2.35          0.21
+#>  6 wt                 1 -3.83 -2.75     -5.81    0             0.79
+#>  7 qsec               1  2.19  0.948     0       2.91          0.49
+#>  8 vs                 0  0    -0.00186   0       1.47          0.06
+#>  9 am                 1  1.46  0.897     0       3.49          0.48
+#> 10 gear               0  0     0.145     0       2.07          0.09
+#> 11 carb               0  0    -0.986    -3.20    0             0.58
 ```
 
 *PIPE*: available for `ncvreg` only

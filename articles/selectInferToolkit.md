@@ -117,18 +117,58 @@ corrects this:
 - `"zero_side"` (default): if an interval contains 0, each endpoint is
   pushed out to at least $`\pm\delta`$; intervals that exclude 0 are
   unchanged. $`[-\delta, \delta]`$ is a region of *reasonably confident
-  null*, in the spirit of second-generation p-values, and it shrinks
-  with $`n`$. For MCP/SCAD $`\delta = \gamma\hat\lambda`$; for stepwise
+  null*, in the spirit of second-generation p-values, which tends to
+  shrink as $`n`$ grows. For MCP/SCAD
+  $`\delta = \gamma\lambda_{\text{eff}}`$ (below); for stepwise
   selection $`\delta = \sqrt{k}\cdot\mathrm{SE}`$ with $`k = 2`$ (AIC)
   or $`\log n`$ (BIC). Large effects are not padded.
 - `"all"`: every interval is widened by $`\delta`$ ($`\hat\lambda`$ for
-  penalized selectors). This is the uniformly valid choice for the
-  lasso, whose bias does not vanish for large effects.
+  [`select_glmnet()`](https://petersonr.github.io/selectInferToolkit/reference/select_glmnet.md),
+  $`\lambda_{\text{eff}}`$ for
+  [`select_ncvreg()`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md)).
+  This is the alternative to consider for the lasso, whose bias does not
+  vanish for large effects, so zero-side padding warns there.
 - `"none"`: the raw percentile interval, treating non-selections as
   confident nulls.
 
 The radius is reported in the `null_radius` column of
 [`tidy()`](https://generics.r-lib.org/reference/tidy.html).
+
+For
+[`select_ncvreg()`](https://petersonr.github.io/selectInferToolkit/reference/select_ncvreg.md),
+the penalty that cross-validation picks can sit near the smallest
+selected effect rather than the noise level, because cross-validated
+error is nearly flat over the penalties that give the same model. So
+[`infer_boot()`](https://petersonr.github.io/selectInferToolkit/reference/infer_boot.md)
+refits each resample at $`\lambda_{\text{eff}}`$, the smallest penalty
+giving the selected model (stored in the selector’s meta), and pads with
+$`\gamma\lambda_{\text{eff}}`$. In simulations with independent
+predictors and one strong effect (GitHub issue \#34),
+$`\gamma\lambda_{\text{eff}}`$ shrank roughly like $`1/\sqrt{n}`$ while
+$`\gamma\hat\lambda`$ did not; with several small effects the two were
+close.
+
+**Running the bootstrap in parallel**
+
+Each resample is selected and fit independently, so the resamples can be
+spread over a cluster from the `parallel` package. Make the cluster
+yourself, pass it as `cluster`, and stop it when you are done; one
+cluster can serve many calls. All resamples are drawn before any
+fitting, so for a given seed the results are the same with or without a
+cluster. A progress bar is shown either way.
+
+``` r
+
+cl <- parallel::makeCluster(4)
+set.seed(1)
+inf <- infer_boot(sel, data = dat, B = 1000, cluster = cl)
+parallel::stopCluster(cl)
+```
+
+On macOS and Linux,
+[`parallel::makeForkCluster()`](https://rdrr.io/r/parallel/makeCluster.html)
+starts faster and its workers share the session’s packages. With
+`makeCluster()`, each worker must have selectInferToolkit installed.
 
 #### Selective Inference
 

@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">selectInferToolkit</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,7 +60,7 @@
                         <h4 data-toc-skip class="author">Jinal Shah
 &amp; Ryan Peterson</h4>
             
-            <h4 data-toc-skip class="date">2026-10-23</h4>
+            <h4 data-toc-skip class="date">2026-10-26</h4>
       
 
       <div class="d-none name"><code>selectInferToolkit.Rmd</code></div>
@@ -198,11 +198,11 @@ endpoint is pushed out to at least
 intervals that exclude 0 are unchanged.
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mi>−</mi><mi>δ</mi><mo>,</mo><mi>δ</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[-\delta, \delta]</annotation></semantics></math>
 is a region of <em>reasonably confident null</em>, in the spirit of
-second-generation p-values, and it shrinks with
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>.
-For MCP/SCAD
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>=</mo><mi>γ</mi><mover><mi>λ</mi><mo accent="true">̂</mo></mover></mrow><annotation encoding="application/x-tex">\delta = \gamma\hat\lambda</annotation></semantics></math>;
-for stepwise selection
+second-generation p-values, which tends to shrink as
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+grows. For MCP/SCAD
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>=</mo><mi>γ</mi><msub><mi>λ</mi><mtext mathvariant="normal">eff</mtext></msub></mrow><annotation encoding="application/x-tex">\delta = \gamma\lambda_{\text{eff}}</annotation></semantics></math>
+(below); for stepwise selection
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>δ</mi><mo>=</mo><msqrt><mi>k</mi></msqrt><mo>⋅</mo><mrow><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow></mrow><annotation encoding="application/x-tex">\delta = \sqrt{k}\cdot\mathrm{SE}</annotation></semantics></math>
 with
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>k</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">k = 2</annotation></semantics></math>
@@ -213,14 +213,50 @@ with
 <code>"all"</code>: every interval is widened by
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>δ</mi><annotation encoding="application/x-tex">\delta</annotation></semantics></math>
 (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mover><mi>λ</mi><mo accent="true">̂</mo></mover><annotation encoding="application/x-tex">\hat\lambda</annotation></semantics></math>
-for penalized selectors). This is the uniformly valid choice for the
-lasso, whose bias does not vanish for large effects.</li>
+for <code><a href="../reference/select_glmnet.html">select_glmnet()</a></code>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>λ</mi><mtext mathvariant="normal">eff</mtext></msub><annotation encoding="application/x-tex">\lambda_{\text{eff}}</annotation></semantics></math>
+for <code><a href="../reference/select_ncvreg.html">select_ncvreg()</a></code>). This is the alternative to consider
+for the lasso, whose bias does not vanish for large effects, so
+zero-side padding warns there.</li>
 <li>
 <code>"none"</code>: the raw percentile interval, treating
 non-selections as confident nulls.</li>
 </ul>
 <p>The radius is reported in the <code>null_radius</code> column of
 <code><a href="https://generics.r-lib.org/reference/tidy.html" class="external-link">tidy()</a></code>.</p>
+<p>For <code><a href="../reference/select_ncvreg.html">select_ncvreg()</a></code>, the penalty that cross-validation
+picks can sit near the smallest selected effect rather than the noise
+level, because cross-validated error is nearly flat over the penalties
+that give the same model. So <code><a href="../reference/infer_boot.html">infer_boot()</a></code> refits each
+resample at
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>λ</mi><mtext mathvariant="normal">eff</mtext></msub><annotation encoding="application/x-tex">\lambda_{\text{eff}}</annotation></semantics></math>,
+the smallest penalty giving the selected model (stored in the selector’s
+meta), and pads with
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>γ</mi><msub><mi>λ</mi><mtext mathvariant="normal">eff</mtext></msub></mrow><annotation encoding="application/x-tex">\gamma\lambda_{\text{eff}}</annotation></semantics></math>.
+In simulations with independent predictors and one strong effect (GitHub
+issue #34),
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>γ</mi><msub><mi>λ</mi><mtext mathvariant="normal">eff</mtext></msub></mrow><annotation encoding="application/x-tex">\gamma\lambda_{\text{eff}}</annotation></semantics></math>
+shrank roughly like
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1</mn><mi>/</mi><msqrt><mi>n</mi></msqrt></mrow><annotation encoding="application/x-tex">1/\sqrt{n}</annotation></semantics></math>
+while
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>γ</mi><mover><mi>λ</mi><mo accent="true">̂</mo></mover></mrow><annotation encoding="application/x-tex">\gamma\hat\lambda</annotation></semantics></math>
+did not; with several small effects the two were close.</p>
+<p><strong>Running the bootstrap in parallel</strong></p>
+<p>Each resample is selected and fit independently, so the resamples can
+be spread over a cluster from the <code>parallel</code> package. Make
+the cluster yourself, pass it as <code>cluster</code>, and stop it when
+you are done; one cluster can serve many calls. All resamples are drawn
+before any fitting, so for a given seed the results are the same with or
+without a cluster. A progress bar is shown either way.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">cl</span> <span class="op">&lt;-</span> <span class="fu">parallel</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/parallel/makeCluster.html" class="external-link">makeCluster</a></span><span class="op">(</span><span class="fl">4</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">inf</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/infer_boot.html">infer_boot</a></span><span class="op">(</span><span class="va">sel</span>, data <span class="op">=</span> <span class="va">dat</span>, B <span class="op">=</span> <span class="fl">1000</span>, cluster <span class="op">=</span> <span class="va">cl</span><span class="op">)</span></span>
+<span><span class="fu">parallel</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/parallel/makeCluster.html" class="external-link">stopCluster</a></span><span class="op">(</span><span class="va">cl</span><span class="op">)</span></span></code></pre></div>
+<p>On macOS and Linux, <code><a href="https://rdrr.io/r/parallel/makeCluster.html" class="external-link">parallel::makeForkCluster()</a></code> starts
+faster and its workers share the session’s packages. With
+<code>makeCluster()</code>, each worker must have selectInferToolkit
+installed.</p>
 </div>
 <div class="section level4">
 <h4 id="selective-inference">Selective Inference<a class="anchor" aria-label="anchor" href="#selective-inference"></a>
