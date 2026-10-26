@@ -1,4 +1,4 @@
-# selectInferToolkit 0.5.0.9000
+# selectInferToolkit 0.5.1
 
 - `infer_boot()` replaces the reserved `n_cores` with
   `cluster`: pass a cluster from `parallel::makeCluster()` (or
