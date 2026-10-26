@@ -1,6 +1,6 @@
-# selectInferToolkit (development version)
+# selectInferToolkit 0.5.0.9000
 
-- **Breaking:** `infer_boot()` replaces the reserved `n_cores` with
+- `infer_boot()` replaces the reserved `n_cores` with
   `cluster`: pass a cluster from `parallel::makeCluster()` (or
   `makeForkCluster()`) to fit the resamples in parallel; the default `NULL`
   fits them sequentially. The progress bar is shown either way. Warnings
@@ -18,7 +18,7 @@
   bootstrap results for a given `set.seed()` differ from earlier versions
   (#7).
 
-- **Breaking:** for `select_ncvreg()`, `infer_boot()` refits each resample
+- For `select_ncvreg()`, `infer_boot()` refits each resample
   at `lambda_eff` and pads with `gamma * lambda_eff` (`lambda_eff` with
   `pad = "all"`). `lambda_eff`, now stored in the selector's meta, is the
   smallest lambda in the run of the path next to the cross-validated choice
