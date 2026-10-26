@@ -103,10 +103,12 @@ test_that("ncvreg resamples are refit at lambda_eff (#34)", {
   # one resample, rebuilt with a direct ncvreg() call on the hand-scaled design
   set.seed(5)
   inf <- infer_boot(sel, d, B = 1, inference_target = "all", pad = "none")
-  # the resample's rows come from its own seed, the first draw after set.seed()
+  # the resample's rows come from its own L'Ecuyer-CMRG stream
   set.seed(5)
-  set.seed(sample.int(.Machine$integer.max, 1))
+  RNGkind("L'Ecuyer-CMRG")
+  assign(".Random.seed", parallel::nextRNGStream(.Random.seed), envir = globalenv())
   idx <- sample(1:nrow(d), replace = TRUE)
+  RNGkind("Mersenne-Twister")
   X <- scale(as.matrix(d[, -1]))
   fit <- ncvreg::ncvreg(X[idx, ], d$y[idx], lambda = meta$lambda_seq,
                         penalty = "MCP")

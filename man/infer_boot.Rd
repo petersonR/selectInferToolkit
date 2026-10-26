@@ -83,8 +83,13 @@ implemented; \code{"residual"} is reserved and currently an error.}
 \item{cluster}{\code{NULL} (default) to fit the resamples sequentially, or a
 cluster from \code{\link[parallel:makeCluster]{parallel::makeCluster()}} to fit them in parallel. Setting
 up and stopping the cluster is left to you, so one cluster can serve
-several calls. A seed for each resample is drawn before any fitting, so
-for a given seed the results are the same with or without a cluster.
+several calls. Each resample draws from its own L'Ecuyer-CMRG stream
+(\code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}, as with \code{doRNG} or \code{future.apply}'s
+\code{future.seed = TRUE}), started from your session's random number state,
+so for a given \code{\link[=set.seed]{set.seed()}} the results are the same with or without a
+cluster and with any number of workers. The session's generator is left
+as it was, with its stream advanced by one draw, and each worker's
+random number state is restored when \code{infer_boot()} returns.
 Each worker
 must have selectInferToolkit installed (a fork cluster from
 \code{\link[parallel:makeForkCluster]{parallel::makeForkCluster()}} shares the calling session's instead).

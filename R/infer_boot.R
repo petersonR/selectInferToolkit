@@ -57,8 +57,13 @@
 #' @param cluster `NULL` (default) to fit the resamples sequentially, or a
 #'   cluster from [parallel::makeCluster()] to fit them in parallel. Setting
 #'   up and stopping the cluster is left to you, so one cluster can serve
-#'   several calls. A seed for each resample is drawn before any fitting, so
-#'   for a given seed the results are the same with or without a cluster.
+#'   several calls. Each resample draws from its own L'Ecuyer-CMRG stream
+#'   ([parallel::nextRNGStream()], as with `doRNG` or `future.apply`'s
+#'   `future.seed = TRUE`), started from your session's random number state,
+#'   so for a given [set.seed()] the results are the same with or without a
+#'   cluster and with any number of workers. The session's generator is left
+#'   as it was, with its stream advanced by one draw, and each worker's
+#'   random number state is restored when `infer_boot()` returns.
 #'   Each worker
 #'   must have selectInferToolkit installed (a fork cluster from
 #'   [parallel::makeForkCluster()] shares the calling session's instead).
@@ -163,28 +168,26 @@ boot <- function(object, data, B,
   y_full <- design_y(design, data)
   terms <- design_terms(design)
 
-  # Draw a seed for each resample before fitting any, so the results don't
-  # depend on whether or how the replicates are spread over a cluster, even
-  # for fits that draw random numbers themselves. Each replicate draws its rows
-  # from its seed, so only B integers are held up front, not B x n
-  seeds <- sample.int(.Machine$integer.max, B)
-  rng_kind <- RNGkind()
+  # One random number stream per resample, so the results don't depend on
+  # whether or how the replicates are spread over a cluster, even for fits
+  # that draw random numbers themselves
+  streams <- boot_streams(B)
 
   message("Bootstrapping with B = ", B, " replicates...")
-  if (is.null(cluster)) {
-    # The replicates reseed this session's RNG; restore the stream as it was
-    # after drawing the seeds
+  # pblapply() runs a one-node cluster in this session, so treat it as none
+  if (is.null(cluster) || length(cluster) < 2) {
+    # The replicates load their streams into this session; put back its own
     rng_state <- get(".Random.seed", envir = globalenv())
     on.exit(assign(".Random.seed", rng_state, envir = globalenv()), add = TRUE)
-    boot_fits <- pbapply::pblapply(seeds, boot_replicate, selector = resampler,
+    boot_fits <- pbapply::pblapply(streams, boot_replicate, selector = resampler,
                                    X_full = X_full, y_full = y_full,
-                                   terms = terms, rng_kind = rng_kind)
+                                   terms = terms)
   } else {
     # Send the selector and data to each worker once, not with every batch
     parallel::clusterCall(cluster, boot_worker_set, resampler, X_full,
-                          y_full, terms, rng_kind)
+                          y_full, terms)
     on.exit(parallel::clusterCall(cluster, boot_worker_clear), add = TRUE)
-    boot_fits <- pbapply::pblapply(seeds, boot_worker_replicate, cl = cluster)
+    boot_fits <- pbapply::pblapply(streams, boot_worker_replicate, cl = cluster)
   }
 
   # B x terms matrix of resample coefficients (scaled metric), 0 when not
@@ -277,14 +280,36 @@ ncvreg_at_lambda_eff <- function(object) {
   object
 }
 
-# One bootstrap replicate: from `seed`, draw the rows and reselect on them,
+# B L'Ecuyer-CMRG streams (.Random.seed values), one per resample, as
+# doRNG and future.apply's future.seed = TRUE make them: started from the
+# session's state, which is left with its own generator and advanced by one
+# draw, so the next call gets new streams
+boot_streams <- function(B) {
+  env <- globalenv()
+  if (!exists(".Random.seed", envir = env, inherits = FALSE)) stats::runif(1)
+  state <- get(".Random.seed", envir = env, inherits = FALSE)
+  # restoring .Random.seed also restores the generator it belongs to
+  on.exit({
+    assign(".Random.seed", state, envir = env)
+    stats::runif(1)
+  })
+  if (RNGkind()[1] != "L'Ecuyer-CMRG")
+    RNGkind("L'Ecuyer-CMRG")  # seeds it from the session's generator
+  stream <- get(".Random.seed", envir = env, inherits = FALSE)
+  streams <- vector("list", B)
+  for (b in seq_len(B)) {
+    stream <- parallel::nextRNGStream(stream)
+    streams[[b]] <- stream
+  }
+  streams
+}
+
+# One bootstrap replicate: load `stream`, draw the rows and reselect on them,
 # and return the coefficient of every term (0 when not selected), whether an
 # ncvreg path ended before its penalty, and any other warnings (all reported
-# once by boot()). `rng_kind` is the calling session's RNGkind(), so workers
-# draw with the same generator
-boot_replicate <- function(seed, selector, X_full, y_full, terms, rng_kind) {
-  set.seed(seed, kind = rng_kind[1], normal.kind = rng_kind[2],
-           sample.kind = rng_kind[3])
+# once by boot())
+boot_replicate <- function(stream, selector, X_full, y_full, terms) {
+  assign(".Random.seed", stream, envir = globalenv())
   n <- length(y_full)
   idx <- sample(1:n, replace = TRUE)
   rows <- design_rows(X_full[idx, , drop = FALSE], y_full[idx])
@@ -302,27 +327,34 @@ boot_replicate <- function(seed, selector, X_full, y_full, terms, rng_kind) {
   list(coef = cf, short_path = short_path, warnings = unique(warnings))
 }
 
-# Each cluster worker keeps the selector and data here between batches
+# Each cluster worker keeps the selector and data here between batches, and
+# its own random number state (e.g. from parallel::clusterSetRNGStream()) to
+# put back afterwards
 .boot_worker <- new.env(parent = emptyenv())
 
-boot_worker_set <- function(selector, X_full, y_full, terms, rng_kind) {
+boot_worker_set <- function(selector, X_full, y_full, terms) {
   .boot_worker$selector <- selector
   .boot_worker$X_full <- X_full
   .boot_worker$y_full <- y_full
   .boot_worker$terms <- terms
-  .boot_worker$rng_kind <- rng_kind
+  .boot_worker$rng_state <- get0(".Random.seed", envir = globalenv(),
+                                 inherits = FALSE)
   invisible(NULL)
 }
 
 boot_worker_clear <- function() {
+  env <- globalenv()
+  if (is.null(.boot_worker$rng_state)) {
+    if (exists(".Random.seed", envir = env, inherits = FALSE))
+      rm(".Random.seed", envir = env)
+  } else assign(".Random.seed", .boot_worker$rng_state, envir = env)
   rm(list = ls(.boot_worker), envir = .boot_worker)
   invisible(NULL)
 }
 
-boot_worker_replicate <- function(seed) {
-  boot_replicate(seed, .boot_worker$selector, .boot_worker$X_full,
-                 .boot_worker$y_full, .boot_worker$terms,
-                 .boot_worker$rng_kind)
+boot_worker_replicate <- function(stream) {
+  boot_replicate(stream, .boot_worker$selector, .boot_worker$X_full,
+                 .boot_worker$y_full, .boot_worker$terms)
 }
 
 

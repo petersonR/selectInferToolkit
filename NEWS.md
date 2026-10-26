@@ -5,16 +5,20 @@
   `makeForkCluster()`) to fit the resamples in parallel; the default `NULL`
   fits them sequentially. The progress bar is shown either way. Warnings
   from fitting the resamples, which a cluster would otherwise drop, are now
-  given once each with the number of resamples that raised them. A seed for
-  each resample is drawn before any fitting, and the resample's rows (and any
-  random numbers its fit draws) come from that seed, so for a given seed the
-  results are the same with or without a cluster. Passing `n_cores` is now an error
-  pointing to `cluster` (#5).
+  given once each with the number of resamples that raised them. Each
+  resample draws its rows (and any random numbers its fit needs) from its own
+  L'Ecuyer-CMRG stream (`parallel::nextRNGStream()`, as with `doRNG` or
+  `future.apply`'s `future.seed = TRUE`), started from the session's random
+  number state. So for a given `set.seed()` the results are the same with or
+  without a cluster and with any number of workers. No seed is set: the
+  session keeps its generator, its stream advanced by one draw, and each
+  worker's random number state is put back afterwards. Passing `n_cores` is
+  now an error pointing to `cluster` (#5).
 
 - `infer_boot()` is faster: the design is applied to the data once and each
   resample takes its rows, instead of rebuilding the model matrix per
   replicate, and replicates are summarized as a coefficient matrix rather
-  than per-replicate `tidy()` tables. Because of the per-resample seeds,
+  than per-replicate `tidy()` tables. Because of the per-resample streams,
   bootstrap results for a given `set.seed()` differ from earlier versions
   (#7).
 
