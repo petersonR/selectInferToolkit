@@ -167,6 +167,7 @@ tidy.inferrer <- function(x, scale_coef = TRUE, ...) {
 }
 
 #' @importFrom rlang .data
+#' @importFrom stats median
 #' @rdname inferrer-methods
 #' @export
 print.inferrer <- function(x, ...) {

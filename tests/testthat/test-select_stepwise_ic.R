@@ -1154,3 +1154,11 @@ test_that("criterion = 'cp' records sigma and replays it through reselect()", {
   expect_error(select_stepwise_ic(y ~ ., data = d, direction = "backward",
                                   criterion = "cp"), "forward")
 })
+
+test_that("reselect() still rejects a factor outcome for a gaussian fit", {
+  d <- fixture_numeric()
+  sel <- select_stepwise_ic(y ~ ., d)
+  d2 <- d
+  d2$y <- factor(d2$y > 0)
+  expect_error(reselect(sel, d2), "factor/character")
+})

@@ -9,8 +9,8 @@
 #'
 #'   * `"zero_side"` (default): an interval that contains 0 has each endpoint
 #'     pushed out to at least `-delta` / `delta`; intervals that exclude 0 are
-#'     unchanged. `[-delta, delta]` is a region of "reasonably confident null"
-#'     that shrinks with `n`.
+#'     unchanged. `[-delta, delta]` is a region of "reasonably confident null",
+#'     which tends to shrink as `n` grows.
 #'   * `"none"`: the raw percentile interval ("confident nulls").
 #'   * `"all"`: every interval is widened by `delta` on both sides.
 #'
@@ -18,24 +18,57 @@
 #'   in the `null_radius` column of `tidy()`. The column is left out when no
 #'   interval could be padded (`pad = "none"`, or a radius of 0):
 #'
-#'   * `select_ncvreg()`: `gamma * lambda` for MCP/SCAD with `"zero_side"`,
-#'     `lambda` with `"all"`.
-#'   * `select_glmnet()` and lasso `select_ncvreg()`: `lambda`. The lasso's
-#'     bias does not vanish for large effects, so `"zero_side"` warns; `"all"`
-#'     is the uniformly valid choice.
+#'   * `select_ncvreg()`: `gamma * lambda_eff` for MCP/SCAD with
+#'     `"zero_side"`, `lambda_eff` with `"all"` (see `select_ncvreg()`
+#'     resampling below).
+#'   * `select_glmnet()`: `lambda`; lasso `select_ncvreg()`: `lambda_eff`.
+#'     The lasso's
+#'     bias does not vanish for large effects, so `"zero_side"` warns.
+#'     `"all"`, which also widens intervals that exclude 0, is the
+#'     alternative to consider.
 #'   * `select_stepwise_ic()`: `sqrt(k)` times the full-model standard error,
 #'     with `k = 2` (AIC) or `log(n)` (BIC). Requires `n > p + 1`.
 #'   * `select_full_model()` / `select_null_model()`: 0, so no padding.
 #'
-#'   Coverage guarantees are for the gaussian family in an orthonormal design;
+#'   The radii are motivated by the gaussian family in an orthonormal design;
 #'   other families warn.
+#'
+#'   For `select_ncvreg()`, every resample is refit at `lambda_eff`, the
+#'   smallest penalty giving the selected model (see [select_ncvreg()]),
+#'   rather than at the cross-validated penalty, which can sit near the
+#'   smallest selected effect rather than the noise level (see GitHub issue
+#'   #34). So `estimate` can differ from `coef` for a coefficient in MCP's
+#'   shrinkage zone. `lambda_eff` is reported in the inferrer's meta.
+#'
+#'   A resample whose path ends before `lambda_eff` (a binomial fit that
+#'   saturates, e.g. under separation, or one that reaches a `dfmax` passed to
+#'   [select_ncvreg()]) is fit at the smallest penalty it reached, which
+#'   shrinks it more; their number is reported in a warning and as
+#'   `n_short_path` in the meta.
+#'
+#'   Warnings from fitting the resamples (e.g. from `glm()` or `ncvreg()`) are
+#'   collected and given once each, with the number of resamples that raised
+#'   them, with or without a cluster. `lambda_eff` is motivated by MCP and SCAD; with the lasso it is
+#'   used too, with a warning when it is below the cross-validated penalty.
 #' @param conf.level .95 by default
 #' @param type the bootstrap type. Only `"paired"` (resampling rows) is
 #'   implemented; `"residual"` is reserved and currently an error.
 #' @param B number of bootstrap resamples
-#' @param n_cores reserved for parallel bootstrapping (see GitHub issue #5).
-#'   Resampling is currently sequential, so this has no effect, and
-#'   supplying it warns.
+#' @param cluster `NULL` (default) to fit the resamples sequentially, or a
+#'   cluster from [parallel::makeCluster()] to fit them in parallel. Setting
+#'   up and stopping the cluster is left to you, so one cluster can serve
+#'   several calls. Each resample draws from its own L'Ecuyer-CMRG stream
+#'   ([parallel::nextRNGStream()], as with `doRNG` or `future.apply`'s
+#'   `future.seed = TRUE`), started from your session's random number state,
+#'   so for a given [set.seed()] the results are the same with or without a
+#'   cluster and with any number of workers. The session's generator is left
+#'   as it was, with its stream advanced by one draw, and each worker's
+#'   random number state is restored when `infer_boot()` returns.
+#'   Each worker
+#'   must have selectInferToolkit installed (a fork cluster from
+#'   [parallel::makeForkCluster()] shares the calling session's instead).
+#'   The progress bar is shown either way; see [pbapply::pboptions()] to turn
+#'   it off.
 #' @param ... not used. Any argument passed here is an error, so that a
 #'   misspelled or removed argument (such as `debias`) can't be silently
 #'   ignored.
@@ -43,8 +76,21 @@
 #'   `prop_selected` (the proportion of resamples in which each term was
 #'   selected) and, when intervals are padded, `null_radius` (the padding
 #'   radius; see `pad`).
-#' @importFrom dplyr right_join group_by summarize bind_rows
+#' @examples
+#' set.seed(1)
+#' sel <- select_ncvreg(mpg ~ ., data = mtcars)
+#' set.seed(2)
+#' inf <- infer_boot(sel, data = mtcars, B = 50)
+#' tidy(inf)
 #'
+#' \donttest{
+#' # In parallel: make the cluster once, reuse it, and stop it when done
+#' cl <- parallel::makeCluster(2)
+#' set.seed(2)
+#' inf_par <- infer_boot(sel, data = mtcars, B = 50, cluster = cl)
+#' parallel::stopCluster(cl)
+#' all.equal(tidy(inf), tidy(inf_par)) # same resamples, same results
+#' }
 #' @export
 
 infer_boot <- function(
@@ -55,7 +101,7 @@ infer_boot <- function(
   conf.level = .95,
   type = c("paired", "residual"),
   B = 250,
-  n_cores = 4,
+  cluster = NULL,
   ...) {
 
   if (!inherits(object, "selector"))
@@ -68,6 +114,9 @@ infer_boot <- function(
   if (length(dots)) {
     nms <- names(dots)
     if (is.null(nms)) nms <- rep("", length(dots))
+    if ("n_cores" %in% nms)
+      stop("`n_cores` was removed from infer_boot(); pass a cluster from ",
+           "parallel::makeCluster() as `cluster` instead.", call. = FALSE)
     removed <- intersect(nms, c("debias", "estimation_data"))
     if (length(removed))
       stop("`", paste(removed, collapse = "`, `"), "` ",
@@ -87,106 +136,96 @@ infer_boot <- function(
   if (type != "paired")
     stop("type = \"", type, "\" is not yet implemented; use \"paired\".",
          call. = FALSE)
-  if (!missing(n_cores))
-    warning("`n_cores` is reserved for parallel bootstrapping and currently ",
-            "has no effect.", call. = FALSE)
+  if (!is.null(cluster) && !inherits(cluster, "cluster"))
+    stop("`cluster` must be NULL or a cluster from parallel::makeCluster().",
+         call. = FALSE)
 
   boot(object, data = data, B = B, inference_target = inference_target,
-       pad = pad, conf.level = conf.level)
+       pad = pad, conf.level = conf.level, cluster = cluster)
 }
 
 
 # Internal worker behind infer_boot(): resample, reselect, and summarize.
 # Not exported, so it doesn't mask boot::boot().
 #
-#' @importFrom magrittr %>%
-#' @importFrom dplyr mutate_if filter select mutate summarise bind_rows rename arrange right_join transmute
-#' @importFrom broom tidy
-#' @importFrom stats lm model.frame model.matrix na.pass
 #' @importFrom tibble tibble
-#' @importFrom MASS stepAIC
-#' @importFrom rlang sym
-#' @importFrom parallel detectCores clusterExport clusterEvalQ makeCluster
-#' @importFrom pbapply pblapply
-#' @importFrom stats as.formula glm coef formula median quantile sd terms
-#' @importFrom utils tail
-#' @importFrom rlang .data
+#' @importFrom stats coef quantile
 #' @noRd
 boot <- function(object, data, B,
                  inference_target = c("selections", "all"),
                  pad = c("zero_side", "none", "all"),
-                 conf.level) {
+                 conf.level, cluster = NULL) {
   stopifnot(inherits(object, "selector"))
   pad <- match.arg(pad)
+
+  # The design is applied once; each resample takes rows of X_full and y_full
+  # (see design_rows())
+  # ncvreg resamples are refit at lambda_eff, not at the CV choice (#34)
+  resampler <- ncvreg_at_lambda_eff(object)
 
   design <- attr(object, "design")
   X_full <- design_X(design, data)
   y_full <- design_y(design, data)
+  terms <- design_terms(design)
 
-  # Uncomment after debug
-  # # do with parallel computing, Number of cores to use
-  # cl <- parallel::makeCluster(n_cores)
-  #
-  # # Export required variables to each worker
-  # parallel::clusterExport(cl, varlist = c("object", "data", "nonselection"), envir = environment())
-  #
-  # # Ensure required packages are loaded in each worker
-  # parallel::clusterEvalQ(cl, {
-  #   library(broom)
-  #   library(dplyr)
-  #   library(selectInferToolkit)
-  # })
+  # One random number stream per resample, so the results don't depend on
+  # whether or how the replicates are spread over a cluster, even for fits
+  # that draw random numbers themselves
+  streams <- boot_streams(B)
 
   message("Bootstrapping with B = ", B, " replicates...")
-  boot_fits <- pbapply::pblapply(1:B, function(b) {
-    boot_idx <- sample(1:nrow(data), replace = TRUE)
-    data_boot <- data[boot_idx,]
-
-    sel_boot = reselect(object, newdata = data_boot)
-    val_boot <- tidy(sel_boot)
-
-    val_boot$estimate <- ifelse(is.na(val_boot$coef), 0, val_boot$coef)
-
-    val_boot
-  })
-
-  boot_df<- bind_rows(boot_fits, .id = "bootstrap")
-
-  if(inference_target=="selections") {
-    results <- boot_df  %>%
-      filter(.data$term %in% names(coef(object))) %>%
-      select("term", "coef", "estimate") %>%
-      group_by(.data$term)  %>%
-      summarise(
-        estimate_m = mean(.data$estimate),
-        ci_low   = quantile(.data$estimate, (1 - conf.level) / 2),
-        ci_high  = quantile(.data$estimate, 1 - (1 - conf.level) / 2),
-        prop_selected = mean(coef != 0),
-        .groups = "drop"
-      )%>%
-      rename(estimate = "estimate_m") %>%
-      right_join(tidy(object)[,1], by = "term")%>%
-      arrange(match(.data$term, unique(boot_df$term)))
+  # pblapply() runs a one-node cluster in this session, so treat it as none
+  if (is.null(cluster) || length(cluster) < 2) {
+    # The replicates load their streams into this session; put back its own
+    rng_state <- get(".Random.seed", envir = globalenv())
+    on.exit(assign(".Random.seed", rng_state, envir = globalenv()), add = TRUE)
+    boot_fits <- pbapply::pblapply(streams, boot_replicate, selector = resampler,
+                                   X_full = X_full, y_full = y_full,
+                                   terms = terms)
+  } else {
+    # Send the selector and data to each worker once, not with every batch
+    parallel::clusterCall(cluster, boot_worker_set, resampler, X_full,
+                          y_full, terms)
+    on.exit(parallel::clusterCall(cluster, boot_worker_clear), add = TRUE)
+    boot_fits <- pbapply::pblapply(streams, boot_worker_replicate, cl = cluster)
   }
 
-  if(inference_target=="all") {
-    results <- boot_df  %>%
-      select("term", "coef", "estimate") %>%
-      group_by(.data$term)  %>%
-      summarise(
-        estimate_m = mean(.data$estimate),
-        ci_low   = quantile(.data$estimate, (1 - conf.level) / 2),
-        ci_high  = quantile(.data$estimate, 1 - (1 - conf.level) / 2),
-        prop_selected = mean(coef != 0),
-        .groups = "drop"
-      )%>%
-      rename(estimate = "estimate_m") %>%
-      arrange(match(.data$term, unique(boot_df$term)))
-  }
+  # B x terms matrix of resample coefficients (scaled metric), 0 when not
+  # selected
+  coefs <- matrix(unlist(lapply(boot_fits, `[[`, "coef")), nrow = B,
+                  byrow = TRUE, dimnames = list(NULL, terms))
+  n_short_path <- sum(vapply(boot_fits, `[[`, logical(1), "short_path"))
+  if (n_short_path > 0)
+    warning(n_short_path, " of ", B, " resamples' paths ended before ",
+            "lambda = ", signif(attr(resampler, "meta")$lambda_used, 3),
+            " (the fit saturated or reached dfmax); each of those is fit at ",
+            "the smallest lambda it reached, which shrinks it more.",
+            call. = FALSE)
+  # Warnings from the fits, once each with their count (workers don't relay
+  # warnings, so they are collected the same way in both modes)
+  fit_warnings <- table(unlist(lapply(boot_fits, `[[`, "warnings")))
+  for (w in names(fit_warnings))
+    warning("In ", fit_warnings[[w]], " of ", B, " resamples: ", w,
+            call. = FALSE)
 
+  probs <- c((1 - conf.level) / 2, 1 - (1 - conf.level) / 2)
+  q <- apply(coefs, 2, quantile, probs, names = FALSE)
+  results <- tibble(
+    term = terms,
+    estimate = unname(colMeans(coefs)),
+    ci_low = q[1, ],
+    ci_high = q[2, ],
+    prop_selected = unname(colMeans(coefs != 0))
+  )
+  if (inference_target == "selections") {
+    nonselected <- !terms %in% names(coef(object))
+    results[nonselected, c("estimate", "ci_low", "ci_high",
+                           "prop_selected")] <- NA
+  }
 
   # Pad the percentile intervals (scaled metric; the intercept is never padded)
-  radius <- pad_radius(object, pad, X_full, y_full, results$term)
+  # (the resampler's penalty, so ncvreg pads with lambda_eff)
+  radius <- pad_radius(resampler, pad, X_full, y_full, results$term)
   results$null_radius <- unname(radius[results$term])
   results <- pad_intervals(results, pad)
   # Only report the radius when padding could have changed an interval
@@ -199,6 +238,18 @@ boot <- function(object, data, B,
     inference_target = inference_target,
     pad = pad
   )
+  if (attr(object, "name") == "ncvreg") {
+    meta_information$lambda_eff <- attr(resampler, "meta")$lambda_used
+    meta_information$n_short_path <- n_short_path
+  }
+
+  # One row per resample and term: the resample's estimate, 0 when not
+  # selected
+  boot_df <- tibble(
+    bootstrap = rep(as.character(seq_len(B)), each = length(terms)),
+    term = rep(terms, B),
+    estimate = as.vector(t(coefs))
+  )
 
   as_inferrer(
     boot_df,
@@ -210,6 +261,100 @@ boot <- function(object, data, B,
     selector = object,
     meta = meta_information
   )
+}
+
+# The selector the resamples replay: for ncvreg, the same selector with its
+# penalty moved to lambda_eff; any other selector as is
+ncvreg_at_lambda_eff <- function(object) {
+  if (attr(object, "name") != "ncvreg") return(object)
+  meta <- attr(object, "meta")
+  # selectors without a lambda_eff (from reselect(), or fit before it was
+  # stored) keep their penalty
+  lambda_eff <- meta$lambda_eff %||% meta$lambda_used
+  if (meta$penalty == "lasso" && lambda_eff < meta$lambda_used)
+    warning("Resamples are refit at lambda_eff, the smallest lambda giving ",
+            "the selected model. This is motivated by MCP and SCAD and is ",
+            "untested for the lasso.", call. = FALSE)
+  meta$lambda_used <- lambda_eff
+  attr(object, "meta") <- meta
+  object
+}
+
+# B L'Ecuyer-CMRG streams (.Random.seed values), one per resample, as
+# doRNG and future.apply's future.seed = TRUE make them: started from the
+# session's state, which is left with its own generator and advanced by one
+# draw, so the next call gets new streams
+boot_streams <- function(B) {
+  env <- globalenv()
+  if (!exists(".Random.seed", envir = env, inherits = FALSE)) stats::runif(1)
+  state <- get(".Random.seed", envir = env, inherits = FALSE)
+  # restoring .Random.seed also restores the generator it belongs to
+  on.exit({
+    assign(".Random.seed", state, envir = env)
+    stats::runif(1)
+  })
+  if (RNGkind()[1] != "L'Ecuyer-CMRG")
+    RNGkind("L'Ecuyer-CMRG")  # seeds it from the session's generator
+  stream <- get(".Random.seed", envir = env, inherits = FALSE)
+  streams <- vector("list", B)
+  for (b in seq_len(B)) {
+    stream <- parallel::nextRNGStream(stream)
+    streams[[b]] <- stream
+  }
+  streams
+}
+
+# One bootstrap replicate: load `stream`, draw the rows and reselect on them,
+# and return the coefficient of every term (0 when not selected), whether an
+# ncvreg path ended before its penalty, and any other warnings (all reported
+# once by boot())
+boot_replicate <- function(stream, selector, X_full, y_full, terms) {
+  assign(".Random.seed", stream, envir = globalenv())
+  n <- length(y_full)
+  idx <- sample(1:n, replace = TRUE)
+  rows <- design_rows(X_full[idx, , drop = FALSE], y_full[idx])
+  short_path <- FALSE
+  warnings <- character()
+  sel <- withCallingHandlers(
+    reselect(selector, newdata = rows),
+    warning = function(w) {
+      if (inherits(w, "ncvreg_short_path")) short_path <<- TRUE else
+        warnings <<- c(warnings, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    })
+  cf <- unname(coef(sel)[terms])
+  cf[is.na(cf)] <- 0
+  list(coef = cf, short_path = short_path, warnings = unique(warnings))
+}
+
+# Each cluster worker keeps the selector and data here between batches, and
+# its own random number state (e.g. from parallel::clusterSetRNGStream()) to
+# put back afterwards
+.boot_worker <- new.env(parent = emptyenv())
+
+boot_worker_set <- function(selector, X_full, y_full, terms) {
+  .boot_worker$selector <- selector
+  .boot_worker$X_full <- X_full
+  .boot_worker$y_full <- y_full
+  .boot_worker$terms <- terms
+  .boot_worker$rng_state <- get0(".Random.seed", envir = globalenv(),
+                                 inherits = FALSE)
+  invisible(NULL)
+}
+
+boot_worker_clear <- function() {
+  env <- globalenv()
+  if (is.null(.boot_worker$rng_state)) {
+    if (exists(".Random.seed", envir = env, inherits = FALSE))
+      rm(".Random.seed", envir = env)
+  } else assign(".Random.seed", .boot_worker$rng_state, envir = env)
+  rm(list = ls(.boot_worker), envir = .boot_worker)
+  invisible(NULL)
+}
+
+boot_worker_replicate <- function(stream) {
+  boot_replicate(stream, .boot_worker$selector, .boot_worker$X_full,
+                 .boot_worker$y_full, .boot_worker$terms)
 }
 
 

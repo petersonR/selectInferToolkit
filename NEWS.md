@@ -1,3 +1,56 @@
+# selectInferToolkit 0.5.0.9000
+
+- `infer_boot()` replaces the reserved `n_cores` with
+  `cluster`: pass a cluster from `parallel::makeCluster()` (or
+  `makeForkCluster()`) to fit the resamples in parallel; the default `NULL`
+  fits them sequentially. The progress bar is shown either way. Warnings
+  from fitting the resamples, which a cluster would otherwise drop, are now
+  given once each with the number of resamples that raised them. Each
+  resample draws its rows (and any random numbers its fit needs) from its own
+  L'Ecuyer-CMRG stream (`parallel::nextRNGStream()`, as with `doRNG` or
+  `future.apply`'s `future.seed = TRUE`), started from the session's random
+  number state. So for a given `set.seed()` the results are the same with or
+  without a cluster and with any number of workers. No seed is set: the
+  session keeps its generator, its stream advanced by one draw, and each
+  worker's random number state is put back afterwards. Passing `n_cores` is
+  now an error pointing to `cluster` (#5).
+
+- `infer_boot()` is faster: the design is applied to the data once and each
+  resample takes its rows, instead of rebuilding the model matrix per
+  replicate, and replicates are summarized as a coefficient matrix rather
+  than per-replicate `tidy()` tables. Because of the per-resample streams,
+  bootstrap results for a given `set.seed()` differ from earlier versions
+  (#7).
+
+- For `select_ncvreg()`, `infer_boot()` refits each resample
+  at `lambda_eff` and pads with `gamma * lambda_eff` (`lambda_eff` with
+  `pad = "all"`). `lambda_eff`, now stored in the selector's meta, is the
+  smallest lambda in the run of the path next to the cross-validated choice
+  that gives the same selected model. CV error is nearly flat over that run,
+  so the CV choice can sit near the smallest selected effect. In the
+  simulations in #34 (independent predictors, one strong effect) the null
+  zone at the CV choice did not shrink as `n` grew, while at `lambda_eff` it
+  shrank roughly like `1/sqrt(n)`. Predictions and `coef()` stay at
+  the CV choice, so `estimate` can now differ from `coef`. `lambda_eff` is
+  reported in the inferrer's meta. `lambda_eff` is searched only over the
+  cross-validated lambdas, which are finite in every fold, and each resample
+  is fit only down to the lambda it needs. A resample whose path ends before
+  that lambda (a binomial fit that saturates, e.g. with separation, or one
+  that reaches `dfmax`) used to stop the whole bootstrap; it is now fit at
+  the smallest lambda it reached, with a warning giving the count
+  (`n_short_path` in the meta). A selector from `reselect()` has no
+  `lambda_eff`, so its resamples are refit at `lambda_used`. With
+  `penalty = "lasso"` this applies too, with a warning when `lambda_eff` is
+  below the CV choice (#34).
+
+- `select_stepwise_ic()` checks the outcome's type only on the first fit, so
+  the two-unique-values note is no longer repeated for every resample.
+
+- `select_ncvreg(lambda = "compact")` now uses the standard one-SE rule: the
+  largest lambda whose CV error is within one SE of the minimum, the SE taken
+  at the minimum. It used `cve < min(cve + cvse)`, a stricter cutoff that
+  could pick a smaller lambda and a larger model than documented.
+
 # selectInferToolkit 0.5.0
 
 This release replaces `infer_boot()`'s `debias` with a new `pad` method,

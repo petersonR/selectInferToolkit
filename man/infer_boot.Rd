@@ -12,7 +12,7 @@ infer_boot(
   conf.level = 0.95,
   type = c("paired", "residual"),
   B = 250,
-  n_cores = 4,
+  cluster = NULL,
   ...
 )
 }
@@ -29,8 +29,8 @@ rarely picks. Within each replicate a non-selected coefficient is 0.
 \itemize{
 \item \code{"zero_side"} (default): an interval that contains 0 has each endpoint
 pushed out to at least \code{-delta} / \code{delta}; intervals that exclude 0 are
-unchanged. \verb{[-delta, delta]} is a region of "reasonably confident null"
-that shrinks with \code{n}.
+unchanged. \verb{[-delta, delta]} is a region of "reasonably confident null",
+which tends to shrink as \code{n} grows.
 \item \code{"none"}: the raw percentile interval ("confident nulls").
 \item \code{"all"}: every interval is widened by \code{delta} on both sides.
 }
@@ -39,18 +39,39 @@ The radius \code{delta} is set from the selector (scaled metric) and returned
 in the \code{null_radius} column of \code{tidy()}. The column is left out when no
 interval could be padded (\code{pad = "none"}, or a radius of 0):
 \itemize{
-\item \code{select_ncvreg()}: \code{gamma * lambda} for MCP/SCAD with \code{"zero_side"},
-\code{lambda} with \code{"all"}.
-\item \code{select_glmnet()} and lasso \code{select_ncvreg()}: \code{lambda}. The lasso's
-bias does not vanish for large effects, so \code{"zero_side"} warns; \code{"all"}
-is the uniformly valid choice.
+\item \code{select_ncvreg()}: \code{gamma * lambda_eff} for MCP/SCAD with
+\code{"zero_side"}, \code{lambda_eff} with \code{"all"} (see \code{select_ncvreg()}
+resampling below).
+\item \code{select_glmnet()}: \code{lambda}; lasso \code{select_ncvreg()}: \code{lambda_eff}.
+The lasso's
+bias does not vanish for large effects, so \code{"zero_side"} warns.
+\code{"all"}, which also widens intervals that exclude 0, is the
+alternative to consider.
 \item \code{select_stepwise_ic()}: \code{sqrt(k)} times the full-model standard error,
 with \code{k = 2} (AIC) or \code{log(n)} (BIC). Requires \code{n > p + 1}.
 \item \code{select_full_model()} / \code{select_null_model()}: 0, so no padding.
 }
 
-Coverage guarantees are for the gaussian family in an orthonormal design;
-other families warn.}
+The radii are motivated by the gaussian family in an orthonormal design;
+other families warn.
+
+For \code{select_ncvreg()}, every resample is refit at \code{lambda_eff}, the
+smallest penalty giving the selected model (see \code{\link[=select_ncvreg]{select_ncvreg()}}),
+rather than at the cross-validated penalty, which can sit near the
+smallest selected effect rather than the noise level (see GitHub issue
+#34). So \code{estimate} can differ from \code{coef} for a coefficient in MCP's
+shrinkage zone. \code{lambda_eff} is reported in the inferrer's meta.
+
+A resample whose path ends before \code{lambda_eff} (a binomial fit that
+saturates, e.g. under separation, or one that reaches a \code{dfmax} passed to
+\code{\link[=select_ncvreg]{select_ncvreg()}}) is fit at the smallest penalty it reached, which
+shrinks it more; their number is reported in a warning and as
+\code{n_short_path} in the meta.
+
+Warnings from fitting the resamples (e.g. from \code{glm()} or \code{ncvreg()}) are
+collected and given once each, with the number of resamples that raised
+them, with or without a cluster. \code{lambda_eff} is motivated by MCP and SCAD; with the lasso it is
+used too, with a warning when it is below the cross-validated penalty.}
 
 \item{conf.level}{.95 by default}
 
@@ -59,9 +80,21 @@ implemented; \code{"residual"} is reserved and currently an error.}
 
 \item{B}{number of bootstrap resamples}
 
-\item{n_cores}{reserved for parallel bootstrapping (see GitHub issue #5).
-Resampling is currently sequential, so this has no effect, and
-supplying it warns.}
+\item{cluster}{\code{NULL} (default) to fit the resamples sequentially, or a
+cluster from \code{\link[parallel:makeCluster]{parallel::makeCluster()}} to fit them in parallel. Setting
+up and stopping the cluster is left to you, so one cluster can serve
+several calls. Each resample draws from its own L'Ecuyer-CMRG stream
+(\code{\link[parallel:nextRNGStream]{parallel::nextRNGStream()}}, as with \code{doRNG} or \code{future.apply}'s
+\code{future.seed = TRUE}), started from your session's random number state,
+so for a given \code{\link[=set.seed]{set.seed()}} the results are the same with or without a
+cluster and with any number of workers. The session's generator is left
+as it was, with its stream advanced by one draw, and each worker's
+random number state is restored when \code{infer_boot()} returns.
+Each worker
+must have selectInferToolkit installed (a fork cluster from
+\code{\link[parallel:makeForkCluster]{parallel::makeForkCluster()}} shares the calling session's instead).
+The progress bar is shown either way; see \code{\link[pbapply:pboptions]{pbapply::pboptions()}} to turn
+it off.}
 
 \item{...}{not used. Any argument passed here is an error, so that a
 misspelled or removed argument (such as \code{debias}) can't be silently
@@ -75,4 +108,20 @@ radius; see \code{pad}).
 }
 \description{
 Inference for \code{selector} via bootstrapping
+}
+\examples{
+set.seed(1)
+sel <- select_ncvreg(mpg ~ ., data = mtcars)
+set.seed(2)
+inf <- infer_boot(sel, data = mtcars, B = 50)
+tidy(inf)
+
+\donttest{
+# In parallel: make the cluster once, reuse it, and stop it when done
+cl <- parallel::makeCluster(2)
+set.seed(2)
+inf_par <- infer_boot(sel, data = mtcars, B = 50, cluster = cl)
+parallel::stopCluster(cl)
+all.equal(tidy(inf), tidy(inf_par)) # same resamples, same results
+}
 }
