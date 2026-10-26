@@ -86,20 +86,21 @@ select_stepwise_ic <- function(
     sigma     <- meta$sigma_arg
   }
 
-  # Check for outcome misspecification
+  # Check for outcome misspecification. The note is given on the first fit
+  # only, not on every bootstrap resample. Resamples pass design_rows(), whose
+  # outcome is the original fit's, so there is nothing to check
   outcome_var <- all.vars(formula)[1]
-  y <- data[[outcome_var]]
+  y <- if (inherits(data, "design_rows")) NULL else data[[outcome_var]]
   if (is.factor(y) || is.character(y)) {
     if (family == "gaussian") {
       stop("Outcome variable '", outcome_var, "' is a factor/character. ",
            "Did you mean to specify family = \"binomial\"?")
     }
-  } else if (is.numeric(y) && length(unique(y)) == 2 && family == "gaussian") {
+  } else if (is.null(fitted_selector) && is.numeric(y) &&
+             length(unique(y)) == 2 && family == "gaussian") {
     message("Note: Outcome '", outcome_var, "' has only 2 unique values. ",
             "Consider setting family = \"binomial\" if this is a binary outcome.")
   }
-
-  k_val <- if (penalty == "AIC") 2 else log(nrow(data))
 
   # Dummies are left uncentered (center_factors = FALSE), so the intercept
   # stays interpretable at "every indicator = 0", i.e. at the reference level
@@ -111,6 +112,7 @@ select_stepwise_ic <- function(
     attr(fitted_selector, "design")
   X <- design_X(design, data)
   y <- design_y(design, data)
+  k_val <- if (penalty == "AIC") 2 else log(length(y))
 
   # The units stepAIC adds and drops: each column on its own, or with
   # select_factors_together, each formula term (all of a factor's dummies)

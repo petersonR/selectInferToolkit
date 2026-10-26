@@ -72,7 +72,9 @@ The bootstrap handles non-selections through its `inference_target` and `pad` ar
 
 In bootstrapping, the selection is re-run on each resample and a non-selected coefficient is recorded as 0. The user specifies their `inference_target` as either `"selections"` or `"all"`. 
 
-Recording non-selections as 0 makes the percentile interval of a small, rarely selected coefficient collapse toward $[0, 0]$. The `pad` argument corrects this. The default, `pad = "zero_side"`, pushes the endpoints of any interval that contains 0 out to at least $\pm\delta$, a region of *reasonably confident null* that shrinks with $n$ ($\delta = \gamma\hat\lambda$ for MCP/SCAD, $\sqrt{k}\cdot\mathrm{SE}$ for stepwise IC); intervals that exclude 0 are unchanged. `pad = "all"` widens every interval by $\delta$ (the valid choice for the lasso), and `pad = "none"` returns the raw percentile intervals (confident nulls). The radius is reported in the `null_radius` column. 
+Recording non-selections as 0 makes the percentile interval of a small, rarely selected coefficient collapse toward $[0, 0]$. The `pad` argument corrects this. The default, `pad = "zero_side"`, pushes the endpoints of any interval that contains 0 out to at least $\pm\delta$, a region of *reasonably confident null* that tends to shrink as $n$ grows ($\delta = \gamma\lambda_{\text{eff}}$ for MCP/SCAD, $\sqrt{k}\cdot\mathrm{SE}$ for stepwise IC); intervals that exclude 0 are unchanged. `pad = "all"` widens every interval by $\delta$ (the alternative to consider for the lasso, for which zero-side padding warns), and `pad = "none"` returns the raw percentile intervals (confident nulls). The radius is reported in the `null_radius` column. 
+
+Resamples can be fit in parallel by passing a cluster you've made with the `parallel` package, e.g. `cl <- parallel::makeCluster(4)`, then `infer_boot(sel, data, cluster = cl)` and `parallel::stopCluster(cl)` when you're done. Results for a given seed are the same with or without a cluster, and a progress bar is shown either way.
 
 ## Example
 
@@ -177,8 +179,9 @@ Here we see that after adjusting for the selective process with selective infere
 
 *Bootstrapping*
 
-The lasso's bias does not vanish for large effects, so for a lasso selector the
-uniformly valid choice is to pad every interval by $\hat\lambda$:
+The lasso's bias does not vanish for large effects, so zero-side padding warns
+for a lasso selector. The alternative is to pad every interval by
+$\hat\lambda$:
 
 ```{r}
 set.seed(1)
@@ -216,8 +219,10 @@ tidy(fit_mcp_infer_upsi)
 *Bootstrapping*
 
 MCP is unbiased for large effects, so the default zero-side padding applies:
-intervals that contain 0 are padded out to $\pm\gamma\hat\lambda$, and the
-others are left alone.
+intervals that contain 0 are padded out to $\pm\gamma\lambda_{\text{eff}}$,
+and the others are left alone. Here $\lambda_{\text{eff}}$ is the smallest
+penalty giving the selected model, and the resamples are refit at it (see
+`?infer_boot`).
 
 ```{r}
 set.seed(12)

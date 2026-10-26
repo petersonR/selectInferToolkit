@@ -1,5 +1,4 @@
 run_inference_suite <- function(sel, data) {
-
   set.seed(1)
 
   configs <- list(
@@ -9,10 +8,13 @@ run_inference_suite <- function(sel, data) {
     list(inf_target = "all",        pad = "none")
   )
 
-  # zero-side padding warns for lasso selectors (glmnet, ncvreg lasso), and
-  # any padding warns for an elastic net
-  is_lasso <- attr(sel, "name") == "glmnet" ||
-    identical(attr(sel, "meta")$penalty, "lasso")
+  # zero-side padding warns for lasso selectors (glmnet, ncvreg lasso), any
+  # padding warns for an elastic net, and an ncvreg lasso warns when its
+  # resamples are refit at a lambda_eff below the CV choice
+  meta <- attr(sel, "meta")
+  is_ncv_lasso <- identical(meta$penalty, "lasso")
+  is_lasso <- attr(sel, "name") == "glmnet" || is_ncv_lasso
+  lasso_moved <- is_ncv_lasso && meta$lambda_eff < meta$lambda_used
   is_enet <- attr(sel, "name") == "glmnet" &&
     !isTRUE(attr(sel, "meta")$alpha == 1)
 
@@ -29,7 +31,8 @@ run_inference_suite <- function(sel, data) {
 
     expected <- c(
       if (is_lasso && cfg$pad == "zero_side") "lasso",
-      if (is_enet && cfg$pad != "none") "ridge")
+      if (is_enet && cfg$pad != "none") "ridge",
+      if (lasso_moved) "lambda_eff")
     expect_length(ws, length(expected))
     for (e in expected) expect_true(any(grepl(e, ws)))
 
@@ -38,6 +41,7 @@ run_inference_suite <- function(sel, data) {
 }
 
 test_that("ncvreg inference pipeline works (IRIS reduced)", {
+  set.seed(11)
 
   data(iris)
   iris <- iris[1:100,]
@@ -58,6 +62,7 @@ test_that("ncvreg inference pipeline works (IRIS reduced)", {
 })
 
 test_that("glmnet inference pipeline works (IRIS reduced)", {
+  set.seed(12)
 
   data(iris)
   iris <- iris[1:100,]
@@ -73,6 +78,7 @@ test_that("glmnet inference pipeline works (IRIS reduced)", {
 
 
 test_that("ncvreg/glmnet inference works (HERS reduced)", {
+  set.seed(13)
 
   data(hers)
   force(hers)

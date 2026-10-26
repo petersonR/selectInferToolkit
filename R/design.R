@@ -93,6 +93,7 @@ design_build <- function(formula, data, center_factors = TRUE) {
 # allow_na: predict() may pass rows with missing values (giving NA
 # predictions); fitting never does.
 design_X <- function(design, data, allow_na = FALSE) {
+  if (inherits(data, "design_rows")) return(data$X)
   tt_x <- delete.response(design$terms)
   mf <- design_frame(tt_x, data, xlev = design$xlev)
   if (!allow_na) check_complete(mf)
@@ -108,6 +109,7 @@ design_X <- function(design, data, allow_na = FALSE) {
 
 # The outcome, as given (factor outcomes stay factors)
 design_y <- function(design, data) {
+  if (inherits(data, "design_rows")) return(data$y)
   mf <- design_frame(design$terms, data, xlev = design$xlev)
   y <- model.response(mf)
   if (anyNA(y))
@@ -115,6 +117,14 @@ design_y <- function(design, data) {
          "first.", call. = FALSE)
   unname(y)
 }
+
+# Rows of a design's own X and y, standing in for `data` in reselect(). The
+# design is applied to the data once, and each bootstrap resample takes rows
+# of the result instead of rebuilding the model matrix. Since the centers and
+# scales are fixed, this is the same as applying the design to the resampled
+# data frame.
+design_rows <- function(X, y)
+  structure(list(X = X, y = y), class = "design_rows")
 
 # Names of the design's columns, kept or not, with the intercept first: the
 # rows tidy() reports

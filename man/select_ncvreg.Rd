@@ -47,4 +47,13 @@ With \code{lambda = "best"} the penalty is \code{lambda.min}, the value minimizi
 cross-validated error; with \code{"compact"} it is \code{lambda.1se}, the largest
 value whose cross-validated error is within one standard error of the
 minimum, which gives a sparser model.
+
+Cross-validated error is nearly flat over the stretch of the path where the
+selected model doesn't change, so the chosen penalty can sit at the top of
+that stretch, near the smallest selected effect rather than the noise
+level (see GitHub issue #34). The selector also stores
+\code{lambda_eff}, the smallest penalty on the path next to the chosen one that
+gives the same selected model (in \code{attr(x, "meta")}). Predictions and
+\code{coef()} use the chosen penalty; \code{\link[=infer_boot]{infer_boot()}} refits its resamples at
+\code{lambda_eff} and pads with it.
 }
