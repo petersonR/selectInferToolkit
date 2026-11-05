@@ -35,7 +35,8 @@ Suggests:
     DT,
     DiagrammeR,
     purrr,
-    tidyr (>= 1.3.0)
+    tidyr (>= 1.3.0),
+    hdi
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 Depends: 
